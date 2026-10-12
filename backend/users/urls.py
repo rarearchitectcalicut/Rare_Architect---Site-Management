@@ -6,6 +6,7 @@ from .views import (
     LogoutView,
     CurrentUserView,
     ChangePasswordView,
+    DetailedSupervisorView,
 )
 
 app_name = "users"
@@ -28,5 +29,10 @@ urlpatterns = [
         "auth/change-password/",
         ChangePasswordView.as_view(),
         name="change-password",
+    ),
+    path(
+        "users/supervisors/<uuid:id>/",
+        DetailedSupervisorView.as_view(),
+        name="supervisor-detail",
     ),
 ]
