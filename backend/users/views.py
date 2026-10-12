@@ -14,9 +14,16 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
+from rest_framework.exceptions import NotFound
+
+
 
 
 User = get_user_model()
+
+
+
+
 
 # Login View
 class PhoneLoginView(APIView):
@@ -31,6 +38,8 @@ class PhoneLoginView(APIView):
         serializer.is_valid(raise_exception=True)
         
         return Response(serializer.validated_data)
+
+
 
 
 # Create SuperVisors
@@ -48,6 +57,8 @@ class SupervisorListCreateView(generics.ListCreateAPIView):
         if self.request.method == "POST":
             return SupervisorCreateSerializer 
         return SupervisorListSerializer   
+
+
 
 
 # Log Out
@@ -87,6 +98,8 @@ class LogoutView(APIView):
         )
 
 
+
+
 # Current User Details View
 class CurrentUserView(generics.RetrieveAPIView):
     serializer_class = CurrentUserSerializer
@@ -94,6 +107,8 @@ class CurrentUserView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
 
 
 # Change Password
@@ -112,3 +127,30 @@ class ChangePasswordView(APIView):
             {"detail": "Password changed successfully."},
             status=status.HTTP_200_OK,
         )
+
+
+
+
+# Detailed Supervisor
+class DetailedSupervisorView(generics.RetrieveAPIView):
+
+    permission_classes = [IsAuthenticated,IsAdminRole]
+    serializer_class = SupervisorListSerializer
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return User.objects.filter(
+            role=User.Role.SUPERVISOR
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+        except NotFound:
+            return Response(
+                {"message": "Supervisor not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
