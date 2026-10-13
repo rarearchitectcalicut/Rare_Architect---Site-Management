@@ -77,6 +77,7 @@ class SupervisorCreateSerializer(serializers.ModelSerializer):
             role=User.Role.SUPERVISOR,
             is_active=True,
             is_staff=False,
+            must_change_password=True,
             is_superuser=False,
             **validated_data,
         )
@@ -136,6 +137,7 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "first_name",
+            "must_change_password",
             "last_name",
             "role",
         ]
@@ -182,7 +184,8 @@ class ChangePasswordSerializer(serializers.Serializer):
     def save(self, **kwargs):
         user = self.context["request"].user
         user.set_password(self.validated_data["new_password"])
-        user.save(update_fields=["password"])
+        user.must_change_password = False
+        user.save(update_fields=["password", "must_change_password"])
         return user
 
 
@@ -201,3 +204,71 @@ class SupervisorListSerializer(serializers.ModelSerializer):
             "created_at",
         )
         read_only_fields = fields
+
+
+# Update Supervisor
+class SupervisorUpdateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = (
+            "email",
+            "phone",
+            "first_name",
+            "last_name",
+            "is_active",
+        )
+
+    def validate_email(self, value):
+        # Find another user with the same email, ignoring case
+        existing_user = (
+            User.objects.filter(email__iexact=value)
+            .exclude(id=self.instance.id)
+            .exists()
+        )
+
+        if existing_user:
+            raise serializers.ValidationError(
+                "This email is already used by another user."
+            )
+
+        return value
+
+    def validate_phone(self, value):
+        existing_user = (
+            User.objects.filter(phone=value).exclude(id=self.instance.id).exists()
+        )
+
+        if existing_user:
+            raise serializers.ValidationError(
+                "This phone number is already used by another user."
+            )
+
+        return value
+
+
+# Supervisor Reset Password by Admin
+class SupervisorResetPasswordSerializer(serializers.Serializer):
+    new_password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+    )
+    confirm_password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+    )
+
+    def validate(self, attrs):
+        user = self.context["supervisor"]
+
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "Passwords do not match."}
+            )
+
+        validate_password(
+            attrs["new_password"],
+            user=user,
+        )
+
+        return attrs
