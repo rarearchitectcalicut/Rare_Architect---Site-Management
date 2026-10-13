@@ -7,6 +7,7 @@ from .views import (
     CurrentUserView,
     ChangePasswordView,
     DetailedSupervisorView,
+    SupervisorResetPasswordView,
 )
 
 app_name = "users"
@@ -34,5 +35,10 @@ urlpatterns = [
         "users/supervisors/<uuid:id>/",
         DetailedSupervisorView.as_view(),
         name="supervisor-detail",
+    ),
+    path(
+        "users/supervisors/<uuid:id>/reset-password/",
+        SupervisorResetPasswordView.as_view(),
+        name="supervisor-reset-password",
     ),
 ]

@@ -9,6 +9,8 @@ from .serializers import (
     CurrentUserSerializer,
     ChangePasswordSerializer,
     SupervisorListSerializer,
+    SupervisorUpdateSerializer,
+    SupervisorResetPasswordSerializer,
 )
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
@@ -17,12 +19,7 @@ from rest_framework import status
 from rest_framework.exceptions import NotFound
 
 
-
-
 User = get_user_model()
-
-
-
 
 
 # Login View
@@ -40,8 +37,6 @@ class PhoneLoginView(APIView):
         return Response(serializer.validated_data)
 
 
-
-
 # Create SuperVisors
 class SupervisorListCreateView(generics.ListCreateAPIView):
     """Allow administrators to create and list supervisor accounts."""
@@ -57,8 +52,6 @@ class SupervisorListCreateView(generics.ListCreateAPIView):
         if self.request.method == "POST":
             return SupervisorCreateSerializer 
         return SupervisorListSerializer   
-
-
 
 
 # Log Out
@@ -98,8 +91,6 @@ class LogoutView(APIView):
         )
 
 
-
-
 # Current User Details View
 class CurrentUserView(generics.RetrieveAPIView):
     serializer_class = CurrentUserSerializer
@@ -107,8 +98,6 @@ class CurrentUserView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
-
-
 
 
 # Change Password
@@ -129,19 +118,20 @@ class ChangePasswordView(APIView):
         )
 
 
-
-
 # Detailed Supervisor
-class DetailedSupervisorView(generics.RetrieveAPIView):
-
-    permission_classes = [IsAuthenticated,IsAdminRole]
+class DetailedSupervisorView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
     serializer_class = SupervisorListSerializer
     lookup_field = "id"
 
     def get_queryset(self):
-        return User.objects.filter(
-            role=User.Role.SUPERVISOR
-        )
+        return User.objects.filter(role=User.Role.SUPERVISOR)
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return SupervisorUpdateSerializer
+
+        return SupervisorListSerializer
 
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -154,3 +144,33 @@ class DetailedSupervisorView(generics.RetrieveAPIView):
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+
+# Reset SuperVisor Password. Admin
+class SupervisorResetPasswordView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+    serializer_class = SupervisorResetPasswordSerializer
+
+    def post(self, request, id):
+        try:
+            supervisor = User.objects.get(
+                id=id,
+                role=User.Role.SUPERVISOR,
+            )
+        except User.DoesNotExist:
+            raise NotFound("Supervisor not found.")
+
+        serializer = self.get_serializer(
+            data=request.data,
+            context={"supervisor": supervisor},
+        )
+        serializer.is_valid(raise_exception=True)
+
+        supervisor.set_password(serializer.validated_data["new_password"])
+        supervisor.must_change_password = True
+        supervisor.save(update_fields=["password", "must_change_password"])
+
+        return Response(
+            {"detail": "Supervisor password reset successfully."},
+            status=status.HTTP_200_OK,
+        )
