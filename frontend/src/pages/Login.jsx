@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
+import loginBg from "../assets/images/login-bg.jpg";
 
 import { useAuth } from "../hooks/useAuth";
 
@@ -89,30 +90,17 @@ export default function Login() {
   };
 
   return (
-    <main className="min-h-screen lg:grid lg:grid-cols-[52.7%_47.3%]">
+    <main className="min-h-screen lg:grid lg:grid-cols-[50%_50%]">
       {/* Left architectural panel */}
-      <section
-        className="relative hidden min-h-screen overflow-hidden lg:flex"
-        style={{
-          backgroundColor: "#292620",
-        }}
-      >
-        <div
-          className="absolute inset-0 opacity-30"
-          aria-hidden="true"
-          style={{
-            backgroundImage: `
-              repeating-linear-gradient(
-                90deg,
-                transparent 0px,
-                transparent 40px,
-                rgba(0,0,0,0.3) 41px,
-                rgba(255,255,255,0.025) 42px
-              )
-            `,
-          }}
+      <section className="relative hidden min-h-screen overflow-hidden lg:flex">
+        {/* Full background image */}
+        <img
+          src={loginBg}
+          alt="RARE Architecture"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
 
+        {/* Bottom text */}
         <div className="relative z-10 mt-auto px-11 pb-12 xl:pb-14">
           <h1 className="max-w-lg text-[32px] font-bold leading-[1.15] tracking-tight text-white xl:text-[36px]">
             Every site. Every task.
@@ -120,7 +108,7 @@ export default function Login() {
             One clear view.
           </h1>
 
-          <p className="mt-4 max-w-sm text-[16px] leading-snug text-stone-300/80">
+          <p className="mt-4 max-w-sm text-[16px] leading-snug text-white">
             RARE project and site management for admins
             and supervisors.
           </p>
@@ -149,16 +137,7 @@ export default function Login() {
             </p>
           </div>
 
-          <header className="mb-4">
-            <h2 className="text-[26px] font-bold leading-[1.15] tracking-[-0.5px] text-[#211e1a]">
-              Project &amp; Site
-              <br />
-              Management
-            </h2>
-            <p className="mt-2 text-sm text-[#8f877b]">
-              Sign in to continue
-            </p>
-          </header>
+         
 
           <form
             onSubmit={handleSubmit(onSubmit)}
