@@ -1,4 +1,7 @@
 
+backend/media/
+
+
 # Python
 __pycache__/
 *.py[cod]
