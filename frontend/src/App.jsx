@@ -3,9 +3,16 @@ import { useAuth } from "./hooks/useAuth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import LoadingScreen from "./components/LoadingScreen";
+import { useEffect,useState
+ } from "react";
 
 function HomeRedirect() {
   const { user } = useAuth();
+  const [ready, setReady] = useState(false);
+
+  
+    
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -25,6 +32,22 @@ function HomeRedirect() {
 }
 
 export default function App() {
+  const [isInitializing, setIsInitializing] = useState(true);
+  
+  useEffect(() => {
+    // Displays a splash screen for 1 second on page reload.
+    const timer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isInitializing) {
+    return <LoadingScreen message="Loading RARE..." />;
+  }
+
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />

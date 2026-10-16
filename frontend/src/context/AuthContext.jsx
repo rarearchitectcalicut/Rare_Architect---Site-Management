@@ -64,6 +64,7 @@ export function AuthProvider({ children }) {
   }, [clearSession]);
 
   const logout = useCallback(async () => {
+   
     const refresh = getRefreshToken();
 
     try {
