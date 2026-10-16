@@ -6,8 +6,9 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import loginBg from "../assets/images/login-bg.jpg";
-
+import rareLogo from "../assets/images/rare-logo.png"
 import { useAuth } from "../hooks/useAuth";
+import LoadingScreen from "../components/LoadingScreen";
 
 const loginSchema = z.object({
   phone: z
@@ -90,6 +91,10 @@ export default function Login() {
   };
 
   return (
+    <>
+      {loading && (
+        <LoadingScreen message="Signing you in..." />
+      )}
     <main className="min-h-screen lg:grid lg:grid-cols-[50%_50%]">
       {/* Left architectural panel */}
       <section className="relative hidden min-h-screen overflow-hidden lg:flex">
@@ -116,38 +121,46 @@ export default function Login() {
       </section>
 
       {/* Right authentication panel */}
+
       <section
-        className="flex min-h-screen items-center justify-center px-6 py-12 sm:px-10"
-        style={{ backgroundColor: "#f1eadf" }}
+        className="flex min-h-screen items-center justify-center bg-[#f1eadf] px-5 py-12 sm:px-8 lg:px-10"
       >
-        <div className="w-full max-w-90.5">
-          {/* Replace with the official company logo */}
-          <div className="mb-9">
-            <div className="inline-flex items-center gap-1">
-              <span className="h-8 w-5 rounded-l-full bg-[#e60023]" />
-              <span className="bg-[#f5c321] px-1 text-[32px] font-black leading-none tracking-[-2px] text-black">
-                RARE
-              </span>
-              <span className="text-3xl font-light text-black">
-                ▷
-              </span>
-            </div>
-            <p className="ml-18.5 mt-0.5 text-[8px] font-medium tracking-tight">
-              RIFATH ASSOCIATES LLP
+        <div className="w-full max-w-95">
+
+          {/* Logo and heading */}
+          <div className="mb-5 flex flex-col items-center text-center">
+
+            {/* RARE Logo */}
+            <img
+              src={rareLogo}
+              alt="RARE - Rifath Associates LLP"
+              className="mb-2 h-auto w-44 object-contain sm:w-48"
+            />
+
+            {/* Heading */}
+            <h1 className="text-[28px] font-bold tracking-tight text-[#211e1a] sm:text-[30px]">
+              Welcome Back
+            </h1>
+
+            {/* Subtitle */}
+            <p className=" text-sm leading-6 text-[#8a8175]">
+              Sign in to your RARE account
             </p>
+
           </div>
 
-         
-
+          {/* Login Form */}
           <form
             onSubmit={handleSubmit(onSubmit)}
             noValidate
-            className="space-y-4"
+            className="flex flex-col gap-5"
           >
-            <div>
+
+            {/* Phone Number */}
+            <div className="space-y-2">
               <label
                 htmlFor="phone"
-                className="mb-1.5 block text-sm font-medium text-[#8a8175]"
+                className="block text-sm font-medium text-[#665e53]"
               >
                 Phone Number
               </label>
@@ -162,24 +175,25 @@ export default function Login() {
                   errors.phone ? "phone-error" : undefined
                 }
                 {...register("phone")}
-                className="h-11 w-full rounded-xl border border-[#e4dccd] bg-[#fffdfa] px-4 text-[15px] text-[#29251f] outline-none transition placeholder:text-[#b0a99f] focus:border-[#292620] focus:ring-2 focus:ring-[#292620]/15 aria-invalid:border-red-600"
+                className="h-12 w-full rounded-xl border border-[#e4dccd] bg-[#fffdfa] px-4 text-[15px] text-[#29251f] outline-none transition-colors placeholder:text-[#b0a99f] focus:border-[#292620] focus:ring-2 focus:ring-[#292620]/15 aria-invalid:border-red-600"
               />
 
               {errors.phone && (
                 <p
                   id="phone-error"
                   role="alert"
-                  className="mt-1 text-xs text-red-700"
+                  className="text-xs text-red-700"
                 >
                   {errors.phone.message}
                 </p>
               )}
             </div>
 
-            <div>
+            {/* Password */}
+            <div className="space-y-2">
               <label
                 htmlFor="password"
-                className="mb-1.5 block text-sm font-medium text-[#8a8175]"
+                className="block text-sm font-medium text-[#665e53]"
               >
                 Password
               </label>
@@ -195,9 +209,10 @@ export default function Login() {
                     errors.password ? "password-error" : undefined
                   }
                   {...register("password")}
-                  className="h-11 w-full rounded-xl border border-[#e4dccd] bg-[#fffdfa] px-4 pr-12 text-[15px] text-[#29251f] outline-none transition placeholder:text-[#b0a99f] focus:border-[#292620] focus:ring-2 focus:ring-[#292620]/15 aria-invalid:border-red-600"
+                  className="h-12 w-full rounded-xl border border-[#e4dccd] bg-[#fffdfa] px-4 pr-12 text-[15px] text-[#29251f] outline-none transition-colors placeholder:text-[#b0a99f] focus:border-[#292620] focus:ring-2 focus:ring-[#292620]/15 aria-invalid:border-red-600"
                 />
 
+                {/* Show / Hide Password */}
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -205,12 +220,12 @@ export default function Login() {
                     showPassword ? "Hide password" : "Show password"
                   }
                   aria-pressed={showPassword}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-[#8a8175] hover:text-[#292620] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#292620]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#8a8175] transition hover:text-[#292620] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#292620]"
                 >
                   {showPassword ? (
-                    <EyeOff size={19} />
+                    <EyeOff size={20} />
                   ) : (
-                    <Eye size={19} />
+                    <Eye size={20} />
                   )}
                 </button>
               </div>
@@ -219,48 +234,54 @@ export default function Login() {
                 <p
                   id="password-error"
                   role="alert"
-                  className="mt-1 text-xs text-red-700"
+                  className="text-xs text-red-700"
                 >
                   {errors.password.message}
                 </p>
               )}
             </div>
 
+            {/* Server Error */}
             {serverError && (
               <div
                 role="alert"
-                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
               >
                 {serverError}
               </div>
             )}
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#211e1a] px-4 text-[15px] font-semibold text-white transition hover:bg-[#38332c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211e1a] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? (
-                  <>
-                    <LoaderCircle
-                      className="animate-spin"
-                      size={18}
-                    />
-                    Signing in...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
-              </button>
-            </div>
+            {/* Sign In Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 flex h-12  items-center justify-center gap-2 rounded-xl bg-[#211e1a] px-4 text-[15px] font-semibold text-white transition-colors hover:bg-[#38332c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211e1a] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? (
+                <>
+                  <LoaderCircle
+                    className="animate-spin"
+                    size={18}
+                  />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+
           </form>
 
-          <p className="mt-7 text-center text-xs text-[#9b9287] lg:hidden">
+          {/* Footer */}
+          <p className="mt-10 text-center text-xs text-[#9b9287]">
             RARE Project &amp; Site Management
           </p>
+
         </div>
       </section>
+
     </main>
+
+    </>
   );
 }

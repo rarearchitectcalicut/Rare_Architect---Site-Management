@@ -1,16 +1,27 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-
+import LoadingScreen from "../components/LoadingScreen";
+import { useState } from "react";
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    if(isLoggingOut) return;
+
+    setIsLoggingOut(true)
+
     await logout();
     navigate("/login", { replace: true });
   };
 
   return (
+    <>
+    {isLoggingOut && (
+        <LoadingScreen message="Signing out" />
+      )}
     <main className="min-h-screen bg-[#f1eadf] p-8">
       <div className="mx-auto max-w-5xl rounded-2xl bg-white p-8 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -47,5 +58,6 @@ export default function Dashboard() {
         </div>
       </div>
     </main>
+    </>
   );
 }
