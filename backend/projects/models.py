@@ -129,6 +129,7 @@ class Project(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"
         COMPLETED = "COMPLETED", "Completed"
+        MAINTENANCE = "MAINTENANCE", "Maintenance"
         ON_HOLD = "ON_HOLD", "On Hold"
         CANCELLED = "CANCELLED", "Cancelled"
 
@@ -230,6 +231,7 @@ class Project(models.Model):
                     status__in=[
                         "ACTIVE",
                         "COMPLETED",
+                        "MAINTENANCE",
                         "ON_HOLD",
                         "CANCELLED",
                     ]
