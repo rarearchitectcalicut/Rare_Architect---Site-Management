@@ -24,7 +24,6 @@ export const authApi = {
       "auth/change-password/",
       payload
     );
-
     return data;
   },
 };

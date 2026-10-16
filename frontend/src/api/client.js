@@ -40,14 +40,20 @@ export function getRefreshToken() {
   return refreshToken;
 }
 
+
+
+// REQUEST INTERCEPTORS
 api.interceptors.request.use((config) => {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
-
   return config;
 });
 
+
+
+
+// RESPONSE INTERCEPTORS
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
