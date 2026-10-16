@@ -66,16 +66,19 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     const refresh = getRefreshToken();
 
-    // Remove frontend access immediately.
-    clearSession();
-
-    if (refresh) {
-      try {
+    try {
+      // Call backend while the access token is still available
+      if (refresh) {
         await authApi.logout(refresh);
-      } catch {
-        // Backend logout should be monitored in production.
-        // Local credentials have already been cleared.
       }
+    } catch (error) {
+      console.error(
+        "Backend logout failed:",
+        error.response?.data?.detail || error.message
+      );
+    } finally {
+      // Always clear frontend authentication state
+      clearSession();
     }
   }, [clearSession]);
 
