@@ -120,7 +120,7 @@ export default function Login() {
         className="flex min-h-screen items-center justify-center px-6 py-12 sm:px-10"
         style={{ backgroundColor: "#f1eadf" }}
       >
-        <div className="w-full max-w-[362px]">
+        <div className="w-full max-w-90.5">
           {/* Replace with the official company logo */}
           <div className="mb-9">
             <div className="inline-flex items-center gap-1">
@@ -132,7 +132,7 @@ export default function Login() {
                 ▷
               </span>
             </div>
-            <p className="ml-[74px] mt-0.5 text-[8px] font-medium tracking-tight">
+            <p className="ml-18.5 mt-0.5 text-[8px] font-medium tracking-tight">
               RIFATH ASSOCIATES LLP
             </p>
           </div>
