@@ -20,6 +20,7 @@ from .views import (
     TimelineChangeRequestListView,
     TimelineChangeApproveView,
     TimelineChangeRejectView,
+    TaskResubmitView,
 )
 
 app_name = "tasks"
@@ -119,5 +120,10 @@ urlpatterns = [
         "timeline-change-requests/<uuid:id>/reject/",
         TimelineChangeRejectView.as_view(),
         name="timeline-change-reject",
+    ),
+    path(
+        "tasks/<uuid:id>/resubmit/",
+        TaskResubmitView.as_view(),
+        name="task-resubmit",
     ),
 ]
