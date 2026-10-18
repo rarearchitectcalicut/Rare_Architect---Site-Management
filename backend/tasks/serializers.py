@@ -1,6 +1,6 @@
 from django.utils import timezone
 from rest_framework import serializers
-from .models import Task
+from .models import Task,TaskChangeRequest
 
 
 # =====================================================
@@ -70,12 +70,18 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def validate(self, attrs):
-        start_date = attrs.get("start_date")
-        end_date = attrs.get("end_date")
+        start_date = attrs.get(
+            "start_date",
+            getattr(self.instance, "start_date", None),
+        )
+        end_date = attrs.get(
+            "end_date",
+            getattr(self.instance, "end_date", None),
+        )
 
         if start_date is not None and end_date is not None and start_date > end_date:
             raise serializers.ValidationError(
-                {"end_date": ("End date cannot be earlier " "than start date.")}
+                {"end_date": ("End date cannot be earlier than start date.")}
             )
 
         return attrs
@@ -339,3 +345,245 @@ class TaskHistorySerializer(serializers.ModelSerializer):
         )
 
         read_only_fields = fields
+
+
+# =====================================================
+# TASK COMPLETION SERIALIZER
+# =====================================================
+class TaskCompleteSerializer(serializers.Serializer):
+    comment = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        trim_whitespace=True,
+        max_length=1000,
+    )
+
+
+# =====================================================
+# TASK CANCELLATION SERIALIZER
+# =====================================================
+class TaskCancelSerializer(serializers.Serializer):
+    reason = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        trim_whitespace=True,
+        max_length=1000,
+    )
+
+    def validate_reason(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError("Cancellation reason is required.")
+
+        return value
+
+
+# =====================================================
+# TASK CHANGE REQUEST CREATE SERIALIZER
+# =====================================================
+class TaskChangeRequestCreateSerializer(serializers.Serializer):
+    """
+    Supervisor proposes changes to an approved task.
+
+    The task is NOT modified by this serializer.
+    """
+
+    new_values = serializers.DictField(
+        child=serializers.JSONField(),
+        allow_empty=False,
+    )
+
+    reason = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        max_length=2000,
+        trim_whitespace=True,
+    )
+
+    ALLOWED_EDIT_FIELDS = {
+        "title",
+        "description",
+        "worker_name",
+        "priority",
+        "start_date",
+    }
+
+    def validate_new_values(self, value):
+        unknown_fields = set(value) - self.ALLOWED_EDIT_FIELDS
+
+        if unknown_fields:
+            raise serializers.ValidationError(
+                "Unsupported task fields: " + ", ".join(sorted(unknown_fields))
+            )
+
+        task = self.context.get("task")
+
+        if task is None:
+            raise serializers.ValidationError("Task context is required.")
+
+        # Reuse field validation from the existing
+        # TaskCreateSerializer.
+        validator = TaskCreateSerializer(
+            instance=task,
+            data=value,
+            partial=True,
+        )
+
+        validator.is_valid(raise_exception=True)
+
+        cleaned_values = dict(validator.validated_data)
+
+        # JSONField needs JSON-compatible values.
+        # Convert validated dates to ISO strings.
+        for field in ("start_date",):
+            if field in cleaned_values:
+                date_value = cleaned_values[field]
+                cleaned_values[field] = (
+                    date_value.isoformat() if date_value is not None else None
+                )
+
+        if not cleaned_values:
+            raise serializers.ValidationError("At least one valid change is required.")
+
+        return cleaned_values
+
+    def validate_reason(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError("A reason is required.")
+
+        return value
+
+
+# =====================================================
+# TASK CHANGE REQUEST DETAIL SERIALIZER
+# =====================================================
+class TaskChangeRequestDetailSerializer(serializers.ModelSerializer):
+    task_title = serializers.CharField(
+        source="task.title",
+        read_only=True,
+    )
+
+    project_id = serializers.UUIDField(
+        source="task.project_id",
+        read_only=True,
+    )
+
+    requested_by_name = serializers.CharField(
+        source="requested_by.username",
+        read_only=True,
+    )
+
+    reviewed_by_name = serializers.CharField(
+        source="reviewed_by.username",
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = TaskChangeRequest
+
+        fields = (
+            "id",
+            "task",
+            "task_title",
+            "project_id",
+            "requested_by",
+            "requested_by_name",
+            "change_type",
+            "old_values",
+            "new_values",
+            "reason",
+            "status",
+            "reviewed_by",
+            "reviewed_by_name",
+            "reviewed_at",
+            "admin_comment",
+            "created_at",
+            "updated_at",
+        )
+
+        read_only_fields = fields
+
+
+# =====================================================
+# TASK CHANGE REQUEST REVIEW SERIALIZER
+# =====================================================
+class TaskChangeRequestReviewSerializer(serializers.Serializer):
+    admin_comment = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=2000,
+        trim_whitespace=True,
+    )
+
+
+# =====================================================
+# TIMELINE REORDER REQUEST SERIALIZER
+# =====================================================
+
+
+class TimelineReorderSerializer(serializers.Serializer):
+    """
+    Accepts the proposed order of approved tasks.
+
+    Task IDs must be unique.
+    Project membership and completeness are
+    checked in the service.
+    """
+
+    task_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        allow_empty=False,
+        min_length=1,
+    )
+
+    reason = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        max_length=2000,
+        trim_whitespace=True,
+    )
+
+    def validate_task_ids(self, value):
+        if len(value) != len(set(value)):
+            raise serializers.ValidationError("Duplicate task IDs are not allowed.")
+
+        return value
+
+    def validate_reason(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError("A reason for reordering is required.")
+
+        return value
+
+
+# =====================================================
+# TIMELINE CHANGE REQUEST DETAIL SERIALIZER
+# =====================================================
+
+
+class TimelineChangeRequestDetailSerializer(TaskChangeRequestDetailSerializer):
+    """
+    Reuses the existing change-request detail
+    serializer for ORDER_CHANGE requests.
+    """
+
+    pass
+
+
+# =====================================================
+# TIMELINE CHANGE REVIEW SERIALIZER
+# =====================================================
+
+
+class TimelineChangeReviewSerializer(TaskChangeRequestReviewSerializer):
+    """
+    Admin comment for order approval or rejection.
+    """
+
+    pass

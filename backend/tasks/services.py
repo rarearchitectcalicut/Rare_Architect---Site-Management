@@ -4,10 +4,10 @@ from rest_framework.exceptions import (
     ValidationError,
 )
 
-from projects.models import Project, ProjectSupervisor
+from projects.models import Project, ProjectSupervisor, TaskChangeRequest
 
-from .models import Task, TaskBatch, TaskHistory , Task
-
+from .models import Task, TaskBatch, TaskHistory, Task
+from .serializers import TaskCreateSerializer
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -216,3 +216,728 @@ def reject_task(*, task_id, admin_user, reason):
     )
 
     return task
+
+
+# =====================================================
+# COMPLETE TASK
+# =====================================================
+
+
+@transaction.atomic
+def complete_task(*, task_id, user, comment=""):
+    task = get_object_or_404(
+        Task.objects.select_related("project").select_for_update(),
+        pk=task_id,
+    )
+
+    # Only an assigned, active Supervisor can complete.
+    if (
+        not user.is_active
+        or user.role != "SUPERVISOR"
+        or user.is_staff
+        or not ProjectSupervisor.objects.filter(
+            project_id=task.project_id,
+            supervisor=user,
+        ).exists()
+    ):
+        raise PermissionDenied("You cannot complete this task.")
+
+    if task.approval_status != Task.ApprovalStatus.APPROVED:
+        raise ValidationError({"detail": "Only approved tasks can be completed."})
+
+    allowed_statuses = {
+        Task.WorkStatus.NOT_STARTED,
+        Task.WorkStatus.IN_PROGRESS,
+        Task.WorkStatus.DELAYED,
+    }
+
+    if task.work_status not in allowed_statuses:
+        raise ValidationError(
+            {"detail": "This task cannot be completed from its current status."}
+        )
+
+    task.work_status = Task.WorkStatus.COMPLETED
+    task.save(update_fields=["work_status", "updated_at"])
+
+    TaskHistory.objects.create(
+        task=task,
+        actor=user,
+        action=TaskHistory.Action.COMPLETED,
+        details={
+            "comment": comment,
+            "work_status": Task.WorkStatus.COMPLETED,
+        },
+    )
+
+    return task
+
+
+# =====================================================
+# CANCEL TASK
+# =====================================================
+
+
+@transaction.atomic
+def cancel_task(*, task_id, admin_user, reason):
+    if (
+        not admin_user.is_authenticated
+        or not admin_user.is_active
+        or admin_user.role != "ADMIN"
+        or not admin_user.is_staff
+    ):
+        raise PermissionDenied("Only Admin can cancel tasks.")
+
+    task = get_object_or_404(
+        Task.objects.select_related("project").select_for_update(),
+        pk=task_id,
+    )
+
+    if task.approval_status != Task.ApprovalStatus.APPROVED:
+        raise ValidationError({"detail": "Only approved tasks can be cancelled."})
+
+    if task.work_status in {
+        Task.WorkStatus.COMPLETED,
+        Task.WorkStatus.CANCELLED,
+    }:
+        raise ValidationError(
+            {"detail": "Completed or cancelled tasks cannot be cancelled again."}
+        )
+
+    task.work_status = Task.WorkStatus.CANCELLED
+    task.save(update_fields=["work_status", "updated_at"])
+
+    TaskHistory.objects.create(
+        task=task,
+        actor=admin_user,
+        action=TaskHistory.Action.CANCELLED,
+        details={
+            "reason": reason,
+            "work_status": Task.WorkStatus.CANCELLED,
+        },
+    )
+
+    return task
+
+
+# =====================================================
+# TASK CHANGE REQUEST HELPERS
+# =====================================================
+
+EDITABLE_TASK_FIELDS = {
+    "title",
+    "description",
+    "worker_name",
+    "priority",
+    "start_date",
+}
+
+
+def task_field_snapshot(task, fields):
+    """Return JSON-compatible values for selected fields."""
+    snapshot = {}
+
+    for field in fields:
+        value = getattr(task, field)
+
+        if field == "start_date" and value is not None:
+            value = value.isoformat()
+
+        snapshot[field] = value
+
+    return snapshot
+
+
+def validate_task_can_be_edited(task):
+    if task.approval_status != Task.ApprovalStatus.APPROVED:
+        raise ValidationError({"detail": "Only approved tasks can be edited."})
+
+    if task.work_status in {
+        Task.WorkStatus.COMPLETED,
+        Task.WorkStatus.CANCELLED,
+    }:
+        raise ValidationError(
+            {"detail": ("Completed or cancelled tasks " "cannot be edited.")}
+        )
+
+
+# =====================================================
+# CREATE TASK CHANGE REQUEST
+# =====================================================
+
+
+@transaction.atomic
+def create_task_change_request(
+    *,
+    task_id,
+    supervisor,
+    new_values,
+    reason,
+):
+    task = get_object_or_404(
+        Task.objects.select_for_update(),
+        pk=task_id,
+    )
+
+    validate_supervisor_assignment(task.project, supervisor)
+    validate_task_can_be_edited(task)
+
+    if not new_values or set(new_values) - EDITABLE_TASK_FIELDS:
+        raise ValidationError({"new_values": "Unsupported or empty task changes."})
+
+    # Validate using existing task field rules.
+    validator = TaskCreateSerializer(
+        instance=task,
+        data=new_values,
+        partial=True,
+    )
+    validator.is_valid(raise_exception=True)
+
+    cleaned = dict(validator.validated_data)
+
+    # Dates must be JSON-compatible.
+    if "start_date" in cleaned and cleaned["start_date"] is not None:
+        cleaned["start_date"] = cleaned["start_date"].isoformat()
+
+    old_values = task_field_snapshot(task, cleaned.keys())
+
+    # Do not create a request without actual changes.
+    changed_values = {
+        field: value for field, value in cleaned.items() if value != old_values[field]
+    }
+
+    if not changed_values:
+        raise ValidationError({"new_values": "No changes detected."})
+
+    if TaskChangeRequest.objects.filter(
+        task=task,
+        status=TaskChangeRequest.Status.PENDING,
+    ).exists():
+        raise ValidationError(
+            {"detail": ("This task already has a pending change request.")}
+        )
+
+    change_request = TaskChangeRequest.objects.create(
+        task=task,
+        requested_by=supervisor,
+        change_type=TaskChangeRequest.ChangeType.EDIT,
+        old_values={field: old_values[field] for field in changed_values},
+        new_values=changed_values,
+        reason=reason,
+        status=TaskChangeRequest.Status.PENDING,
+    )
+
+    TaskHistory.objects.create(
+        task=task,
+        actor=supervisor,
+        action=TaskHistory.Action.EDIT_REQUESTED,
+        details={
+            "change_request_id": str(change_request.id),
+            "old_values": change_request.old_values,
+            "new_values": change_request.new_values,
+            "reason": reason,
+        },
+    )
+
+    return change_request
+
+
+# =====================================================
+# APPROVE TASK CHANGE REQUEST
+# =====================================================
+@transaction.atomic
+def approve_task_change_request(
+    *,
+    change_request_id,
+    admin_user,
+    admin_comment="",
+):
+    if (
+        not admin_user.is_authenticated
+        or not admin_user.is_active
+        or admin_user.role != "ADMIN"
+        or not admin_user.is_staff
+    ):
+        raise PermissionDenied("Only Admin can approve changes.")
+
+    request_obj = get_object_or_404(
+        TaskChangeRequest,
+        pk=change_request_id,
+        change_type=TaskChangeRequest.ChangeType.EDIT,
+    )
+
+    # Lock the task first, consistently with creation.
+    task = Task.objects.select_for_update().get(pk=request_obj.task_id)
+
+    request_obj = TaskChangeRequest.objects.select_for_update().get(pk=request_obj.pk)
+
+    if request_obj.status != TaskChangeRequest.Status.PENDING:
+        raise ValidationError(
+            {"detail": "This change request has already been reviewed."}
+        )
+
+    validate_task_can_be_edited(task)
+
+    current_values = task_field_snapshot(
+        task,
+        request_obj.old_values.keys(),
+    )
+
+    if current_values != request_obj.old_values:
+        raise ValidationError(
+            {
+                "detail": (
+                    "Task details have changed since this request "
+                    "was submitted. Review the request again."
+                )
+            }
+        )
+
+    if not request_obj.new_values or set(request_obj.new_values) - EDITABLE_TASK_FIELDS:
+        raise ValidationError({"new_values": "Unsupported task changes."})
+
+    validator = TaskCreateSerializer(
+        instance=task,
+        data=request_obj.new_values,
+        partial=True,
+    )
+    validator.is_valid(raise_exception=True)
+
+    for field, value in validator.validated_data.items():
+        setattr(task, field, value)
+
+    changed_fields = list(validator.validated_data.keys())
+    task.save(update_fields=changed_fields + ["updated_at"])
+
+    request_obj.status = TaskChangeRequest.Status.APPROVED
+    request_obj.reviewed_by = admin_user
+    request_obj.reviewed_at = timezone.now()
+    request_obj.admin_comment = admin_comment
+    request_obj.save(
+        update_fields=[
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "admin_comment",
+            "updated_at",
+        ]
+    )
+
+    TaskHistory.objects.create(
+        task=task,
+        actor=admin_user,
+        action=TaskHistory.Action.EDIT_APPROVED,
+        details={
+            "change_request_id": str(request_obj.id),
+            "old_values": request_obj.old_values,
+            "new_values": request_obj.new_values,
+            "comment": admin_comment,
+        },
+    )
+
+    return request_obj
+
+
+# =====================================================
+# REJECT TASK CHANGE REQUEST
+# =====================================================
+@transaction.atomic
+def reject_task_change_request(
+    *,
+    change_request_id,
+    admin_user,
+    admin_comment,
+):
+    if (
+        not admin_user.is_authenticated
+        or not admin_user.is_active
+        or admin_user.role != "ADMIN"
+        or not admin_user.is_staff
+    ):
+        raise PermissionDenied("Only Admin can reject changes.")
+
+    request_obj = get_object_or_404(
+        TaskChangeRequest,
+        pk=change_request_id,
+        change_type=TaskChangeRequest.ChangeType.EDIT,
+    )
+
+    task = Task.objects.select_for_update().get(pk=request_obj.task_id)
+
+    request_obj = TaskChangeRequest.objects.select_for_update().get(pk=request_obj.pk)
+
+    if request_obj.status != TaskChangeRequest.Status.PENDING:
+        raise ValidationError(
+            {"detail": "This change request has already been reviewed."}
+        )
+
+    if not admin_comment.strip():
+        raise ValidationError({"admin_comment": "A rejection reason is required."})
+
+    request_obj.status = TaskChangeRequest.Status.REJECTED
+    request_obj.reviewed_by = admin_user
+    request_obj.reviewed_at = timezone.now()
+    request_obj.admin_comment = admin_comment
+    request_obj.save(
+        update_fields=[
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "admin_comment",
+            "updated_at",
+        ]
+    )
+
+    TaskHistory.objects.create(
+        task=task,
+        actor=admin_user,
+        action=TaskHistory.Action.EDIT_REJECTED,
+        details={
+            "change_request_id": str(request_obj.id),
+            "reason": admin_comment,
+        },
+    )
+
+    return request_obj
+
+
+# =====================================================
+# TIMELINE HELPERS
+# =====================================================
+
+
+def get_timeline_tasks(project):
+    """
+    All approved, non-cancelled tasks in a project.
+
+    We use a stable secondary ordering for tasks
+    that currently share the same display_order.
+    """
+    return list(
+        Task.objects.filter(
+            project=project,
+            approval_status=Task.ApprovalStatus.APPROVED,
+        )
+        .exclude(work_status=Task.WorkStatus.CANCELLED)
+        .order_by("display_order", "created_at", "id")
+    )
+
+
+def timeline_snapshot(tasks):
+    """
+    Store both task identity and current display_order
+    so stale reorder requests can be detected.
+    """
+    return [
+        {
+            "task_id": str(task.id),
+            "display_order": task.display_order,
+        }
+        for task in tasks
+    ]
+
+
+def validate_timeline_admin(user):
+    if not (
+        user.is_authenticated
+        and user.is_active
+        and user.role == "ADMIN"
+        and user.is_staff
+    ):
+        raise PermissionDenied("Only Admin can review timeline changes.")
+
+
+def get_locked_timeline_request(request_id):
+    """
+    Find the project, lock it, then lock the request.
+
+    All timeline write operations use project-first
+    locking to serialize changes within a project.
+    """
+    request_obj = get_object_or_404(
+        TaskChangeRequest.objects.filter(
+            change_type=TaskChangeRequest.ChangeType.ORDER_CHANGE,
+        ).select_related("task"),
+        pk=request_id,
+    )
+
+    project = Project.objects.select_for_update().get(pk=request_obj.task.project_id)
+
+    request_obj = TaskChangeRequest.objects.select_for_update().get(pk=request_obj.pk)
+
+    return project, request_obj
+
+
+# =====================================================
+# CREATE TIMELINE REORDER REQUEST
+# =====================================================
+
+
+@transaction.atomic
+def create_timeline_reorder_request(
+    *,
+    project,
+    supervisor,
+    task_ids,
+    reason,
+):
+    project = Project.objects.select_for_update().get(pk=project.pk)
+
+    validate_supervisor_assignment(project, supervisor)
+
+    tasks = get_timeline_tasks(project)
+
+    if len(tasks) < 2:
+        raise ValidationError(
+            {
+                "task_ids": (
+                    "At least two approved timeline tasks "
+                    "are required for reordering."
+                )
+            }
+        )
+
+    current_ids = [str(task.id) for task in tasks]
+    proposed_ids = [str(task_id) for task_id in task_ids]
+
+    if len(proposed_ids) != len(set(proposed_ids)):
+        raise ValidationError({"task_ids": "Duplicate task IDs are not allowed."})
+
+    if len(proposed_ids) != len(current_ids) or set(proposed_ids) != set(current_ids):
+        raise ValidationError(
+            {
+                "task_ids": (
+                    "Provide every approved, non-cancelled "
+                    "task in this project exactly once."
+                )
+            }
+        )
+
+    if proposed_ids == current_ids:
+        raise ValidationError({"task_ids": "The proposed order is unchanged."})
+
+    # One pending timeline reorder per project.
+    existing = TaskChangeRequest.objects.filter(
+        task__project=project,
+        change_type=TaskChangeRequest.ChangeType.ORDER_CHANGE,
+        status=TaskChangeRequest.Status.PENDING,
+    ).exists()
+
+    if existing:
+        raise ValidationError(
+            {
+                "detail": (
+                    "This project already has a pending " "timeline reorder request."
+                )
+            }
+        )
+
+    # TaskChangeRequest requires a task FK.
+    # Use the first task as an audit anchor, while
+    # storing the complete ordering in JSON.
+    anchor_task = tasks[0]
+
+    proposed_snapshot = [
+        {
+            "task_id": task_id,
+            "display_order": index,
+        }
+        for index, task_id in enumerate(
+            proposed_ids,
+            start=1,
+        )
+    ]
+
+    change_request = TaskChangeRequest.objects.create(
+        task=anchor_task,
+        requested_by=supervisor,
+        change_type=TaskChangeRequest.ChangeType.ORDER_CHANGE,
+        old_values={
+            "timeline": timeline_snapshot(tasks),
+        },
+        new_values={
+            "timeline": proposed_snapshot,
+        },
+        reason=reason,
+        status=TaskChangeRequest.Status.PENDING,
+    )
+
+    TaskHistory.objects.create(
+        task=anchor_task,
+        actor=supervisor,
+        action=TaskHistory.Action.ORDER_CHANGE_REQUESTED,
+        details={
+            "change_request_id": str(change_request.id),
+            "project_id": str(project.id),
+            "old_order": current_ids,
+            "proposed_order": proposed_ids,
+        },
+    )
+
+    return change_request
+
+
+# =====================================================
+# APPROVE TIMELINE REORDER REQUEST
+# =====================================================
+
+
+@transaction.atomic
+def approve_timeline_reorder_request(
+    *,
+    request_id,
+    admin_user,
+    admin_comment="",
+):
+    validate_timeline_admin(admin_user)
+
+    project, change_request = get_locked_timeline_request(request_id)
+
+    if change_request.status != TaskChangeRequest.Status.PENDING:
+        raise ValidationError({"detail": "This timeline request is already reviewed."})
+
+    # Lock all timeline tasks before checking/applying.
+    tasks = list(
+        Task.objects.select_for_update()
+        .filter(
+            project=project,
+            approval_status=Task.ApprovalStatus.APPROVED,
+        )
+        .exclude(work_status=Task.WorkStatus.CANCELLED)
+        .order_by("display_order", "created_at", "id")
+    )
+
+    current_snapshot = timeline_snapshot(tasks)
+
+    if current_snapshot != change_request.old_values.get("timeline"):
+        raise ValidationError(
+            {
+                "detail": (
+                    "The project timeline has changed since "
+                    "this request was submitted. "
+                    "Please create a new reorder request."
+                )
+            }
+        )
+
+    proposed_snapshot = change_request.new_values.get("timeline")
+
+    if not isinstance(proposed_snapshot, list):
+        raise ValidationError({"detail": "Invalid proposed timeline data."})
+
+    current_ids = {str(task.id) for task in tasks}
+
+    proposed_ids = []
+
+    for index, item in enumerate(proposed_snapshot, start=1):
+        if not isinstance(item, dict):
+            raise ValidationError({"detail": "Invalid proposed timeline entry."})
+
+        if set(item) != {"task_id", "display_order"}:
+            raise ValidationError({"detail": "Invalid timeline entry fields."})
+
+        if type(item["display_order"]) is not int or (item["display_order"] != index):
+            raise ValidationError({"detail": "Invalid proposed display order."})
+
+        proposed_ids.append(str(item["task_id"]))
+
+    if (
+        len(proposed_ids) != len(current_ids)
+        or len(proposed_ids) != len(set(proposed_ids))
+        or set(proposed_ids) != current_ids
+    ):
+        raise ValidationError(
+            {
+                "detail": (
+                    "The proposal must contain every " "timeline task exactly once."
+                )
+            }
+        )
+
+    tasks_by_id = {str(task.id): task for task in tasks}
+
+    # Update each task inside the same transaction.
+    for index, task_id in enumerate(proposed_ids, start=1):
+        task = tasks_by_id[task_id]
+        task.display_order = index
+        task.save(update_fields=["display_order", "updated_at"])
+
+    change_request.status = TaskChangeRequest.Status.APPROVED
+    change_request.reviewed_by = admin_user
+    change_request.reviewed_at = timezone.now()
+    change_request.admin_comment = admin_comment
+
+    change_request.save(
+        update_fields=[
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "admin_comment",
+            "updated_at",
+        ]
+    )
+
+    TaskHistory.objects.create(
+        task=change_request.task,
+        actor=admin_user,
+        action=TaskHistory.Action.ORDER_CHANGE_APPROVED,
+        details={
+            "change_request_id": str(change_request.id),
+            "project_id": str(project.id),
+            "old_values": change_request.old_values,
+            "new_values": change_request.new_values,
+            "comment": admin_comment,
+        },
+    )
+
+    return change_request
+
+
+# =====================================================
+# REJECT TIMELINE REORDER REQUEST
+# =====================================================
+
+
+@transaction.atomic
+def reject_timeline_reorder_request(
+    *,
+    request_id,
+    admin_user,
+    admin_comment,
+):
+    validate_timeline_admin(admin_user)
+
+    project, change_request = get_locked_timeline_request(request_id)
+
+    if change_request.status != TaskChangeRequest.Status.PENDING:
+        raise ValidationError({"detail": "This timeline request is already reviewed."})
+
+    if not admin_comment or not admin_comment.strip():
+        raise ValidationError({"admin_comment": "A rejection reason is required."})
+
+    change_request.status = TaskChangeRequest.Status.REJECTED
+    change_request.reviewed_by = admin_user
+    change_request.reviewed_at = timezone.now()
+    change_request.admin_comment = admin_comment
+
+    change_request.save(
+        update_fields=[
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "admin_comment",
+            "updated_at",
+        ]
+    )
+
+    TaskHistory.objects.create(
+        task=change_request.task,
+        actor=admin_user,
+        action=TaskHistory.Action.ORDER_CHANGE_REJECTED,
+        details={
+            "change_request_id": str(change_request.id),
+            "project_id": str(project.id),
+            "reason": admin_comment,
+        },
+    )
+
+    return change_request
