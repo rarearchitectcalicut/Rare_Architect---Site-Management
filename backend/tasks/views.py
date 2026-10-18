@@ -29,6 +29,8 @@ from .serializers import (
     TimelineReorderSerializer,
     TimelineChangeRequestDetailSerializer,
     TimelineChangeReviewSerializer,
+    TaskResubmissionSerializer,
+    TaskDetailSerializer,
 )
 from .services import (
     create_task,
@@ -44,6 +46,7 @@ from .services import (
     create_timeline_reorder_request,
     approve_timeline_reorder_request,
     reject_timeline_reorder_request,
+    resubmit_task,
 )
 
 # =====================================================
@@ -845,6 +848,60 @@ class TimelineChangeRejectView(generics.GenericAPIView):
                 "message": "Timeline reorder rejected.",
                 "change_request": TimelineChangeRequestDetailSerializer(
                     change_request,
+                    context={"request": request},
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+# =====================================================
+# RESUBMIT REJECTED TASK VIEW
+# =====================================================
+class TaskResubmitView(generics.GenericAPIView):
+    """
+    Allows the original Supervisor to correct
+    and resubmit a rejected task.
+
+    The service verifies ownership and resets
+    the task to PENDING Admin approval.
+    """
+
+    serializer_class = TaskResubmissionSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+        IsSupervisorRole,
+    ]
+
+    def post(self, request, id):
+        # Check whether Supervisor can access the task.
+        task = get_accessible_task(
+            request.user,
+            id,
+        )
+
+        # Validate input against existing task values.
+        serializer = self.get_serializer(
+            instance=task,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+
+        # Service revalidates under database lock.
+        updated_task = resubmit_task(
+            task_id=task.id,
+            supervisor=request.user,
+            validated_data=serializer.validated_data,
+        )
+
+        return Response(
+            {
+                "message": ("Task resubmitted for Admin approval."),
+                "task": TaskDetailSerializer(
+                    updated_task,
                     context={"request": request},
                 ).data,
             },

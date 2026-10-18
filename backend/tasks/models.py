@@ -391,6 +391,7 @@ class TaskHistory(models.Model):
 
     class Action(models.TextChoices):
         CREATED = "CREATED", "Created"
+        RESUBMITTED = "RESUBMITTED", "Resubmitted"
         APPROVED = "APPROVED", "Approved"
         REJECTED = "REJECTED", "Rejected"
 
@@ -473,6 +474,7 @@ class TaskHistory(models.Model):
                 condition=Q(
                     action__in=[
                         "CREATED",
+                        "RESUBMITTED",
                         "APPROVED",
                         "REJECTED",
                         "EDIT_REQUESTED",

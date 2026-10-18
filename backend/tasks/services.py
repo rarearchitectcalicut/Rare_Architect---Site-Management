@@ -4,10 +4,10 @@ from rest_framework.exceptions import (
     ValidationError,
 )
 
-from projects.models import Project, ProjectSupervisor, TaskChangeRequest
+from projects.models import Project, ProjectSupervisor
 
-from .models import Task, TaskBatch, TaskHistory, Task
-from .serializers import TaskCreateSerializer
+from .models import Task, TaskBatch, TaskHistory, Task, TaskChangeRequest
+from .serializers import TaskCreateSerializer, TaskResubmissionSerializer
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -941,3 +941,134 @@ def reject_timeline_reorder_request(
     )
 
     return change_request
+
+
+# =====================================================
+# RESUBMIT REJECTED TASK
+# =====================================================
+@transaction.atomic
+def resubmit_task(*, task_id, supervisor, validated_data):
+    """
+    Correct and resubmit a rejected task.
+
+    Rules:
+    - Only the original creator can resubmit.
+    - Creator must still be an assigned Supervisor.
+    - Task must be REJECTED.
+    - Project must be ACTIVE or MAINTENANCE.
+    - At least one task field must actually change.
+    - Task UUID and batch remain unchanged.
+    - Approval status returns to PENDING.
+    - A RESUBMITTED history entry is created.
+    """
+
+    # Lock project first, consistent with other
+    # project-level write operations.
+    existing_task = get_object_or_404(
+        Task.objects.only("id", "project_id"),
+        pk=task_id,
+    )
+
+    from projects.models import Project
+
+    project = Project.objects.select_for_update().get(pk=existing_task.project_id)
+
+    # Lock task against simultaneous reviews/updates.
+    task = get_object_or_404(
+        Task.objects.select_for_update(),
+        pk=task_id,
+        project=project,
+    )
+
+    # Check original creator.
+    if task.created_by_id != supervisor.id:
+        raise PermissionDenied("Only the original task creator can resubmit.")
+
+    # Check current supervisor assignment.
+    validate_supervisor_assignment(project, supervisor)
+
+    # Check project status.
+    validate_project_allows_tasks(project)
+
+    # Check approval state.
+    if task.approval_status != Task.ApprovalStatus.REJECTED:
+        raise ValidationError({"detail": "Only rejected tasks can be resubmitted."})
+
+    if task.work_status != Task.WorkStatus.NOT_STARTED:
+        raise ValidationError(
+            {
+                "detail": (
+                    "Rejected tasks must be in NOT_STARTED "
+                    "status before resubmission."
+                )
+            }
+        )
+
+    # Revalidate input against the locked task.
+    # This also ensures the correction is not empty.
+    serializer = TaskResubmissionSerializer(
+        instance=task,
+        data=validated_data,
+        partial=True,
+    )
+    serializer.is_valid(raise_exception=True)
+
+    cleaned_data = dict(serializer.validated_data)
+
+    # The note belongs in history, not the Task model.
+    resubmission_note = cleaned_data.pop("resubmission_note")
+
+    # Record old values for the audit trail.
+    old_values = {}
+
+    for field in cleaned_data:
+        value = getattr(task, field)
+
+        if field in {"start_date", "end_date"}:
+            value = value.isoformat() if value else None
+
+        old_values[field] = value
+
+    # Apply corrected fields.
+    for field, value in cleaned_data.items():
+        setattr(task, field, value)
+
+    # Restart the approval cycle.
+    task.approval_status = Task.ApprovalStatus.PENDING
+    task.approved_by = None
+    task.approved_at = None
+
+    task.save(
+        update_fields=[
+            *cleaned_data.keys(),
+            "approval_status",
+            "approved_by",
+            "approved_at",
+            "updated_at",
+        ]
+    )
+
+    # JSON-compatible new values for history.
+    new_values = {}
+
+    for field in cleaned_data:
+        value = getattr(task, field)
+
+        if field in {"start_date", "end_date"}:
+            value = value.isoformat() if value else None
+
+        new_values[field] = value
+
+    TaskHistory.objects.create(
+        task=task,
+        actor=supervisor,
+        action=TaskHistory.Action.RESUBMITTED,
+        details={
+            "resubmission_note": resubmission_note,
+            "old_values": old_values,
+            "new_values": new_values,
+            "approval_status": "PENDING",
+        },
+    )
+
+    return task

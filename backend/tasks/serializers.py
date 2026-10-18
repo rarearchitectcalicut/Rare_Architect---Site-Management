@@ -521,6 +521,112 @@ class TaskChangeRequestReviewSerializer(serializers.Serializer):
 
 
 # =====================================================
+# TASK RESUBMISSION SERIALIZER
+# =====================================================
+
+
+class TaskResubmissionSerializer(TaskCreateSerializer):
+    """
+    Validate corrections to a rejected task.
+
+    The existing Task instance must be supplied
+    through serializer(instance=task, data=...).
+
+    The service will handle:
+    - checking rejection status
+    - checking task ownership
+    - checking supervisor assignment
+    - resetting approval status to PENDING
+    - recording the RESUBMITTED history event
+    """
+
+    resubmission_note = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        max_length=2000,
+        trim_whitespace=True,
+        write_only=True,
+    )
+
+    class Meta(TaskCreateSerializer.Meta):
+        fields = (
+            "title",
+            "description",
+            "worker_name",
+            "priority",
+            "start_date",
+            "end_date",
+            "display_order",
+            "resubmission_note",
+        )
+
+        extra_kwargs = {
+            **TaskCreateSerializer.Meta.extra_kwargs,
+            "title": {
+                "required": False,
+                "allow_blank": False,
+            },
+        }
+
+    def validate_resubmission_note(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Explain what was corrected before resubmitting."
+            )
+
+        return value
+
+    def validate(self, attrs):
+        # Reuse the TaskCreateSerializer's date checks,
+        # including comparison with existing task dates.
+        attrs = super().validate(attrs)
+
+        corrected_fields = {
+            "title",
+            "description",
+            "worker_name",
+            "priority",
+            "start_date",
+            "end_date",
+            "display_order",
+        }
+
+        if not corrected_fields.intersection(attrs):
+            raise serializers.ValidationError(
+                {
+                    "detail": (
+                        "Provide at least one task field "
+                        "to correct before resubmitting."
+                    )
+                }
+            )
+
+        task = self.instance
+
+        if task is not None:
+            has_actual_change = any(
+                getattr(task, field) != attrs[field]
+                for field in corrected_fields.intersection(attrs)
+            )
+
+            if not has_actual_change:
+                raise serializers.ValidationError(
+                    {
+                        "detail": (
+                            "No actual changes detected. "
+                            "Modify at least one task field."
+                        )
+                    }
+                )
+
+        # The note is metadata for the resubmission
+        # history event, not a Task model field.
+        return attrs
+
+
+# =====================================================
 # TIMELINE REORDER REQUEST SERIALIZER
 # =====================================================
 
