@@ -8,6 +8,18 @@ from .views import (
     TaskRejectView,
     TaskDetailView,
     TaskHistoryView,
+    TaskCompleteView,
+    TaskCancelView,
+    TaskChangeRequestCreateView,
+    TaskChangeRequestListView,
+    TaskChangeRequestDetailView,
+    TaskChangeRequestApproveView,
+    TaskChangeRequestRejectView,
+    ProjectTimelineView,
+    TimelineReorderView,
+    TimelineChangeRequestListView,
+    TimelineChangeApproveView,
+    TimelineChangeRejectView,
 )
 
 app_name = "tasks"
@@ -47,5 +59,65 @@ urlpatterns = [
         "tasks/<uuid:id>/history/",
         TaskHistoryView.as_view(),
         name="task-history",
+    ),
+    path(
+        "tasks/<uuid:id>/complete/",
+        TaskCompleteView.as_view(),
+        name="task-complete",
+    ),
+    path(
+        "tasks/<uuid:id>/cancel/",
+        TaskCancelView.as_view(),
+        name="task-cancel",
+    ),
+    path(
+        "tasks/<uuid:id>/change-requests/",
+        TaskChangeRequestCreateView.as_view(),
+        name="task-change-request-create",
+    ),
+    path(
+        "task-change-requests/",
+        TaskChangeRequestListView.as_view(),
+        name="task-change-request-list",
+    ),
+    path(
+        "task-change-requests/<uuid:id>/",
+        TaskChangeRequestDetailView.as_view(),
+        name="task-change-request-detail",
+    ),
+    path(
+        "task-change-requests/<uuid:id>/approve/",
+        TaskChangeRequestApproveView.as_view(),
+        name="task-change-request-approve",
+    ),
+    path(
+        "task-change-requests/<uuid:id>/reject/",
+        TaskChangeRequestRejectView.as_view(),
+        name="task-change-request-reject",
+    ),
+    path(
+        "projects/<uuid:project_id>/timeline/",
+        ProjectTimelineView.as_view(),
+        name="project-timeline",
+    ),
+    path(
+        "projects/<uuid:project_id>/timeline/reorder/",
+        TimelineReorderView.as_view(),
+        name="timeline-reorder",
+    ),
+    path(
+        "timeline-change-requests/",
+        TimelineChangeRequestListView.as_view(),
+        name="timeline-change-request-list",
+    ),
+    path(
+        "timeline-change-requests/<uuid:id>/approve/",
+        TimelineChangeApproveView.as_view(),
+        name="timeline-change-approve",
+    ),
+    path(
+        "timeline-change-requests/<uuid:id>/reject/",
+        TimelineChangeRejectView.as_view(),
+        name="timeline-change-reject",
     ),
 ]

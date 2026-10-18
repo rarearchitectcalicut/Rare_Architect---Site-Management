@@ -9,7 +9,7 @@ from projects.pagination import ProjectPagination
 
 from users.permissions import MustChangePasswordPermission,IsAdminRole
 
-from .models import Task,TaskHistory
+from .models import Task,TaskHistory,TaskChangeRequest
 from .permissions import IsSupervisorRole
 from .serializers import (
     TaskCreateSerializer,
@@ -20,13 +20,30 @@ from .serializers import (
     TaskRejectionSerializer,
     TaskApprovalListSerializer,
     TaskDetailSerializer,
-    TaskHistorySerializer
+    TaskHistorySerializer,
+    TaskCancelSerializer,
+    TaskCompleteSerializer,
+    TaskChangeRequestCreateSerializer,
+    TaskChangeRequestDetailSerializer,
+    TaskChangeRequestReviewSerializer,
+    TimelineReorderSerializer,
+    TimelineChangeRequestDetailSerializer,
+    TimelineChangeReviewSerializer,
 )
 from .services import (
     create_task,
     create_bulk_tasks,
     approve_task,
     reject_task,
+    cancel_task,
+    complete_task,
+    create_task_change_request,
+    approve_task_change_request,
+    reject_task_change_request,
+    get_timeline_tasks,
+    create_timeline_reorder_request,
+    approve_timeline_reorder_request,
+    reject_timeline_reorder_request,
 )
 
 # =====================================================
@@ -377,4 +394,459 @@ class TaskHistoryView(generics.ListAPIView):
             TaskHistory.objects.filter(task=task)
             .select_related("actor")
             .order_by("-created_at", "-id")
+        )
+
+
+# =====================================================
+# COMPLETE TASK VIEW
+# =====================================================
+
+
+class TaskCompleteView(generics.GenericAPIView):
+    serializer_class = TaskCompleteSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+        IsSupervisorRole,
+    ]
+
+    def post(self, request, id):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        task = complete_task(
+            task_id=id,
+            user=request.user,
+            comment=serializer.validated_data.get("comment", ""),
+        )
+
+        return Response(
+            {
+                "message": "Task completed successfully.",
+                "task": TaskDetailSerializer(
+                    task,
+                    context={"request": request},
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+# =====================================================
+# CANCEL TASK VIEW
+# =====================================================
+
+
+class TaskCancelView(generics.GenericAPIView):
+    serializer_class = TaskCancelSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+        IsAdminRole,
+    ]
+
+    def post(self, request, id):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        task = cancel_task(
+            task_id=id,
+            admin_user=request.user,
+            reason=serializer.validated_data["reason"],
+        )
+
+        return Response(
+            {
+                "message": "Task cancelled successfully.",
+                "task": TaskDetailSerializer(
+                    task,
+                    context={"request": request},
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+# =====================================================
+# CREATE TASK CHANGE REQUEST
+# =====================================================
+
+class TaskChangeRequestCreateView(generics.GenericAPIView):
+    serializer_class = TaskChangeRequestCreateSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+        IsSupervisorRole,
+    ]
+
+    def post(self, request, id):
+        task = get_accessible_task(request.user, id)
+
+        serializer = self.get_serializer(
+            data=request.data,
+            context={
+                "request": request,
+                "task": task,
+            },
+        )
+        serializer.is_valid(raise_exception=True)
+
+        change_request = create_task_change_request(
+            task_id=task.id,
+            supervisor=request.user,
+            new_values=serializer.validated_data["new_values"],
+            reason=serializer.validated_data["reason"],
+        )
+
+        return Response(
+            TaskChangeRequestDetailSerializer(
+                change_request,
+                context={"request": request},
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+# =====================================================
+# CHANGE REQUEST ACCESS HELPER
+# =====================================================
+
+def accessible_change_requests(user):
+    queryset = TaskChangeRequest.objects.select_related(
+        "task",
+        "requested_by",
+        "reviewed_by",
+    )
+
+    if user.role == "ADMIN" and user.is_staff and user.is_active:
+        return queryset
+
+    if user.role == "SUPERVISOR" and user.is_active:
+        return queryset.filter(
+            task__project__supervisor_assignments__supervisor=user
+        ).distinct()
+
+    return queryset.none()
+
+
+# =====================================================
+# LIST CHANGE REQUESTS
+# =====================================================
+
+class TaskChangeRequestListView(generics.ListAPIView):
+    serializer_class = TaskChangeRequestDetailSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+    ]
+
+    pagination_class = ProjectPagination
+
+    def get_queryset(self):
+        queryset = accessible_change_requests(
+            self.request.user
+        )
+
+        # Ordinary task edits only.
+        queryset = queryset.filter(
+            change_type=TaskChangeRequest.ChangeType.EDIT
+        )
+
+        requested_status = self.request.query_params.get("status")
+
+        if requested_status:
+            if requested_status not in (
+                TaskChangeRequest.Status.values
+            ):
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({
+                    "status": "Invalid change request status."
+                })
+
+            queryset = queryset.filter(status=requested_status)
+
+        return queryset.order_by("-created_at", "-id")
+
+
+# =====================================================
+# CHANGE REQUEST DETAILS
+# =====================================================
+
+class TaskChangeRequestDetailView(generics.RetrieveAPIView):
+    serializer_class = TaskChangeRequestDetailSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+    ]
+
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return accessible_change_requests(
+            self.request.user
+        )
+
+
+# =====================================================
+# APPROVE CHANGE REQUEST
+# =====================================================
+
+class TaskChangeRequestApproveView(generics.GenericAPIView):
+    serializer_class = TaskChangeRequestReviewSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+        IsAdminRole,
+    ]
+
+    def post(self, request, id):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        change_request = approve_task_change_request(
+            change_request_id=id,
+            admin_user=request.user,
+            admin_comment=serializer.validated_data.get(
+                "admin_comment", ""
+            ),
+        )
+
+        return Response(
+            {
+                "message": "Task changes approved successfully.",
+                "change_request": TaskChangeRequestDetailSerializer(
+                    change_request,
+                    context={"request": request},
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+# =====================================================
+# REJECT CHANGE REQUEST
+# =====================================================
+
+class TaskChangeRequestRejectView(generics.GenericAPIView):
+    serializer_class = TaskChangeRequestReviewSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+        IsAdminRole,
+    ]
+
+    def post(self, request, id):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        change_request = reject_task_change_request(
+            change_request_id=id,
+            admin_user=request.user,
+            admin_comment=serializer.validated_data.get(
+                "admin_comment", ""
+            ),
+        )
+
+        return Response(
+            {
+                "message": "Task changes rejected successfully.",
+                "change_request": TaskChangeRequestDetailSerializer(
+                    change_request,
+                    context={"request": request},
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+# =====================================================
+# PROJECT TIMELINE
+# =====================================================
+
+
+class ProjectTimelineView(generics.GenericAPIView):
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+    ]
+
+    def get(self, request, project_id):
+        project = get_accessible_project(
+            request.user,
+            project_id,
+        )
+
+        tasks = get_timeline_tasks(project)
+
+        return Response(
+            {
+                "project_id": str(project.id),
+                "project_name": project.name,
+                "task_count": len(tasks),
+                "tasks": TaskListSerializer(
+                    tasks,
+                    many=True,
+                    context={"request": request},
+                ).data,
+            }
+        )
+
+
+# =====================================================
+# REQUEST TIMELINE REORDER
+# =====================================================
+
+
+class TimelineReorderView(generics.GenericAPIView):
+    serializer_class = TimelineReorderSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+        IsSupervisorRole,
+    ]
+
+    def post(self, request, project_id):
+        project = get_accessible_project(
+            request.user,
+            project_id,
+        )
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        change_request = create_timeline_reorder_request(
+            project=project,
+            supervisor=request.user,
+            task_ids=serializer.validated_data["task_ids"],
+            reason=serializer.validated_data["reason"],
+        )
+
+        return Response(
+            {
+                "message": "Timeline reorder submitted for approval.",
+                "change_request": TimelineChangeRequestDetailSerializer(
+                    change_request,
+                    context={"request": request},
+                ).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+# =====================================================
+# LIST TIMELINE CHANGE REQUESTS
+# =====================================================
+
+
+class TimelineChangeRequestListView(generics.ListAPIView):
+    serializer_class = TimelineChangeRequestDetailSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+    ]
+
+    pagination_class = ProjectPagination
+
+    def get_queryset(self):
+        queryset = accessible_change_requests(self.request.user).filter(
+            change_type=TaskChangeRequest.ChangeType.ORDER_CHANGE
+        )
+
+        requested_status = self.request.query_params.get("status")
+
+        if requested_status:
+            if requested_status not in TaskChangeRequest.Status.values:
+                from rest_framework.exceptions import ValidationError
+
+                raise ValidationError({"status": "Invalid timeline request status."})
+
+            queryset = queryset.filter(status=requested_status)
+
+        return queryset.order_by("-created_at", "-id")
+
+
+# =====================================================
+# APPROVE TIMELINE REORDER
+# =====================================================
+
+
+class TimelineChangeApproveView(generics.GenericAPIView):
+    serializer_class = TimelineChangeReviewSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+        IsAdminRole,
+    ]
+
+    def post(self, request, id):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        change_request = approve_timeline_reorder_request(
+            request_id=id,
+            admin_user=request.user,
+            admin_comment=serializer.validated_data.get(
+                "admin_comment",
+                "",
+            ),
+        )
+
+        return Response(
+            {
+                "message": "Timeline order approved successfully.",
+                "change_request": TimelineChangeRequestDetailSerializer(
+                    change_request,
+                    context={"request": request},
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+# =====================================================
+# REJECT TIMELINE REORDER
+# =====================================================
+
+
+class TimelineChangeRejectView(generics.GenericAPIView):
+    serializer_class = TimelineChangeReviewSerializer
+
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+        IsAdminRole,
+    ]
+
+    def post(self, request, id):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        change_request = reject_timeline_reorder_request(
+            request_id=id,
+            admin_user=request.user,
+            admin_comment=serializer.validated_data.get(
+                "admin_comment",
+                "",
+            ),
+        )
+
+        return Response(
+            {
+                "message": "Timeline reorder rejected.",
+                "change_request": TimelineChangeRequestDetailSerializer(
+                    change_request,
+                    context={"request": request},
+                ).data,
+            },
+            status=status.HTTP_200_OK,
         )
