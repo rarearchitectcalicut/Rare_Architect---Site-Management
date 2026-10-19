@@ -26,6 +26,10 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             "start_date",
             "end_date",
             "display_order",
+            "measurement_method",
+            "planned_quantity",
+            "measurement_unit",
+            "completion_criteria",
         )
 
         extra_kwargs = {
@@ -68,21 +72,92 @@ class TaskCreateSerializer(serializers.ModelSerializer):
 
     def validate_worker_name(self, value):
         return value.strip()
-
+    
+    
+    
+    
     def validate(self, attrs):
+    
         start_date = attrs.get(
             "start_date",
             getattr(self.instance, "start_date", None),
         )
+
         end_date = attrs.get(
             "end_date",
             getattr(self.instance, "end_date", None),
         )
 
-        if start_date is not None and end_date is not None and start_date > end_date:
-            raise serializers.ValidationError(
-                {"end_date": ("End date cannot be earlier than start date.")}
-            )
+        if (
+            start_date is not None
+            and end_date is not None
+            and start_date > end_date
+        ):
+            raise serializers.ValidationError({
+                "end_date": (
+                    "End date cannot be earlier "
+                    "than start date."
+                )
+            })
+
+        # -----------------------------------------
+        # Progress measurement validation
+        # -----------------------------------------
+
+        method = attrs.get(
+            "measurement_method",
+            getattr(
+                self.instance,
+                "measurement_method",
+                Task.MeasurementMethod.COMPLETION_ONLY,
+            ),
+        )
+
+        quantity = attrs.get(
+            "planned_quantity",
+            getattr(self.instance, "planned_quantity", None),
+        )
+
+        unit = attrs.get(
+            "measurement_unit",
+            getattr(self.instance, "measurement_unit", None),
+        )
+
+        if method == Task.MeasurementMethod.QUANTITY:
+
+            if quantity is None or quantity <= 0:
+                raise serializers.ValidationError({
+                    "planned_quantity": (
+                        "Quantity-based tasks require "
+                        "a planned quantity greater than zero."
+                    )
+                })
+
+            if not unit:
+                raise serializers.ValidationError({
+                    "measurement_unit": (
+                        "A measurement unit is required "
+                        "for quantity-based tasks."
+                    )
+                })
+
+        elif method == Task.MeasurementMethod.COMPLETION_ONLY:
+
+            if quantity is not None:
+                raise serializers.ValidationError({
+                    "planned_quantity": (
+                        "Completion-only tasks cannot "
+                        "have a planned quantity."
+                    )
+                })
+
+            if unit is not None:
+                raise serializers.ValidationError({
+                    "measurement_unit": (
+                        "Completion-only tasks cannot "
+                        "have a measurement unit."
+                    )
+                })
 
         return attrs
 
@@ -139,6 +214,10 @@ class TaskListSerializer(serializers.ModelSerializer):
             "display_order",
             "approval_status",
             "work_status",
+            "measurement_method",
+            "planned_quantity",
+            "measurement_unit",
+            "completion_criteria",
             "is_overdue",
             "created_by",
             "created_by_name",
@@ -203,6 +282,10 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             "display_order",
             "approval_status",
             "work_status",
+            "measurement_method",
+            "planned_quantity",
+            "measurement_unit",
+            "completion_criteria",
             "is_overdue",
             "created_by",
             "created_by_name",
@@ -305,6 +388,10 @@ class TaskApprovalListSerializer(serializers.ModelSerializer):
             "start_date",
             "end_date",
             "display_order",
+            "measurement_method",
+            "planned_quantity",
+            "measurement_unit",
+            "completion_criteria",
             "approval_status",
             "created_by",
             "created_by_name",
@@ -407,6 +494,11 @@ class TaskChangeRequestCreateSerializer(serializers.Serializer):
         "worker_name",
         "priority",
         "start_date",
+        # Progress measurement baseline
+        "measurement_method",
+        "planned_quantity",
+        "measurement_unit",
+        "completion_criteria",
     }
 
     def validate_new_values(self, value):
@@ -436,12 +528,14 @@ class TaskChangeRequestCreateSerializer(serializers.Serializer):
 
         # JSONField needs JSON-compatible values.
         # Convert validated dates to ISO strings.
-        for field in ("start_date",):
-            if field in cleaned_values:
-                date_value = cleaned_values[field]
-                cleaned_values[field] = (
-                    date_value.isoformat() if date_value is not None else None
-                )
+        from decimal import Decimal
+        from datetime import date, datetime
+        for field, value in cleaned_values.items():
+            if isinstance(value, Decimal):
+                cleaned_values[field] = str(value)
+
+            elif isinstance(value, (date, datetime)):
+                cleaned_values[field] = value.isoformat()
 
         if not cleaned_values:
             raise serializers.ValidationError("At least one valid change is required.")
@@ -550,23 +644,27 @@ class TaskResubmissionSerializer(TaskCreateSerializer):
 
     class Meta(TaskCreateSerializer.Meta):
         fields = (
-            "title",
-            "description",
-            "worker_name",
-            "priority",
-            "start_date",
-            "end_date",
-            "display_order",
-            "resubmission_note",
-        )
+                "title",
+                "description",
+                "worker_name",
+                "priority",
+                "start_date",
+                "end_date",
+                "display_order",
+                "measurement_method",
+                "planned_quantity",
+                "measurement_unit",
+                "completion_criteria",
+                "resubmission_note",
+            )
 
         extra_kwargs = {
-            **TaskCreateSerializer.Meta.extra_kwargs,
-            "title": {
-                "required": False,
-                "allow_blank": False,
-            },
-        }
+                **TaskCreateSerializer.Meta.extra_kwargs,
+                "title": {
+                    "required": False,
+                    "allow_blank": False,
+                },
+            }
 
     def validate_resubmission_note(self, value):
         value = value.strip()
@@ -591,6 +689,10 @@ class TaskResubmissionSerializer(TaskCreateSerializer):
             "start_date",
             "end_date",
             "display_order",
+            "measurement_method",
+            "planned_quantity",
+            "measurement_unit",
+            "completion_criteria",
         }
 
         if not corrected_fields.intersection(attrs):

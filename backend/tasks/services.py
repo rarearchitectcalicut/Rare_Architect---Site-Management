@@ -4,6 +4,8 @@ from rest_framework.exceptions import (
     ValidationError,
 )
 
+from datetime import date, datetime
+from decimal import Decimal
 from projects.models import Project, ProjectSupervisor
 
 from .models import Task, TaskBatch, TaskHistory, Task, TaskChangeRequest
@@ -329,17 +331,30 @@ EDITABLE_TASK_FIELDS = {
     "worker_name",
     "priority",
     "start_date",
+    "measurement_method",
+    "planned_quantity",
+    "measurement_unit",
+    "completion_criteria",
 }
 
 
 def task_field_snapshot(task, fields):
-    """Return JSON-compatible values for selected fields."""
+    """
+    Capture selected task fields in a JSON-compatible form.
+
+    Dates become ISO strings.
+    Decimal quantities become strings.
+    """
+
     snapshot = {}
 
     for field in fields:
         value = getattr(task, field)
 
-        if field == "start_date" and value is not None:
+        if isinstance(value, Decimal):
+            value = str(value)
+
+        elif isinstance(value, (date, datetime)):
             value = value.isoformat()
 
         snapshot[field] = value
@@ -395,9 +410,13 @@ def create_task_change_request(
     cleaned = dict(validator.validated_data)
 
     # Dates must be JSON-compatible.
-    if "start_date" in cleaned and cleaned["start_date"] is not None:
-        cleaned["start_date"] = cleaned["start_date"].isoformat()
+    for field, value in cleaned.items():
+        if isinstance(value, Decimal):
+            cleaned[field] = str(value)
 
+        elif isinstance(value, (date, datetime)):
+            cleaned[field] = value.isoformat()
+            
     old_values = task_field_snapshot(task, cleaned.keys())
 
     # Do not create a request without actual changes.

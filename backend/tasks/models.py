@@ -70,6 +70,18 @@ class Task(models.Model):
         DELAYED = "DELAYED", "Delayed"
         CANCELLED = "CANCELLED", "Cancelled"
 
+    class MeasurementMethod(models.TextChoices):
+        QUANTITY = "QUANTITY", "Quantity Based"
+        COMPLETION_ONLY = "COMPLETION_ONLY", "Completion Only"
+
+    class MeasurementUnit(models.TextChoices):
+        SQM = "SQM", "Square Metres"
+        METER = "METER", "Metres"
+        CUM = "CUM", "Cubic Metres"
+        COUNT = "COUNT", "Count"
+        KG = "KG", "Kilograms"
+        LITRE = "LITRE", "Litres"
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -121,6 +133,35 @@ class Task(models.Model):
 
     display_order = models.PositiveIntegerField(
         default=0,
+    )
+
+    # =====================================================
+    # TASK PROGRESS BASELINE
+    # =====================================================
+
+    measurement_method = models.CharField(
+        max_length=20,
+        choices=MeasurementMethod.choices,
+        default=MeasurementMethod.COMPLETION_ONLY,
+    )
+
+    planned_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+    )
+
+    measurement_unit = models.CharField(
+        max_length=20,
+        choices=MeasurementUnit.choices,
+        null=True,
+        blank=True,
+    )
+
+    completion_criteria = models.TextField(
+        blank=True,
+        default="",
     )
 
     approval_status = models.CharField(
@@ -226,6 +267,37 @@ class Task(models.Model):
                 ),
                 name="task_valid_work_status",
             ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    measurement_method__in=[
+                        "QUANTITY",
+                        "COMPLETION_ONLY",
+                    ]
+                ),
+                name="task_valid_measurement_method",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        measurement_method="QUANTITY",
+                        planned_quantity__gt=0,
+                        measurement_unit__in=[
+                            "SQM",
+                            "METER",
+                            "CUM",
+                            "COUNT",
+                            "KG",
+                            "LITRE",
+                        ],
+                    )
+                    | models.Q(
+                        measurement_method="COMPLETION_ONLY",
+                        planned_quantity__isnull=True,
+                        measurement_unit__isnull=True,
+                    )
+                ),
+                name="task_valid_progress_baseline",
+            ),
         ]
 
     def clean(self):
@@ -252,6 +324,40 @@ class Task(models.Model):
             and self.batch.project_id != self.project_id
         ):
             errors["batch"] = "Task batch must belong to the same project."
+
+        if self.measurement_method == self.MeasurementMethod.QUANTITY:
+
+            if (
+                self.planned_quantity is None
+                or self.planned_quantity <= 0
+            ):
+                raise ValidationError({
+                    "planned_quantity": (
+                        "Quantity-based tasks require "
+                        "a planned quantity greater than zero."
+                    )
+                })
+
+            if not self.measurement_unit:
+                raise ValidationError({
+                    "measurement_unit": (
+                        "Choose a measurement unit "
+                        "for quantity-based tasks."
+                    )
+                })
+
+        elif self.measurement_method == self.MeasurementMethod.COMPLETION_ONLY:
+
+            if (
+                self.planned_quantity is not None
+                or self.measurement_unit
+            ):
+                raise ValidationError({
+                    "measurement_method": (
+                        "Completion-only tasks must not "
+                        "have a planned quantity or unit."
+                    )
+                })
 
         if errors:
             raise ValidationError(errors)
