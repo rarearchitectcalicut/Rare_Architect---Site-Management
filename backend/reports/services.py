@@ -1,16 +1,35 @@
 from django.db import transaction,IntegrityError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import (
     PermissionDenied,
     ValidationError,
 )
-from tasks.models import Task
+from tasks.models import Task,TaskHistory
 from projects.models import Project, ProjectSupervisor
-
-from .models import DailyReport,DailyTaskWork
-from .serializers import DailyReportCreateSerializer,DailyTaskWorkCreateSerializer
+from pathlib import Path
+from django.db.models import Sum
+from decimal import Decimal, ROUND_HALF_UP
+from .models import (
+    DailyReport,
+    DailyTaskWork,
+    DailyReport,
+    DailyManpower,
+    DailyMaterialEntry,
+    DailyReportAttachment,
+    DelayReport
+)
+from .serializers import (
+    DailyReportCreateSerializer,
+    DailyTaskWorkCreateSerializer,
+    DailyTaskWorkUpdateSerializer,
+    DailyManpowerCreateSerializer,
+    DailyMaterialEntryCreateSerializer,
+    DailyReportAttachmentUploadSerializer,
+    DailyTaskWorkCreateSerializer,
+    DelayReportCreateSerializer
+)
 
 # =====================================================
 # PROJECT ACCESS HELPERS
@@ -71,6 +90,31 @@ def validate_report_project_status(project):
                 )
             }
         )
+
+
+# =====================================================
+# ACCESSIBLE DELAY REPORTS
+# =====================================================
+
+
+def accessible_delay_reports(user):
+    """
+    Admins can see all delay reports.
+
+    Supervisors can see reports associated
+    with their currently assigned projects.
+    """
+
+    return (
+        DelayReport.objects.filter(task__project__in=accessible_projects(user))
+        .select_related(
+            "task",
+            "task__project",
+            "reported_by",
+            "reviewed_by",
+        )
+        .distinct()
+    )
 
 
 # =====================================================
@@ -249,7 +293,7 @@ def add_daily_task_work(
         context={"daily_report": report},
     )
     serializer.is_valid(raise_exception=True)
-    
+
     if task.work_status == Task.WorkStatus.COMPLETED:
         raise ValidationError({
             "task": "Completed tasks cannot receive new work entries."
@@ -278,3 +322,1402 @@ def add_daily_task_work(
         )
 
     return entry
+
+
+# =====================================================
+# LOCK A DRAFT WORK ENTRY
+# =====================================================
+
+
+def get_locked_draft_work_entry(*, entry_id, supervisor):
+    """
+    Must be called inside transaction.atomic().
+
+    Lock the parent report first, then the entry.
+    This prevents edits from racing with submission.
+    """
+
+    existing_entry = get_object_or_404(
+        DailyTaskWork.objects.only(
+            "id",
+            "daily_report_id",
+        ),
+        pk=entry_id,
+    )
+
+    report = get_object_or_404(
+        DailyReport.objects.select_for_update().select_related("project"),
+        pk=existing_entry.daily_report_id,
+    )
+
+    validate_daily_report_draft(report, supervisor)
+
+    entry = get_object_or_404(
+        DailyTaskWork.objects.select_for_update().select_related(
+            "task", "daily_report"
+        ),
+        pk=entry_id,
+        daily_report=report,
+    )
+
+    if entry.verification_status != DailyTaskWork.VerificationStatus.PENDING:
+        raise ValidationError({"detail": "Reviewed work entries cannot be modified."})
+
+    return entry
+
+
+# =====================================================
+# UPDATE DAILY TASK WORK
+# =====================================================
+
+
+@transaction.atomic
+def update_daily_task_work(*, entry_id, supervisor, data):
+    entry = get_locked_draft_work_entry(
+        entry_id=entry_id,
+        supervisor=supervisor,
+    )
+
+    allowed_fields = {
+        "work_description",
+        "location_detail",
+        "quantity_completed_today",
+        "completion_claimed",
+    }
+
+    unsupported_fields = set(data) - allowed_fields
+
+    if unsupported_fields:
+        raise ValidationError(
+            {"detail": ("Unsupported fields: " + ", ".join(sorted(unsupported_fields)))}
+        )
+
+    serializer = DailyTaskWorkUpdateSerializer(
+        instance=entry,
+        data=data,
+        partial=True,
+    )
+    serializer.is_valid(raise_exception=True)
+
+    for field, value in serializer.validated_data.items():
+        setattr(entry, field, value)
+
+    if serializer.validated_data:
+        entry.full_clean()
+
+        entry.save(
+            update_fields=[
+                *serializer.validated_data.keys(),
+                "updated_at",
+            ]
+        )
+
+    return entry
+
+
+# =====================================================
+# DELETE DAILY TASK WORK
+# =====================================================
+
+
+@transaction.atomic
+def delete_daily_task_work(*, entry_id, supervisor):
+    entry = get_locked_draft_work_entry(
+        entry_id=entry_id,
+        supervisor=supervisor,
+    )
+
+    # Attachments use PROTECT, so remove/reassign
+    # draft attachments first through their own API.
+    if entry.attachments.exists():
+        raise ValidationError(
+            {
+                "detail": (
+                    "This entry has attachments. " "Remove its draft attachments first."
+                )
+            }
+        )
+
+    entry.delete()
+
+
+# =====================================================
+# DAILY MANPOWER SERVICES
+# =====================================================
+
+MANPOWER_EDITABLE_FIELDS = {
+    "trade",
+    "contractor_name",
+    "worker_count",
+    "hours_worked",
+    "remarks",
+}
+
+
+@transaction.atomic
+def add_daily_manpower(*, report_id, supervisor, data):
+    report = get_object_or_404(
+        DailyReport.objects.select_for_update().select_related("project"),
+        pk=report_id,
+    )
+
+    validate_daily_report_draft(report, supervisor)
+
+    unknown_fields = set(data) - MANPOWER_EDITABLE_FIELDS
+    if unknown_fields:
+        raise ValidationError(
+            {"detail": ("Unsupported fields: " + ", ".join(sorted(unknown_fields)))}
+        )
+
+    serializer = DailyManpowerCreateSerializer(data=data)
+    serializer.is_valid(raise_exception=True)
+
+    entry = DailyManpower(
+        daily_report=report,
+        **serializer.validated_data,
+    )
+    entry.full_clean()
+    entry.save()
+
+    return entry
+
+
+def get_locked_draft_manpower(*, entry_id, supervisor):
+    """
+    Call only within transaction.atomic().
+    Lock the parent report before locking the entry.
+    """
+
+    existing = get_object_or_404(
+        DailyManpower.objects.only("id", "daily_report_id"),
+        pk=entry_id,
+    )
+
+    report = get_object_or_404(
+        DailyReport.objects.select_for_update().select_related("project"),
+        pk=existing.daily_report_id,
+    )
+
+    validate_daily_report_draft(report, supervisor)
+
+    return get_object_or_404(
+        DailyManpower.objects.select_for_update(),
+        pk=entry_id,
+        daily_report=report,
+    )
+
+
+@transaction.atomic
+def update_daily_manpower(*, entry_id, supervisor, data):
+    entry = get_locked_draft_manpower(
+        entry_id=entry_id,
+        supervisor=supervisor,
+    )
+
+    unknown_fields = set(data) - MANPOWER_EDITABLE_FIELDS
+    if unknown_fields:
+        raise ValidationError(
+            {"detail": ("Unsupported fields: " + ", ".join(sorted(unknown_fields)))}
+        )
+
+    serializer = DailyManpowerCreateSerializer(
+        instance=entry,
+        data=data,
+        partial=True,
+    )
+    serializer.is_valid(raise_exception=True)
+
+    for field, value in serializer.validated_data.items():
+        setattr(entry, field, value)
+
+    entry.full_clean()
+
+    if serializer.validated_data:
+        entry.save(update_fields=list(serializer.validated_data))
+
+    return entry
+
+
+@transaction.atomic
+def delete_daily_manpower(*, entry_id, supervisor):
+    entry = get_locked_draft_manpower(
+        entry_id=entry_id,
+        supervisor=supervisor,
+    )
+
+    entry.delete()
+
+
+# =====================================================
+# DAILY MATERIAL SERVICES
+# =====================================================
+
+MATERIAL_EDITABLE_FIELDS = {
+    "material_name",
+    "entry_type",
+    "quantity",
+    "unit",
+    "remarks",
+}
+
+
+def validate_material_fields(data):
+    unknown = set(data) - MATERIAL_EDITABLE_FIELDS
+
+    if unknown:
+        raise ValidationError(
+            {"detail": ("Unsupported fields: " + ", ".join(sorted(unknown)))}
+        )
+
+
+def save_validated_material(entry, *, update_fields=None):
+    """
+    Run model validation and translate any errors
+    into normal DRF 400 responses.
+    """
+    try:
+        entry.full_clean()
+    except DjangoValidationError as exc:
+        if hasattr(exc, "message_dict"):
+            raise ValidationError(exc.message_dict)
+        raise ValidationError(exc.messages)
+
+    if update_fields is None:
+        entry.save()
+    elif update_fields:
+        entry.save(update_fields=update_fields)
+
+    return entry
+
+
+# =====================================================
+# ADD MATERIAL TO A DRAFT REPORT
+# =====================================================
+
+
+@transaction.atomic
+def add_daily_material(*, report_id, supervisor, data):
+    report = get_object_or_404(
+        DailyReport.objects.select_for_update().select_related("project"),
+        pk=report_id,
+    )
+
+    validate_daily_report_draft(report, supervisor)
+    validate_material_fields(data)
+
+    serializer = DailyMaterialEntryCreateSerializer(data=data)
+    serializer.is_valid(raise_exception=True)
+
+    entry = DailyMaterialEntry(
+        daily_report=report,
+        **serializer.validated_data,
+    )
+
+    return save_validated_material(entry)
+
+
+# =====================================================
+# LOCK DRAFT MATERIAL ENTRY
+# =====================================================
+
+
+def get_locked_draft_material(*, entry_id, supervisor):
+    """
+    Must be called within transaction.atomic().
+
+    Lock the parent report before the entry,
+    preventing edits after report submission.
+    """
+
+    existing = get_object_or_404(
+        DailyMaterialEntry.objects.only(
+            "id",
+            "daily_report_id",
+        ),
+        pk=entry_id,
+    )
+
+    report = get_object_or_404(
+        DailyReport.objects.select_for_update().select_related("project"),
+        pk=existing.daily_report_id,
+    )
+
+    validate_daily_report_draft(report, supervisor)
+
+    return get_object_or_404(
+        DailyMaterialEntry.objects.select_for_update(),
+        pk=entry_id,
+        daily_report=report,
+    )
+
+
+# =====================================================
+# UPDATE DRAFT MATERIAL
+# =====================================================
+
+
+@transaction.atomic
+def update_daily_material(*, entry_id, supervisor, data):
+    entry = get_locked_draft_material(
+        entry_id=entry_id,
+        supervisor=supervisor,
+    )
+
+    validate_material_fields(data)
+
+    serializer = DailyMaterialEntryCreateSerializer(
+        instance=entry,
+        data=data,
+        partial=True,
+    )
+    serializer.is_valid(raise_exception=True)
+
+    for field, value in serializer.validated_data.items():
+        setattr(entry, field, value)
+
+    changed_fields = list(serializer.validated_data)
+
+    # full_clean() also catches problems arising from
+    # combinations of existing and newly supplied values.
+    return save_validated_material(
+        entry,
+        update_fields=changed_fields,
+    )
+
+
+# =====================================================
+# DELETE DRAFT MATERIAL
+# =====================================================
+
+
+@transaction.atomic
+def delete_daily_material(*, entry_id, supervisor):
+    entry = get_locked_draft_material(
+        entry_id=entry_id,
+        supervisor=supervisor,
+    )
+
+    entry.delete()
+
+
+# =====================================================
+# DAILY REPORT ATTACHMENT UPLOAD
+# =====================================================
+
+
+@transaction.atomic
+def upload_daily_report_attachment(
+    *,
+    report_id,
+    supervisor,
+    data,
+):
+    report = get_object_or_404(
+        DailyReport.objects.select_for_update().select_related("project"),
+        pk=report_id,
+    )
+
+    validate_daily_report_draft(
+        report,
+        supervisor,
+    )
+
+    serializer = DailyReportAttachmentUploadSerializer(
+        data=data,
+        context={"daily_report": report},
+    )
+    serializer.is_valid(raise_exception=True)
+
+    uploaded_file = serializer.validated_data["file"]
+
+    original_filename = Path(uploaded_file.name).name[:255]
+
+    attachment = DailyReportAttachment(
+        daily_report=report,
+        task_work=serializer.validated_data.get("task_work"),
+        original_filename=original_filename,
+        file_size=uploaded_file.size,
+        caption=serializer.validated_data.get("caption", ""),
+        uploaded_by=supervisor,
+    )
+
+    # FileField saves the file to private storage.
+    # If DB validation or saving fails, remove
+    # the newly written file.
+    try:
+        attachment.file.save(
+            uploaded_file.name,
+            uploaded_file,
+            save=False,
+        )
+
+        attachment.full_clean()
+        attachment.save()
+
+    except Exception:
+        if attachment.file.name:
+            attachment.file.delete(save=False)
+        raise
+
+    return attachment
+
+
+# =====================================================
+# LOCK A DRAFT ATTACHMENT
+# =====================================================
+
+
+def get_locked_draft_attachment(
+    *,
+    attachment_id,
+    supervisor,
+):
+    """
+    Must be called inside transaction.atomic().
+
+    Lock the parent report before deleting
+    the attachment so submission and deletion
+    cannot happen at the same time.
+    """
+
+    existing = get_object_or_404(
+        DailyReportAttachment.objects.only(
+            "id",
+            "daily_report_id",
+        ),
+        pk=attachment_id,
+    )
+
+    report = get_object_or_404(
+        DailyReport.objects.select_for_update().select_related("project"),
+        pk=existing.daily_report_id,
+    )
+
+    validate_daily_report_draft(
+        report,
+        supervisor,
+    )
+
+    return get_object_or_404(
+        DailyReportAttachment.objects.select_for_update(),
+        pk=attachment_id,
+        daily_report=report,
+    )
+
+
+# =====================================================
+# DELETE DRAFT ATTACHMENT
+# =====================================================
+
+
+@transaction.atomic
+def delete_daily_report_attachment(
+    *,
+    attachment_id,
+    supervisor,
+):
+    attachment = get_locked_draft_attachment(
+        attachment_id=attachment_id,
+        supervisor=supervisor,
+    )
+
+    # Save the storage reference before deleting
+    # the database record.
+    storage = attachment.file.storage
+    stored_name = attachment.file.name
+
+    # Delete database metadata first.
+    attachment.delete()
+
+    # Delete the physical file only after the
+    # database transaction successfully commits.
+    if stored_name:
+        transaction.on_commit(
+            lambda: storage.delete(stored_name),
+        )
+
+
+# =====================================================
+# ADMIN DAILY WORK REVIEW
+# =====================================================
+
+
+def validate_work_reviewer(admin_user):
+    if not is_admin(admin_user):
+        raise PermissionDenied("Only active Admins can review daily work.")
+
+
+def get_locked_pending_work(*, entry_id):
+    """
+    Must be called inside transaction.atomic().
+
+    Consistent lock order:
+    1. Parent DailyReport
+    2. Task
+    3. DailyTaskWork
+
+    Locking the task serializes verification
+    of work entries from different reports
+    belonging to that same task.
+    """
+
+    reference = get_object_or_404(
+        DailyTaskWork.objects.only(
+            "id",
+            "daily_report_id",
+            "task_id",
+        ),
+        pk=entry_id,
+    )
+
+    report = get_object_or_404(
+        DailyReport.objects.select_for_update(),
+        pk=reference.daily_report_id,
+    )
+
+    task = get_object_or_404(
+        Task.objects.select_for_update(),
+        pk=reference.task_id,
+    )
+
+    entry = get_object_or_404(
+        DailyTaskWork.objects.select_for_update().select_related(
+            "daily_report", "task"
+        ),
+        pk=entry_id,
+        daily_report_id=report.id,
+        task_id=task.id,
+    )
+
+    if report.status != DailyReport.Status.SUBMITTED:
+        raise ValidationError(
+            {"detail": ("Only work from submitted reports " "can be reviewed.")}
+        )
+
+    if entry.verification_status != DailyTaskWork.VerificationStatus.PENDING:
+        raise ValidationError(
+            {"detail": ("This work entry has already been reviewed.")}
+        )
+
+    if task.project_id != report.project_id:
+        raise ValidationError(
+            {"task": ("Task does not belong to " "this daily report's project.")}
+        )
+
+    if task.approval_status != Task.ApprovalStatus.APPROVED:
+        raise ValidationError({"task": "The task must be approved."})
+
+    return entry, task
+
+
+def save_reviewed_work(entry):
+    """
+    Convert Django model-validation errors
+    to standard API validation responses.
+    """
+
+    try:
+        entry.full_clean()
+
+    except DjangoValidationError as exc:
+        if hasattr(exc, "message_dict"):
+            raise ValidationError(exc.message_dict)
+
+        raise ValidationError(exc.messages)
+
+    entry.save(
+        update_fields=[
+            "verification_status",
+            "verified_by",
+            "verified_at",
+            "verification_note",
+            "updated_at",
+        ]
+    )
+
+
+# =====================================================
+# VERIFY DAILY WORK
+# =====================================================
+
+
+@transaction.atomic
+def verify_daily_task_work(
+    *,
+    entry_id,
+    admin_user,
+    verification_note="",
+):
+    validate_work_reviewer(admin_user)
+
+    entry, task = get_locked_pending_work(
+        entry_id=entry_id,
+    )
+
+    if task.measurement_method == Task.MeasurementMethod.QUANTITY:
+
+        quantity = entry.quantity_completed_today
+
+        if quantity is None or quantity <= 0:
+            raise ValidationError(
+                {"quantity_completed_today": ("A positive quantity is required.")}
+            )
+
+        verified_total = DailyTaskWork.objects.filter(
+            task=task,
+            verification_status=(DailyTaskWork.VerificationStatus.VERIFIED),
+        ).aggregate(total=Sum("quantity_completed_today"))["total"] or Decimal("0.000")
+
+        if task.planned_quantity is None:
+            raise ValidationError(
+                {"task": "The task has no approved quantity baseline."}
+            )
+
+        new_total = verified_total + quantity
+
+        if new_total > task.planned_quantity:
+            remaining = max(
+                task.planned_quantity - verified_total,
+                Decimal("0.000"),
+            )
+
+            raise ValidationError(
+                {
+                    "quantity_completed_today": (
+                        "Verification would exceed the "
+                        "approved planned quantity. "
+                        f"Remaining allowable quantity: {remaining} "
+                        f"{task.measurement_unit}."
+                    )
+                }
+            )
+
+    elif task.measurement_method == Task.MeasurementMethod.COMPLETION_ONLY:
+
+        if not entry.completion_claimed:
+            raise ValidationError(
+                {"completion_claimed": ("The entry does not claim task completion.")}
+            )
+
+        already_verified = (
+            DailyTaskWork.objects.filter(
+                task=task,
+                verification_status=(DailyTaskWork.VerificationStatus.VERIFIED),
+                completion_claimed=True,
+            )
+            .exclude(
+                pk=entry.id,
+            )
+            .exists()
+        )
+
+        if already_verified:
+            raise ValidationError(
+                {"detail": ("Completion for this task " "has already been verified.")}
+            )
+
+    else:
+        raise ValidationError({"task": "Unsupported task measurement method."})
+
+    entry.verification_status = DailyTaskWork.VerificationStatus.VERIFIED
+    entry.verified_by = admin_user
+    entry.verified_at = timezone.now()
+    entry.verification_note = verification_note
+
+    save_reviewed_work(entry)
+
+    return entry
+
+
+# =====================================================
+# REJECT DAILY WORK
+# =====================================================
+
+
+@transaction.atomic
+def reject_daily_task_work(
+    *,
+    entry_id,
+    admin_user,
+    verification_note,
+):
+    validate_work_reviewer(admin_user)
+
+    verification_note = verification_note.strip()
+
+    if not verification_note:
+        raise ValidationError(
+            {"verification_note": ("Provide a reason for rejecting this work.")}
+        )
+
+    entry, task = get_locked_pending_work(
+        entry_id=entry_id,
+    )
+
+    entry.verification_status = DailyTaskWork.VerificationStatus.REJECTED
+    entry.verified_by = admin_user
+    entry.verified_at = timezone.now()
+    entry.verification_note = verification_note
+
+    save_reviewed_work(entry)
+
+    return entry
+
+
+# =====================================================
+# CORRECT REJECTED DAILY TASK WORK
+# =====================================================
+
+
+@transaction.atomic
+def correct_rejected_daily_task_work(
+    *,
+    rejected_entry_id,
+    new_report_id,
+    supervisor,
+    corrected_data,
+):
+    """
+    Create a new pending work entry linked to
+    a rejected original entry.
+
+    Never modify the original submitted evidence.
+    """
+
+    # Find the original entry's parent report.
+    original_reference = get_object_or_404(
+        DailyTaskWork.objects.only(
+            "id",
+            "daily_report_id",
+            "task_id",
+        ),
+        pk=rejected_entry_id,
+    )
+
+    # Lock the new report before adding work.
+    new_report = get_object_or_404(
+        DailyReport.objects.select_for_update().select_related("project"),
+        pk=new_report_id,
+    )
+
+    validate_daily_report_draft(
+        new_report,
+        supervisor,
+    )
+
+    # Lock the task consistently with ordinary
+    # work creation and Admin verification.
+    task = get_object_or_404(
+        Task.objects.select_for_update(),
+        pk=original_reference.task_id,
+    )
+
+    # Lock the original entry to prevent competing
+    # corrections from being created simultaneously.
+    original_entry = get_object_or_404(
+        DailyTaskWork.objects.select_for_update().select_related("daily_report"),
+        pk=rejected_entry_id,
+        task=task,
+    )
+
+    original_report = original_entry.daily_report
+
+    if original_report.status != DailyReport.Status.SUBMITTED:
+        raise ValidationError(
+            {"detail": ("Only entries from submitted reports " "can be corrected.")}
+        )
+
+    if original_entry.verification_status != DailyTaskWork.VerificationStatus.REJECTED:
+        raise ValidationError(
+            {"detail": ("Only rejected daily work entries " "can be corrected.")}
+        )
+
+    # The correction must be made by the Supervisor
+    # who originally submitted the rejected work.
+    if original_report.reported_by_id != supervisor.id:
+        raise PermissionDenied(
+            "Only the original reporting Supervisor " "can correct this entry."
+        )
+
+    if new_report.id == original_report.id:
+        raise ValidationError(
+            {"new_daily_report": ("Create a new draft report for corrections.")}
+        )
+
+    if new_report.project_id != original_report.project_id:
+        raise ValidationError(
+            {
+                "new_daily_report": (
+                    "The correction report must belong " "to the original project."
+                )
+            }
+        )
+
+    if task.project_id != new_report.project_id:
+        raise ValidationError(
+            {"task": ("The task must belong to the " "correction report's project.")}
+        )
+
+    # One immediate correction per rejected entry.
+    if DailyTaskWork.objects.filter(
+        correction_of=original_entry,
+    ).exists():
+        raise ValidationError(
+            {"detail": ("This rejected entry already " "has a correction.")}
+        )
+
+    # The new report can have only one entry
+    # per task, following the model constraint.
+    if DailyTaskWork.objects.filter(
+        daily_report=new_report,
+        task=task,
+    ).exists():
+        raise ValidationError(
+            {"task": ("This task is already included " "in the correction report.")}
+        )
+
+    if task.work_status == Task.WorkStatus.COMPLETED:
+        raise ValidationError(
+            {"task": ("Completed tasks cannot receive " "new work entries.")}
+        )
+
+    # Reuse existing task measurement validation.
+    serializer = DailyTaskWorkCreateSerializer(
+        data={
+            **corrected_data,
+            "task": str(task.id),
+        },
+        context={
+            "daily_report": new_report,
+        },
+    )
+
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+
+    # Use a nested savepoint so database uniqueness
+    # errors can become an API validation response.
+    try:
+        with transaction.atomic():
+            corrected_entry = DailyTaskWork.objects.create(
+                daily_report=new_report,
+                task=task,
+                correction_of=original_entry,
+                work_description=data["work_description"],
+                location_detail=data.get("location_detail", ""),
+                quantity_completed_today=data.get("quantity_completed_today"),
+                completion_claimed=data.get("completion_claimed", False),
+                verification_status=(DailyTaskWork.VerificationStatus.PENDING),
+            )
+    except IntegrityError:
+        raise ValidationError(
+            {
+                "detail": (
+                    "A correction already exists, or this "
+                    "task is already in the new report."
+                )
+            }
+        )
+
+    return corrected_entry
+
+
+# =====================================================
+# DELAY REPORT CREATION
+# =====================================================
+
+DELAY_REPORT_CREATE_FIELDS = {
+    "delay_type",
+    "reason",
+    "description",
+    "expected_completion_date",
+    "extension_requested",
+    "requested_end_date",
+}
+
+
+@transaction.atomic
+def create_delay_report(
+    *,
+    task_id,
+    supervisor,
+    data,
+):
+    """
+    Create a pending delay report.
+
+    Only an assigned Supervisor can report
+    a delay on an approved, unfinished task.
+
+    A deadline extension is NOT applied here.
+    """
+
+    if not is_supervisor(supervisor):
+        raise PermissionDenied("Only active Supervisors can report delays.")
+
+    # Lock the Task so its current dates and status
+    # are stable while validating the request.
+    task = get_object_or_404(
+        Task.objects.select_for_update().select_related("project"),
+        pk=task_id,
+    )
+
+    validate_report_supervisor(
+        task.project,
+        supervisor,
+    )
+
+    validate_report_project_status(task.project)
+
+    if task.approval_status != Task.ApprovalStatus.APPROVED:
+        raise ValidationError(
+            {"task": ("Only approved tasks can have " "delay reports.")}
+        )
+
+    if task.work_status in {
+        Task.WorkStatus.COMPLETED,
+        Task.WorkStatus.CANCELLED,
+    }:
+        raise ValidationError(
+            {
+                "task": (
+                    "Completed or cancelled tasks " "cannot receive new delay reports."
+                )
+            }
+        )
+
+    unknown_fields = set(data) - DELAY_REPORT_CREATE_FIELDS
+
+    if unknown_fields:
+        raise ValidationError(
+            {"detail": ("Unsupported fields: " + ", ".join(sorted(unknown_fields)))}
+        )
+
+    # Revalidate against the locked Task, not an
+    # earlier copy read by the API view.
+    serializer = DelayReportCreateSerializer(
+        data=data,
+        context={"task": task},
+    )
+    serializer.is_valid(raise_exception=True)
+
+    report = DelayReport(
+        task=task,
+        reported_by=supervisor,
+        **serializer.validated_data,
+    )
+
+    # Use the model's defaults for pending review
+    # and pending/not-requested extension status.
+    try:
+        report.full_clean()
+    except DjangoValidationError as exc:
+        if hasattr(exc, "message_dict"):
+            raise ValidationError(exc.message_dict)
+
+        raise ValidationError(exc.messages)
+
+    report.save()
+
+    return report
+
+
+# =====================================================
+# ADMIN DELAY REPORT REVIEW
+# =====================================================
+
+
+def validate_delay_report_reviewer(admin_user):
+    """
+    Only an active Admin with staff access
+    can review delay reports.
+    """
+    if not is_admin(admin_user):
+        raise PermissionDenied("Only active Admins can review delay reports.")
+
+
+def get_locked_pending_delay_report(*, report_id):
+    """
+    Must be called inside transaction.atomic().
+
+    Lock the report to prevent two Admins from
+    reviewing the same request simultaneously.
+    """
+    report = get_object_or_404(
+        DelayReport.objects.select_for_update(),
+        pk=report_id,
+    )
+
+    if report.status != DelayReport.Status.PENDING:
+        raise ValidationError(
+            {"detail": "This delay report has already been reviewed."}
+        )
+
+    return report
+
+
+def save_reviewed_delay_report(report):
+    """
+    Validate the report before saving and
+    convert model validation errors to API errors.
+    """
+    try:
+        report.full_clean()
+    except DjangoValidationError as exc:
+        if hasattr(exc, "message_dict"):
+            raise ValidationError(exc.message_dict)
+
+        raise ValidationError(exc.messages)
+
+    report.save(
+        update_fields=[
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "admin_comment",
+        ]
+    )
+
+
+# =====================================================
+# APPROVE DELAY REPORT
+# =====================================================
+
+
+@transaction.atomic
+def approve_delay_report(
+    *,
+    report_id,
+    admin_user,
+    admin_comment="",
+):
+    validate_delay_report_reviewer(admin_user)
+
+    report = get_locked_pending_delay_report(
+        report_id=report_id,
+    )
+
+    report.status = DelayReport.Status.APPROVED
+    report.reviewed_by = admin_user
+    report.reviewed_at = timezone.now()
+    report.admin_comment = admin_comment.strip()
+
+    save_reviewed_delay_report(report)
+
+    # IMPORTANT:
+    # Do not modify report.task.end_date.
+    # Do not approve the extension here.
+
+    return report
+
+
+# =====================================================
+# REJECT DELAY REPORT
+# =====================================================
+
+
+@transaction.atomic
+def reject_delay_report(
+    *,
+    report_id,
+    admin_user,
+    admin_comment,
+):
+    validate_delay_report_reviewer(admin_user)
+
+    admin_comment = admin_comment.strip()
+
+    if not admin_comment:
+        raise ValidationError({"admin_comment": ("A rejection reason is required.")})
+
+    report = get_locked_pending_delay_report(
+        report_id=report_id,
+    )
+
+    report.status = DelayReport.Status.REJECTED
+    report.reviewed_by = admin_user
+    report.reviewed_at = timezone.now()
+    report.admin_comment = admin_comment
+
+    save_reviewed_delay_report(report)
+
+    # Deadline and extension decision remain
+    # separate from the delay review.
+    return report
+
+
+# =====================================================
+# DEADLINE EXTENSION HELPERS
+# =====================================================
+
+
+def get_locked_pending_extension(*, report_id):
+    """
+    Must be called inside transaction.atomic().
+
+    Lock the Task first, then the DelayReport.
+
+    This keeps concurrent deadline changes
+    from silently overwriting one another.
+    """
+
+    reference = get_object_or_404(
+        DelayReport.objects.only(
+            "id",
+            "task_id",
+        ),
+        pk=report_id,
+    )
+
+    task = get_object_or_404(
+        Task.objects.select_for_update(),
+        pk=reference.task_id,
+    )
+
+    report = get_object_or_404(
+        DelayReport.objects.select_for_update(),
+        pk=report_id,
+        task_id=task.id,
+    )
+
+    if not report.extension_requested:
+        raise ValidationError(
+            {"detail": ("This delay report does not " "contain an extension request.")}
+        )
+
+    if report.extension_status != DelayReport.Status.PENDING:
+        raise ValidationError(
+            {
+                "detail": (
+                    "This extension has already " "been reviewed or is not pending."
+                )
+            }
+        )
+
+    if report.requested_end_date is None:
+        raise ValidationError(
+            {"requested_end_date": ("A requested end date is required.")}
+        )
+
+    return report, task
+
+
+def validate_and_save_extension_review(report):
+    """
+    Validate extension decision fields and
+    convert Django validation errors to DRF 400s.
+    """
+
+    try:
+        report.full_clean()
+
+    except DjangoValidationError as exc:
+        if hasattr(exc, "message_dict"):
+            raise ValidationError(exc.message_dict)
+
+        raise ValidationError(exc.messages)
+
+    report.save(
+        update_fields=[
+            "extension_status",
+            "extension_reviewed_by",
+            "extension_reviewed_at",
+            "extension_admin_comment",
+        ]
+    )
+
+
+# =====================================================
+# APPROVE DEADLINE EXTENSION
+# =====================================================
+
+
+@transaction.atomic
+def approve_delay_extension(
+    *,
+    report_id,
+    admin_user,
+    admin_comment="",
+):
+    # Reuse existing Admin permission helper.
+    validate_delay_report_reviewer(admin_user)
+
+    report, task = get_locked_pending_extension(
+        report_id=report_id,
+    )
+
+    # -----------------------------------------
+    # DELAY REPORT MUST BE APPROVED FIRST
+    # -----------------------------------------
+
+    if report.status != DelayReport.Status.APPROVED:
+        raise ValidationError(
+            {
+                "detail": (
+                    "Approve the delay report before "
+                    "approving its deadline extension."
+                )
+            }
+        )
+
+    # -----------------------------------------
+    # TASK MUST BE ELIGIBLE
+    # -----------------------------------------
+
+    if task.approval_status != Task.ApprovalStatus.APPROVED:
+        raise ValidationError({"task": "Only approved tasks can receive extensions."})
+
+    if task.work_status in {
+        Task.WorkStatus.COMPLETED,
+        Task.WorkStatus.CANCELLED,
+    }:
+        raise ValidationError(
+            {
+                "task": (
+                    "Completed or cancelled tasks "
+                    "cannot receive deadline extensions."
+                )
+            }
+        )
+
+    # -----------------------------------------
+    # VALIDATE REQUESTED DEADLINE
+    # -----------------------------------------
+
+    old_end_date = task.end_date
+    new_end_date = report.requested_end_date
+
+    if old_end_date is not None and new_end_date <= old_end_date:
+        raise ValidationError(
+            {
+                "requested_end_date": (
+                    "The requested date must be later "
+                    "than the current task deadline."
+                )
+            }
+        )
+
+    if task.start_date is not None and new_end_date < task.start_date:
+        raise ValidationError(
+            {
+                "requested_end_date": (
+                    "The new deadline cannot be " "earlier than the task start date."
+                )
+            }
+        )
+
+    # -----------------------------------------
+    # CHANGE TASK DEADLINE
+    # -----------------------------------------
+
+    task.end_date = new_end_date
+
+    try:
+        task.full_clean()
+
+    except DjangoValidationError as exc:
+        if hasattr(exc, "message_dict"):
+            raise ValidationError(exc.message_dict)
+
+        raise ValidationError(exc.messages)
+
+    task.save(
+        update_fields=[
+            "end_date",
+            "updated_at",
+        ]
+    )
+
+    # -----------------------------------------
+    # APPROVE EXTENSION
+    # -----------------------------------------
+
+    report.extension_status = DelayReport.Status.APPROVED
+    report.extension_reviewed_by = admin_user
+    report.extension_reviewed_at = timezone.now()
+    report.extension_admin_comment = admin_comment.strip()
+
+    validate_and_save_extension_review(report)
+
+    # -----------------------------------------
+    # TASK HISTORY
+    # -----------------------------------------
+
+    TaskHistory.objects.create(
+        task=task,
+        actor=admin_user,
+        action=TaskHistory.Action.EXTENSION_APPROVED,
+        details={
+            "delay_report_id": str(report.id),
+            "old_end_date": (
+                old_end_date.isoformat() if old_end_date is not None else None
+            ),
+            "new_end_date": new_end_date.isoformat(),
+            "admin_comment": admin_comment.strip(),
+        },
+    )
+
+    return report
+
+
+# =====================================================
+# REJECT DEADLINE EXTENSION
+# =====================================================
+
+
+@transaction.atomic
+def reject_delay_extension(
+    *,
+    report_id,
+    admin_user,
+    admin_comment,
+):
+    validate_delay_report_reviewer(admin_user)
+
+    admin_comment = admin_comment.strip()
+
+    if not admin_comment:
+        raise ValidationError({"admin_comment": ("A rejection reason is required.")})
+
+    report, task = get_locked_pending_extension(
+        report_id=report_id,
+    )
+
+    # -----------------------------------------
+    # REJECT EXTENSION
+    # -----------------------------------------
+
+    report.extension_status = DelayReport.Status.REJECTED
+    report.extension_reviewed_by = admin_user
+    report.extension_reviewed_at = timezone.now()
+    report.extension_admin_comment = admin_comment
+
+    validate_and_save_extension_review(report)
+
+    # -----------------------------------------
+    # RECORD HISTORY
+    # -----------------------------------------
+
+    TaskHistory.objects.create(
+        task=task,
+        actor=admin_user,
+        action=TaskHistory.Action.EXTENSION_REJECTED,
+        details={
+            "delay_report_id": str(report.id),
+            "requested_end_date": (
+                report.requested_end_date.isoformat()
+                if report.requested_end_date is not None
+                else None
+            ),
+            "current_end_date": (
+                task.end_date.isoformat() if task.end_date is not None else None
+            ),
+            "admin_comment": admin_comment,
+        },
+    )
+
+    # IMPORTANT:
+    # We never change task.end_date
+    # when rejecting an extension.
+
+    return report

@@ -4,7 +4,26 @@ from .views import (
     ProjectDailyReportListCreateView,
     DailyReportDetailView,
     DailyReportSubmitView,
-    DailyTaskWorkListCreateView
+    DailyTaskWorkListCreateView,
+    DailyTaskWorkDetailView,
+    DailyManpowerListCreateView,
+    DailyManpowerDetailView,
+    DailyMaterialListCreateView,
+    DailyMaterialDetailView,
+    DailyReportAttachmentUploadView,
+    DailyReportAttachmentDetailView,
+    DailyReportAttachmentDownloadView,
+    DailyTaskWorkVerifyView,
+    DailyTaskWorkRejectView,
+    TaskProgressView,
+    DailyTaskWorkCorrectionView,
+    TaskDelayReportCreateView,
+    DelayReportListView,
+    DelayReportDetailView,
+    DelayReportApproveView,
+    DelayReportRejectView,
+    DelayExtensionApproveView,
+    DelayExtensionRejectView,
 )
 
 app_name = "reports"
@@ -27,7 +46,102 @@ urlpatterns = [
     ),
     path(
         "daily-reports/<uuid:id>/work-entries/",
-         DailyTaskWorkListCreateView.as_view(),
+        DailyTaskWorkListCreateView.as_view(),
         name="daily-task-work-list-create",
+    ),
+    path(
+        "daily-task-work/<uuid:id>/",
+        DailyTaskWorkDetailView.as_view(),
+        name="daily-task-work-detail",
+    ),
+    path(
+        "daily-reports/<uuid:id>/manpower/",
+        DailyManpowerListCreateView.as_view(),
+        name="daily-manpower-list-create",
+    ),
+    path(
+        "daily-manpower/<uuid:id>/",
+        DailyManpowerDetailView.as_view(),
+        name="daily-manpower-detail",
+    ),
+    path(
+        "daily-reports/<uuid:id>/materials/",
+        DailyMaterialListCreateView.as_view(),
+        name="daily-material-list-create",
+    ),
+    path(
+        "daily-materials/<uuid:id>/",
+        DailyMaterialDetailView.as_view(),
+        name="daily-material-detail",
+    ),
+    path(
+        "daily-reports/<uuid:id>/attachments/",
+        DailyReportAttachmentUploadView.as_view(),
+        name="daily-report-attachment-upload",
+    ),
+    path(
+        "daily-report-attachments/<uuid:id>/download/",
+        DailyReportAttachmentDownloadView.as_view(),
+        name="daily-report-attachment-download",
+    ),
+    path(
+        "daily-report-attachments/<uuid:id>/",
+        DailyReportAttachmentDetailView.as_view(),
+        name="daily-report-attachment-detail",
+    ),
+    path(
+        "daily-task-work/<uuid:id>/verify/",
+        DailyTaskWorkVerifyView.as_view(),
+        name="daily-task-work-verify",
+    ),
+    path(
+        "daily-task-work/<uuid:id>/reject/",
+        DailyTaskWorkRejectView.as_view(),
+        name="daily-task-work-reject",
+    ),
+    path(
+        "tasks/<uuid:id>/progress/",
+        TaskProgressView.as_view(),
+        name="task-progress",
+    ),
+    path(
+        "daily-task-work/<uuid:id>/correct/",
+        DailyTaskWorkCorrectionView.as_view(),
+        name="daily-task-work-correct",
+    ),
+    path(
+        "tasks/<uuid:id>/delay-reports/",
+        TaskDelayReportCreateView.as_view(),
+        name="task-delay-report-create",
+    ),
+    path(
+        "delay-reports/",
+        DelayReportListView.as_view(),
+        name="delay-report-list",
+    ),
+    path(
+        "delay-reports/<uuid:id>/",
+        DelayReportDetailView.as_view(),
+        name="delay-report-detail",
+    ),
+    path(
+        "delay-reports/<uuid:id>/approve/",
+        DelayReportApproveView.as_view(),
+        name="delay-report-approve",
+    ),
+    path(
+        "delay-reports/<uuid:id>/reject/",
+        DelayReportRejectView.as_view(),
+        name="delay-report-reject",
+    ),
+    path(
+        "delay-reports/<uuid:id>/approve-extension/",
+        DelayExtensionApproveView.as_view(),
+        name="delay-extension-approve",
+    ),
+    path(
+        "delay-reports/<uuid:id>/reject-extension/",
+        DelayExtensionRejectView.as_view(),
+        name="delay-extension-reject",
     ),
 ]

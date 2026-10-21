@@ -416,7 +416,7 @@ def create_task_change_request(
 
         elif isinstance(value, (date, datetime)):
             cleaned[field] = value.isoformat()
-            
+
     old_values = task_field_snapshot(task, cleaned.keys())
 
     # Do not create a request without actual changes.
@@ -463,6 +463,8 @@ def create_task_change_request(
 # =====================================================
 # APPROVE TASK CHANGE REQUEST
 # =====================================================
+
+
 @transaction.atomic
 def approve_task_change_request(
     *,
@@ -484,9 +486,11 @@ def approve_task_change_request(
         change_type=TaskChangeRequest.ChangeType.EDIT,
     )
 
-    # Lock the task first, consistently with creation.
+    # Lock the Task first to stay consistent with
+    # the existing task-change workflow.
     task = Task.objects.select_for_update().get(pk=request_obj.task_id)
 
+    # Lock the change request before reviewing it.
     request_obj = TaskChangeRequest.objects.select_for_update().get(pk=request_obj.pk)
 
     if request_obj.status != TaskChangeRequest.Status.PENDING:
@@ -496,6 +500,8 @@ def approve_task_change_request(
 
     validate_task_can_be_edited(task)
 
+    # Confirm the task has not changed since
+    # the Supervisor submitted the request.
     current_values = task_field_snapshot(
         task,
         request_obj.old_values.keys(),
@@ -514,6 +520,8 @@ def approve_task_change_request(
     if not request_obj.new_values or set(request_obj.new_values) - EDITABLE_TASK_FIELDS:
         raise ValidationError({"new_values": "Unsupported task changes."})
 
+    # Revalidate the proposed changes against
+    # the latest Task state.
     validator = TaskCreateSerializer(
         instance=task,
         data=request_obj.new_values,
@@ -521,16 +529,37 @@ def approve_task_change_request(
     )
     validator.is_valid(raise_exception=True)
 
+    # -------------------------------------------------
+    # PROTECT VERIFIED MEASUREMENT BASELINES
+    # -------------------------------------------------
+    # The task is already locked.
+    # Block actual baseline changes if verified
+    # daily work exists.
+    validate_task_measurement_baseline_change(
+        task=task,
+        proposed_values=validator.validated_data,
+    )
+
+    # -------------------------------------------------
+    # APPLY APPROVED CHANGES
+    # -------------------------------------------------
     for field, value in validator.validated_data.items():
         setattr(task, field, value)
 
     changed_fields = list(validator.validated_data.keys())
+
+    task.full_clean()
+
     task.save(update_fields=changed_fields + ["updated_at"])
 
+    # -------------------------------------------------
+    # APPROVE CHANGE REQUEST
+    # -------------------------------------------------
     request_obj.status = TaskChangeRequest.Status.APPROVED
     request_obj.reviewed_by = admin_user
     request_obj.reviewed_at = timezone.now()
     request_obj.admin_comment = admin_comment
+
     request_obj.save(
         update_fields=[
             "status",
@@ -541,6 +570,9 @@ def approve_task_change_request(
         ]
     )
 
+    # -------------------------------------------------
+    # TASK HISTORY
+    # -------------------------------------------------
     TaskHistory.objects.create(
         task=task,
         actor=admin_user,
@@ -1091,3 +1123,83 @@ def resubmit_task(*, task_id, supervisor, validated_data):
     )
 
     return task
+
+
+# Fields that define how task progress is measured.
+PROTECTED_MEASUREMENT_FIELDS = {
+    "measurement_method",
+    "planned_quantity",
+    "measurement_unit",
+    "completion_criteria",
+}
+
+
+# =====================================================
+# PROTECT TASK MEASUREMENT BASELINES
+# =====================================================
+
+
+def validate_task_measurement_baseline_change(
+    *,
+    task,
+    proposed_values,
+):
+    """
+    Protect measurement fields when pending or
+    verified daily work entries exist.
+
+    Must be called inside transaction.atomic()
+    while holding a select_for_update() lock
+    on the corresponding Task row.
+    """
+
+    from decimal import Decimal
+
+    # Local import avoids circular dependencies.
+    from reports.models import DailyTaskWork
+
+    affected_fields = PROTECTED_MEASUREMENT_FIELDS & set(proposed_values.keys())
+
+    # Ordinary task edits do not need this check.
+    if not affected_fields:
+        return
+
+    actual_changes = set()
+
+    for field in affected_fields:
+        old_value = getattr(task, field)
+        new_value = proposed_values[field]
+
+        if field == "planned_quantity":
+            old_value = Decimal(str(old_value)) if old_value is not None else None
+
+            new_value = Decimal(str(new_value)) if new_value is not None else None
+
+        if old_value != new_value:
+            actual_changes.add(field)
+
+    # No baseline change if all values are identical.
+    if not actual_changes:
+        return
+
+    blocking_entries = DailyTaskWork.objects.filter(
+        task=task,
+        verification_status__in=[
+            DailyTaskWork.VerificationStatus.PENDING,
+            DailyTaskWork.VerificationStatus.VERIFIED,
+        ],
+    )
+
+    if blocking_entries.exists():
+        raise ValidationError(
+            {
+                "new_values": (
+                    "This task has pending or verified "
+                    "daily work entries. Its measurement "
+                    "method, planned quantity, measurement "
+                    "unit, and completion criteria cannot "
+                    "be changed through an ordinary "
+                    "task change request."
+                )
+            }
+        )
