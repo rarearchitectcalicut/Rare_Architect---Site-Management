@@ -290,3 +290,19 @@ class TaskDocumentCreateSerializer(serializers.Serializer):
     def validate_file(self, value):
         validate_document_file(value)
         return value
+
+
+# =====================================================
+# TASK DOCUMENT NEW VERSION UPLOAD
+# =====================================================
+
+
+class TaskDocumentVersionUploadSerializer(serializers.Serializer):
+    file = serializers.FileField(
+        allow_empty_file=False,
+        write_only=True,
+    )
+
+    def validate_file(self, value):
+        validate_document_file(value)
+        return value

@@ -27,6 +27,8 @@ from .serializers import (
     TaskDocumentCreateSerializer,
     TaskDocumentListSerializer,
     TaskDocumentDetailSerializer,
+    TaskDocumentVersionSerializer,
+    TaskDocumentVersionUploadSerializer,
 )
 from .services import (
     create_project_document,
@@ -34,6 +36,7 @@ from .services import (
     upload_project_document_version,
     create_task_document,
     validate_document_access,
+    upload_task_document_version,
 )
 
 # =====================================================
@@ -492,3 +495,152 @@ class TaskDocumentDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return accessible_task_documents(self.request.user)
+
+
+# =====================================================
+# TASK DOCUMENT VERSION LIST + UPLOAD
+# =====================================================
+
+
+class TaskDocumentVersionListCreateView(generics.GenericAPIView):
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+    ]
+
+    parser_classes = [
+        MultiPartParser,
+        FormParser,
+    ]
+
+    pagination_class = ProjectPagination
+
+    def get_document(self, user, document_id):
+        """
+        Retrieve only a Task Document belonging
+        to a project accessible to the user.
+        """
+
+        return get_object_or_404(
+            accessible_task_documents(user),
+            pk=document_id,
+        )
+
+    # ---------------------------------------------
+    # GET - VERSION HISTORY
+    # ---------------------------------------------
+
+    def get(self, request, id):
+        document = self.get_document(
+            request.user,
+            id,
+        )
+
+        queryset = TaskDocumentVersion.objects.filter(
+            document=document,
+        ).order_by("-version_number")
+
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = TaskDocumentVersionSerializer(
+                page,
+                many=True,
+                context={"request": request},
+            )
+            return self.get_paginated_response(serializer.data)
+
+        serializer = TaskDocumentVersionSerializer(
+            queryset,
+            many=True,
+            context={"request": request},
+        )
+
+        return Response(serializer.data)
+
+    # ---------------------------------------------
+    # POST - UPLOAD NEW VERSION
+    # ---------------------------------------------
+
+    def post(self, request, id):
+        # Check ownership/access before processing
+        # the incoming file.
+        self.get_document(request.user, id)
+
+        serializer = TaskDocumentVersionUploadSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+
+        version = upload_task_document_version(
+            document_id=id,
+            user=request.user,
+            uploaded_file=serializer.validated_data["file"],
+        )
+
+        return Response(
+            TaskDocumentVersionSerializer(
+                version,
+                context={"request": request},
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+# =====================================================
+# SECURE TASK DOCUMENT DOWNLOAD
+# =====================================================
+
+
+class TaskDocumentVersionDownloadView(generics.GenericAPIView):
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+    ]
+
+    def get(self, request, id):
+        """
+        Require authenticated project access
+        before opening and streaming a private
+        Task Document version.
+        """
+
+        version = get_object_or_404(
+            TaskDocumentVersion.objects.select_related(
+                "document",
+                "document__task",
+                "document__task__project",
+            ).filter(
+                document__in=accessible_task_documents(
+                    request.user,
+                )
+            ),
+            pk=id,
+        )
+
+        if not version.file.name:
+            raise Http404("Document file is unavailable.")
+
+        try:
+            file_handle = version.file.storage.open(
+                version.file.name,
+                mode="rb",
+            )
+        except (OSError, FileNotFoundError):
+            raise Http404("Document file is unavailable.")
+
+        # Use the original filename only as
+        # the suggested download filename.
+        download_name = Path(version.original_filename.replace("\\", "/")).name
+
+        response = FileResponse(
+            file_handle,
+            as_attachment=True,
+            filename=download_name,
+            content_type="application/octet-stream",
+        )
+
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Cache-Control"] = "private, no-store"
+
+        return response
