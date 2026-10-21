@@ -527,6 +527,7 @@ class TaskHistory(models.Model):
             "EXTENSION_APPROVED",
             "Extension Approved",
         )
+        EXTENSION_REJECTED = "EXTENSION_REJECTED", "Extension Rejected"
 
         COMPLETED = "COMPLETED", "Completed"
         CANCELLED = "CANCELLED", "Cancelled"

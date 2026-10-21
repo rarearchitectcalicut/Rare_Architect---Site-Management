@@ -2,6 +2,8 @@ from rest_framework import serializers
 from pathlib import Path
 from django.conf import settings
 from tasks.models import Task
+from PIL import Image, UnidentifiedImageError
+from django.conf import settings
 
 from .models import (
     DailyReport,
@@ -9,6 +11,7 @@ from .models import (
     DailyManpower,
     DailyMaterialEntry,
     DailyReportAttachment,
+    DelayReport
 )
 
 # =====================================================
@@ -329,6 +332,7 @@ class DailyTaskWorkDetailSerializer(serializers.ModelSerializer):
             "location_detail",
             "quantity_completed_today",
             "completion_claimed",
+            "correction_of",
             "verification_status",
             "verified_by",
             "verified_by_name",
@@ -425,19 +429,36 @@ class DailyMaterialEntryCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        quantity = attrs.get("quantity")
-        unit = attrs.get("unit", "")
+    # For PATCH, use existing values when a field
+    # was not included in the request.
+
+        existing = self.instance
+
+        quantity = attrs.get(
+            "quantity",
+            getattr(existing, "quantity", None),
+        )
+
+        unit = attrs.get(
+            "unit",
+            getattr(existing, "unit", ""),
+        )
 
         if quantity is not None:
             if quantity <= 0:
-                raise serializers.ValidationError(
-                    {"quantity": ("Quantity must be greater than zero.")}
-                )
+                raise serializers.ValidationError({
+                    "quantity": (
+                        "Quantity must be greater than zero."
+                    )
+                })
 
             if not unit or not unit.strip():
-                raise serializers.ValidationError(
-                    {"unit": ("Provide a unit when entering " "a material quantity.")}
-                )
+                raise serializers.ValidationError({
+                    "unit": (
+                        "Provide a unit when entering "
+                        "a material quantity."
+                    )
+                })
 
         return attrs
 
@@ -508,26 +529,58 @@ class DailyReportAttachmentUploadSerializer(serializers.Serializer):
     }
 
     def validate_file(self, value):
-        if value.size > self.MAX_FILE_SIZE:
-            raise serializers.ValidationError("File must not exceed 10 MB.")
-
         extension = Path(value.name).suffix.lower()
 
-        if extension not in self.ALLOWED_EXTENSIONS:
+        allowed_types = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp",
+            ".pdf": "application/pdf",
+        }
+
+        expected_type = allowed_types.get(extension)
+
+        if expected_type is None:
             raise serializers.ValidationError(
-                "Only JPG, JPEG, PNG, WEBP, and PDF files are allowed."
+                "Only JPG, PNG, WEBP and PDF files are allowed."
             )
 
-        # UploadedFile.content_type is client-supplied
-        # metadata, so it is only an initial check.
-        content_type = getattr(
-            value,
-            "content_type",
-            None,
-        )
+        if value.size <= 0 or value.size > settings.DAILY_REPORT_MAX_FILE_SIZE:
+            raise serializers.ValidationError("File must be between 1 byte and 10 MB.")
 
-        if content_type not in self.ALLOWED_CONTENT_TYPES:
-            raise serializers.ValidationError("Unsupported file content type.")
+        if getattr(value, "content_type", None) != expected_type:
+            raise serializers.ValidationError(
+                "File content type does not match its extension."
+            )
+
+        try:
+            value.seek(0)
+
+            if extension == ".pdf":
+                # Basic format identification, not full
+                # PDF malware/content sanitization.
+                if value.read(5) != b"%PDF-":
+                    raise serializers.ValidationError(
+                        "The uploaded file is not a valid PDF."
+                    )
+
+            else:
+                with Image.open(value) as image:
+                    if image.format not in {"JPEG", "PNG", "WEBP"}:
+                        raise serializers.ValidationError("Unsupported image format.")
+
+                    image.verify()
+
+        except (
+            UnidentifiedImageError,
+            OSError,
+            ValueError,
+        ):
+            raise serializers.ValidationError("The uploaded image is invalid or corrupted.")
+
+        finally:
+            value.seek(0)
 
         return value
 
@@ -546,3 +599,448 @@ class DailyReportAttachmentUploadSerializer(serializers.Serializer):
             )
 
         return value
+
+
+# =====================================================
+# DAILY REPORT ATTACHMENT DETAIL SERIALIZER
+# =====================================================
+
+
+class DailyReportAttachmentDetailSerializer(serializers.ModelSerializer):
+
+    uploaded_by_name = serializers.CharField(
+        source="uploaded_by.username",
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = DailyReportAttachment
+
+        fields = (
+            "id",
+            "daily_report",
+            "task_work",
+            "original_filename",
+            "file_size",
+            "caption",
+            "uploaded_by",
+            "uploaded_by_name",
+            "created_at",
+        )
+
+        read_only_fields = fields
+
+
+# =====================================================
+# DAILY TASK WORK UPDATE SERIALIZER
+# =====================================================
+
+
+class DailyTaskWorkUpdateSerializer(serializers.ModelSerializer):
+    """
+    Update permitted fields on a draft work entry.
+
+    The task, report, and verification fields
+    cannot be modified through this serializer.
+    """
+
+    class Meta:
+        model = DailyTaskWork
+
+        fields = (
+            "work_description",
+            "location_detail",
+            "quantity_completed_today",
+            "completion_claimed",
+        )
+
+        extra_kwargs = {
+            "work_description": {
+                "required": False,
+                "allow_blank": False,
+            },
+            "location_detail": {
+                "required": False,
+                "allow_blank": True,
+            },
+            "quantity_completed_today": {
+                "required": False,
+                "allow_null": True,
+            },
+            "completion_claimed": {
+                "required": False,
+            },
+        }
+
+    def validate_work_description(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError("Work description cannot be empty.")
+
+        return value
+
+    def validate(self, attrs):
+        entry = self.instance
+
+        if entry is None:
+            raise serializers.ValidationError("An existing work entry is required.")
+
+        if entry.daily_report.status != DailyReport.Status.DRAFT:
+            raise serializers.ValidationError(
+                {"detail": "Only draft work entries can be edited."}
+            )
+
+        if entry.verification_status != DailyTaskWork.VerificationStatus.PENDING:
+            raise serializers.ValidationError(
+                {"detail": "Reviewed work entries cannot be edited."}
+            )
+
+        task = entry.task
+
+        if task.approval_status != Task.ApprovalStatus.APPROVED:
+            raise serializers.ValidationError({"task": "Task must still be approved."})
+
+        if task.work_status in {
+            Task.WorkStatus.COMPLETED,
+            Task.WorkStatus.CANCELLED,
+        }:
+            raise serializers.ValidationError(
+                {"task": "Completed or cancelled tasks cannot be edited."}
+            )
+
+        description = attrs.get(
+            "work_description",
+            entry.work_description,
+        )
+
+        quantity = attrs.get(
+            "quantity_completed_today",
+            entry.quantity_completed_today,
+        )
+
+        claimed = attrs.get(
+            "completion_claimed",
+            entry.completion_claimed,
+        )
+
+        if not description or not description.strip():
+            raise serializers.ValidationError(
+                {"work_description": "Work description is required."}
+            )
+
+        if task.measurement_method == Task.MeasurementMethod.QUANTITY:
+            if quantity is None or quantity <= 0:
+                raise serializers.ValidationError(
+                    {
+                        "quantity_completed_today": (
+                            "Enter a quantity greater than zero."
+                        )
+                    }
+                )
+
+            if quantity > task.planned_quantity:
+                raise serializers.ValidationError(
+                    {
+                        "quantity_completed_today": (
+                            "Quantity cannot exceed the planned quantity."
+                        )
+                    }
+                )
+
+            if claimed:
+                raise serializers.ValidationError(
+                    {
+                        "completion_claimed": (
+                            "Quantity-based tasks must use measured quantities."
+                        )
+                    }
+                )
+
+        elif task.measurement_method == Task.MeasurementMethod.COMPLETION_ONLY:
+            if quantity is not None:
+                raise serializers.ValidationError(
+                    {
+                        "quantity_completed_today": (
+                            "Completion-only tasks cannot report quantities."
+                        )
+                    }
+                )
+
+            if not claimed:
+                raise serializers.ValidationError(
+                    {"completion_claimed": ("Confirm completion for this task.")}
+                )
+
+        return attrs
+
+
+class DailyTaskWorkReviewSerializer(serializers.Serializer):
+    verification_note = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=2000,
+        trim_whitespace=True,
+    )
+
+
+# =====================================================
+# REJECTED DAILY WORK CORRECTION SERIALIZER
+# =====================================================
+
+
+class DailyTaskWorkCorrectionSerializer(serializers.Serializer):
+    new_daily_report = serializers.PrimaryKeyRelatedField(
+        queryset=DailyReport.objects.all(),
+    )
+
+    work_description = serializers.CharField(
+        allow_blank=False,
+        trim_whitespace=True,
+    )
+
+    location_detail = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=255,
+    )
+
+    quantity_completed_today = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        required=False,
+        allow_null=True,
+    )
+
+    completion_claimed = serializers.BooleanField(
+        required=False,
+        default=False,
+    )
+
+
+# =====================================================
+# DELAY REPORT CREATE SERIALIZER
+# =====================================================
+
+
+class DelayReportCreateSerializer(serializers.ModelSerializer):
+    """
+    Supervisor submits a delay report for a Task.
+
+    The backend controls:
+    - task
+    - reported_by
+    - report status
+    - review fields
+    - extension approval status
+    """
+
+    class Meta:
+        model = DelayReport
+
+        fields = (
+            "delay_type",
+            "reason",
+            "description",
+            "expected_completion_date",
+            "extension_requested",
+            "requested_end_date",
+        )
+
+        extra_kwargs = {
+            "reason": {
+                "required": True,
+                "allow_blank": False,
+            },
+            "description": {
+                "required": False,
+                "allow_blank": True,
+            },
+            "expected_completion_date": {
+                "required": False,
+                "allow_null": True,
+            },
+            "extension_requested": {
+                "required": False,
+            },
+            "requested_end_date": {
+                "required": False,
+                "allow_null": True,
+            },
+        }
+
+    def validate_reason(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError("A delay reason is required.")
+
+        return value
+
+    def validate(self, attrs):
+        task = self.context.get("task")
+
+        if task is None:
+            raise serializers.ValidationError({"task": "Task context is required."})
+
+        extension_requested = attrs.get(
+            "extension_requested",
+            False,
+        )
+
+        requested_end_date = attrs.get(
+            "requested_end_date",
+        )
+
+        expected_completion_date = attrs.get(
+            "expected_completion_date",
+        )
+
+        # -----------------------------------------
+        # EXTENSION REQUEST VALIDATION
+        # -----------------------------------------
+
+        if extension_requested:
+
+            if requested_end_date is None:
+                raise serializers.ValidationError(
+                    {
+                        "requested_end_date": (
+                            "A proposed end date is required "
+                            "when requesting an extension."
+                        )
+                    }
+                )
+
+            if task.end_date is not None and requested_end_date <= task.end_date:
+                raise serializers.ValidationError(
+                    {
+                        "requested_end_date": (
+                            "The requested end date must be "
+                            "later than the current task deadline."
+                        )
+                    }
+                )
+
+            if task.start_date is not None and requested_end_date < task.start_date:
+                raise serializers.ValidationError(
+                    {
+                        "requested_end_date": (
+                            "The requested end date cannot be "
+                            "earlier than the task start date."
+                        )
+                    }
+                )
+
+        elif requested_end_date is not None:
+            raise serializers.ValidationError(
+                {
+                    "requested_end_date": (
+                        "Set extension_requested to true "
+                        "when providing a requested end date."
+                    )
+                }
+            )
+
+        # -----------------------------------------
+        # EXPECTED COMPLETION DATE VALIDATION
+        # -----------------------------------------
+
+        if (
+            expected_completion_date is not None
+            and task.start_date is not None
+            and expected_completion_date < task.start_date
+        ):
+            raise serializers.ValidationError(
+                {
+                    "expected_completion_date": (
+                        "Expected completion cannot be "
+                        "earlier than the task start date."
+                    )
+                }
+            )
+
+        return attrs
+
+
+# =====================================================
+# DELAY REPORT DETAIL SERIALIZER
+# =====================================================
+
+
+class DelayReportDetailSerializer(serializers.ModelSerializer):
+
+    task_title = serializers.CharField(
+        source="task.title",
+        read_only=True,
+    )
+
+    project_id = serializers.UUIDField(
+        source="task.project_id",
+        read_only=True,
+    )
+
+    reported_by_name = serializers.CharField(
+        source="reported_by.name",
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = DelayReport
+
+        fields = (
+            "id",
+            "task",
+            "task_title",
+            "project_id",
+            "reported_by",
+            "reported_by_name",
+            "delay_type",
+            "reason",
+            "description",
+            "expected_completion_date",
+            "extension_requested",
+            "requested_end_date",
+            "status",
+            "extension_status",
+            "reviewed_by",
+            "reviewed_at",
+            "admin_comment",
+            "extension_reviewed_by",
+            "extension_reviewed_at",
+            "extension_admin_comment",
+            "reported_at",
+        )
+
+        read_only_fields = fields
+
+
+# =====================================================
+# DELAY REPORT REVIEW SERIALIZER
+# =====================================================
+
+
+class DelayReportReviewSerializer(serializers.Serializer):
+
+    admin_comment = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=2000,
+        trim_whitespace=True,
+    )
+
+
+# =====================================================
+# DEADLINE EXTENSION REVIEW SERIALIZER
+# =====================================================
+
+class DelayExtensionReviewSerializer(serializers.Serializer):
+
+    admin_comment = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=2000,
+        trim_whitespace=True,
+    )

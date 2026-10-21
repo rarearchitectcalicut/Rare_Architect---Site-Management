@@ -26,3 +26,7 @@ build/
 .vscode/
 .DS_Store
 Thumbs.db
+
+
+backend/private_media/
+private_media/

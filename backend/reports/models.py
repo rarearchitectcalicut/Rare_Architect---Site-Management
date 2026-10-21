@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from pathlib import Path
+from .storage import private_report_storage
 
 # =====================================================
 # DELAY REPORT MODEL
@@ -513,6 +514,18 @@ class DailyTaskWork(models.Model):
         blank=True,
     )
 
+    # =================================================
+    # REJECTED WORK CORRECTION REFERENCE
+    # =================================================
+
+    correction_of = models.OneToOneField(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="correction",
+    )
+
     # Used for completion-only tasks.
     completion_claimed = models.BooleanField(
         default=False,
@@ -959,8 +972,10 @@ class DailyReportAttachment(models.Model):
         related_name="attachments",
     )
 
+    
     file = models.FileField(
         upload_to=daily_report_attachment_path,
+        storage=private_report_storage,
         max_length=500,
     )
 
