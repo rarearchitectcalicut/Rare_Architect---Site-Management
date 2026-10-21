@@ -30,6 +30,16 @@ from .serializers import (
     DailyTaskWorkCreateSerializer,
     DelayReportCreateSerializer
 )
+from notifications.report_events import (
+    notify_admins_daily_report_submitted,
+    notify_daily_task_work_verified,
+    notify_daily_task_work_rejected,
+    notify_admins_delay_report_submitted,
+    notify_delay_report_approved,
+    notify_delay_report_rejected,
+    notify_deadline_extension_approved,
+    notify_deadline_extension_rejected,
+)
 
 # =====================================================
 # PROJECT ACCESS HELPERS
@@ -223,6 +233,8 @@ def submit_daily_report(*, report_id, supervisor):
             "updated_at",
         ]
     )
+    
+    notify_admins_daily_report_submitted(report)
 
     return report
 
@@ -1026,6 +1038,8 @@ def verify_daily_task_work(
 
     save_reviewed_work(entry)
 
+    notify_daily_task_work_verified(entry)
+
     return entry
 
 
@@ -1060,7 +1074,9 @@ def reject_daily_task_work(
     entry.verification_note = verification_note
 
     save_reviewed_work(entry)
-
+    
+    notify_daily_task_work_rejected(entry)
+    
     return entry
 
 
@@ -1318,6 +1334,8 @@ def create_delay_report(
         raise ValidationError(exc.messages)
 
     report.save()
+    
+    notify_admins_delay_report_submitted(report)
 
     return report
 
@@ -1403,6 +1421,8 @@ def approve_delay_report(
     report.admin_comment = admin_comment.strip()
 
     save_reviewed_delay_report(report)
+    
+    notify_delay_report_approved(report)
 
     # IMPORTANT:
     # Do not modify report.task.end_date.
@@ -1440,6 +1460,8 @@ def reject_delay_report(
     report.admin_comment = admin_comment
 
     save_reviewed_delay_report(report)
+
+    notify_delay_report_rejected(report)
 
     # Deadline and extension decision remain
     # separate from the delay review.
@@ -1636,6 +1658,9 @@ def approve_delay_extension(
     report.extension_reviewed_by = admin_user
     report.extension_reviewed_at = timezone.now()
     report.extension_admin_comment = admin_comment.strip()
+    
+    
+    
 
     validate_and_save_extension_review(report)
 
@@ -1656,6 +1681,8 @@ def approve_delay_extension(
             "admin_comment": admin_comment.strip(),
         },
     )
+    
+    notify_deadline_extension_approved(report)
 
     return report
 
@@ -1715,6 +1742,8 @@ def reject_delay_extension(
             "admin_comment": admin_comment,
         },
     )
+    
+    notify_deadline_extension_rejected(report)
 
     # IMPORTANT:
     # We never change task.end_date
