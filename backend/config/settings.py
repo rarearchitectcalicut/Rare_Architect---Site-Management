@@ -176,3 +176,4 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Keep this directory outside MEDIA_ROOT and STATIC_ROOT.
 PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
 DAILY_REPORT_MAX_FILE_SIZE = 10 * 1024 * 1024
+PRIVATE_DOCUMENT_ROOT = BASE_DIR / "private_documents"
