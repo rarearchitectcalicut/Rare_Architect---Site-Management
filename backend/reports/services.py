@@ -11,6 +11,7 @@ from projects.models import Project, ProjectSupervisor
 from pathlib import Path
 from django.db.models import Sum
 from decimal import Decimal, ROUND_HALF_UP
+from activity.services import create_activity_log
 from .models import (
     DailyReport,
     DailyTaskWork,
@@ -147,6 +148,20 @@ def create_daily_report(*, project, supervisor, validated_data):
         **validated_data,
     )
 
+    create_activity_log(
+        actor=supervisor,
+        action="DAILY_REPORT_CREATED",
+        entity_type="DAILY_REPORT",
+        entity_id=report.id,
+        description="Daily report created.",
+        metadata={
+            "daily_report_id": str(report.id),
+            "project_id": str(report.project_id),
+            "new_status": report.status,
+            "report_date": report.report_date.isoformat(),
+        },
+    )
+
     return report
 
 
@@ -178,6 +193,11 @@ def update_daily_report(*, report_id, supervisor, data):
 
     serializer.is_valid(raise_exception=True)
 
+    activity_changed_fields = sorted(
+        field for field, value in serializer.validated_data.items()
+        if getattr(report, field) != value
+    )
+
     for field, value in serializer.validated_data.items():
         setattr(report, field, value)
 
@@ -187,6 +207,20 @@ def update_daily_report(*, report_id, supervisor, data):
                 *serializer.validated_data.keys(),
                 "updated_at",
             ]
+        )
+
+    if activity_changed_fields:
+        create_activity_log(
+            actor=supervisor,
+            action="DAILY_REPORT_UPDATED",
+            entity_type="DAILY_REPORT",
+            entity_id=report.id,
+            description="Daily report updated.",
+            metadata={
+                "daily_report_id": str(report.id),
+                "project_id": str(report.project_id),
+                "changed_fields": activity_changed_fields,
+            },
         )
 
     return report
@@ -234,6 +268,20 @@ def submit_daily_report(*, report_id, supervisor):
         ]
     )
     
+    create_activity_log(
+        actor=supervisor,
+        action="DAILY_REPORT_SUBMITTED",
+        entity_type="DAILY_REPORT",
+        entity_id=report.id,
+        description="Daily report submitted.",
+        metadata={
+            "daily_report_id": str(report.id),
+            "project_id": str(report.project_id),
+            "old_status": DailyReport.Status.DRAFT,
+            "new_status": report.status,
+        },
+    )
+
     notify_admins_daily_report_submitted(report)
 
     return report
@@ -333,6 +381,19 @@ def add_daily_task_work(
             {"task": ("This task is already included " "in the daily report.")}
         )
 
+    create_activity_log(
+        actor=supervisor,
+        action="DAILY_TASK_WORK_ADDED",
+        entity_type="DAILY_TASK_WORK",
+        entity_id=entry.id,
+        description="Daily task work added.",
+        metadata={
+            "daily_report_id": str(entry.daily_report_id),
+            "project_id": str(entry.daily_report.project_id),
+            "task_id": str(entry.task_id),
+        },
+    )
+
     return entry
 
 
@@ -411,6 +472,11 @@ def update_daily_task_work(*, entry_id, supervisor, data):
     )
     serializer.is_valid(raise_exception=True)
 
+    activity_changed_fields = sorted(
+        field for field, value in serializer.validated_data.items()
+        if getattr(entry, field) != value
+    )
+
     for field, value in serializer.validated_data.items():
         setattr(entry, field, value)
 
@@ -422,6 +488,21 @@ def update_daily_task_work(*, entry_id, supervisor, data):
                 *serializer.validated_data.keys(),
                 "updated_at",
             ]
+        )
+
+    if activity_changed_fields:
+        create_activity_log(
+            actor=supervisor,
+            action="DAILY_TASK_WORK_UPDATED",
+            entity_type="DAILY_TASK_WORK",
+            entity_id=entry.id,
+            description="Daily task work updated.",
+            metadata={
+                "daily_report_id": str(entry.daily_report_id),
+                "project_id": str(entry.daily_report.project_id),
+                "task_id": str(entry.task_id),
+                "changed_fields": activity_changed_fields,
+            },
         )
 
     return entry
@@ -450,7 +531,21 @@ def delete_daily_task_work(*, entry_id, supervisor):
             }
         )
 
+    deleted_id = entry.id
     entry.delete()
+
+    create_activity_log(
+        actor=supervisor,
+        action="DAILY_TASK_WORK_DELETED",
+        entity_type="DAILY_TASK_WORK",
+        entity_id=deleted_id,
+        description="Daily task work deleted.",
+        metadata={
+            "daily_report_id": str(entry.daily_report_id),
+            "project_id": str(entry.daily_report.project_id),
+            "task_id": str(entry.task_id),
+        },
+    )
 
 
 # =====================================================
@@ -490,6 +585,18 @@ def add_daily_manpower(*, report_id, supervisor, data):
     )
     entry.full_clean()
     entry.save()
+
+    create_activity_log(
+        actor=supervisor,
+        action="DAILY_MANPOWER_ADDED",
+        entity_type="DAILY_MANPOWER",
+        entity_id=entry.id,
+        description="Daily manpower added.",
+        metadata={
+            "daily_report_id": str(entry.daily_report_id),
+            "project_id": str(entry.daily_report.project_id),
+        },
+    )
 
     return entry
 
@@ -539,6 +646,11 @@ def update_daily_manpower(*, entry_id, supervisor, data):
     )
     serializer.is_valid(raise_exception=True)
 
+    activity_changed_fields = sorted(
+        field for field, value in serializer.validated_data.items()
+        if getattr(entry, field) != value
+    )
+
     for field, value in serializer.validated_data.items():
         setattr(entry, field, value)
 
@@ -546,6 +658,20 @@ def update_daily_manpower(*, entry_id, supervisor, data):
 
     if serializer.validated_data:
         entry.save(update_fields=list(serializer.validated_data))
+
+    if activity_changed_fields:
+        create_activity_log(
+            actor=supervisor,
+            action="DAILY_MANPOWER_UPDATED",
+            entity_type="DAILY_MANPOWER",
+            entity_id=entry.id,
+            description="Daily manpower updated.",
+            metadata={
+                "daily_report_id": str(entry.daily_report_id),
+                "project_id": str(entry.daily_report.project_id),
+                "changed_fields": activity_changed_fields,
+            },
+        )
 
     return entry
 
@@ -557,7 +683,20 @@ def delete_daily_manpower(*, entry_id, supervisor):
         supervisor=supervisor,
     )
 
+    deleted_id = entry.id
     entry.delete()
+
+    create_activity_log(
+        actor=supervisor,
+        action="DAILY_MANPOWER_DELETED",
+        entity_type="DAILY_MANPOWER",
+        entity_id=deleted_id,
+        description="Daily manpower deleted.",
+        metadata={
+            "daily_report_id": str(entry.daily_report_id),
+            "project_id": str(entry.daily_report.project_id),
+        },
+    )
 
 
 # =====================================================
@@ -625,7 +764,21 @@ def add_daily_material(*, report_id, supervisor, data):
         **serializer.validated_data,
     )
 
-    return save_validated_material(entry)
+    save_validated_material(entry)
+
+    create_activity_log(
+        actor=supervisor,
+        action="DAILY_MATERIAL_ADDED",
+        entity_type="DAILY_MATERIAL",
+        entity_id=entry.id,
+        description="Daily material added.",
+        metadata={
+            "daily_report_id": str(entry.daily_report_id),
+            "project_id": str(entry.daily_report.project_id),
+        },
+    )
+
+    return entry
 
 
 # =====================================================
@@ -684,6 +837,11 @@ def update_daily_material(*, entry_id, supervisor, data):
     )
     serializer.is_valid(raise_exception=True)
 
+    activity_changed_fields = sorted(
+        field for field, value in serializer.validated_data.items()
+        if getattr(entry, field) != value
+    )
+
     for field, value in serializer.validated_data.items():
         setattr(entry, field, value)
 
@@ -691,10 +849,26 @@ def update_daily_material(*, entry_id, supervisor, data):
 
     # full_clean() also catches problems arising from
     # combinations of existing and newly supplied values.
-    return save_validated_material(
+    save_validated_material(
         entry,
         update_fields=changed_fields,
     )
+
+    if activity_changed_fields:
+        create_activity_log(
+            actor=supervisor,
+            action="DAILY_MATERIAL_UPDATED",
+            entity_type="DAILY_MATERIAL",
+            entity_id=entry.id,
+            description="Daily material updated.",
+            metadata={
+                "daily_report_id": str(entry.daily_report_id),
+                "project_id": str(entry.daily_report.project_id),
+                "changed_fields": activity_changed_fields,
+            },
+        )
+
+    return entry
 
 
 # =====================================================
@@ -709,7 +883,20 @@ def delete_daily_material(*, entry_id, supervisor):
         supervisor=supervisor,
     )
 
+    deleted_id = entry.id
     entry.delete()
+
+    create_activity_log(
+        actor=supervisor,
+        action="DAILY_MATERIAL_DELETED",
+        entity_type="DAILY_MATERIAL",
+        entity_id=deleted_id,
+        description="Daily material deleted.",
+        metadata={
+            "daily_report_id": str(entry.daily_report_id),
+            "project_id": str(entry.daily_report.project_id),
+        },
+    )
 
 
 # =====================================================
@@ -765,6 +952,20 @@ def upload_daily_report_attachment(
 
         attachment.full_clean()
         attachment.save()
+
+        create_activity_log(
+            actor=supervisor,
+            action="DAILY_ATTACHMENT_UPLOADED",
+            entity_type="DAILY_REPORT_ATTACHMENT",
+            entity_id=attachment.id,
+            description="Daily report attachment uploaded.",
+            metadata={
+                "daily_report_id": str(report.id),
+                "project_id": str(report.project_id),
+                "file_size": attachment.file_size,
+                "task_work_id": str(attachment.task_work_id) if attachment.task_work_id else None,
+            },
+        )
 
     except Exception:
         if attachment.file.name:
@@ -839,7 +1040,20 @@ def delete_daily_report_attachment(
     stored_name = attachment.file.name
 
     # Delete database metadata first.
+    deleted_id = attachment.id
     attachment.delete()
+
+    create_activity_log(
+        actor=supervisor,
+        action="DAILY_ATTACHMENT_DELETED",
+        entity_type="DAILY_REPORT_ATTACHMENT",
+        entity_id=deleted_id,
+        description="Daily report attachment deleted.",
+        metadata={
+            "daily_report_id": str(attachment.daily_report_id),
+            "project_id": str(attachment.daily_report.project_id),
+        },
+    )
 
     # Delete the physical file only after the
     # database transaction successfully commits.
@@ -1038,6 +1252,22 @@ def verify_daily_task_work(
 
     save_reviewed_work(entry)
 
+    create_activity_log(
+        actor=admin_user,
+        action="DAILY_TASK_WORK_VERIFIED",
+        entity_type="DAILY_TASK_WORK",
+        entity_id=entry.id,
+        description="Daily task work verified.",
+        metadata={
+            "daily_report_id": str(entry.daily_report_id),
+            "project_id": str(entry.daily_report.project_id),
+            "task_id": str(entry.task_id),
+            "old_status": DailyTaskWork.VerificationStatus.PENDING,
+            "new_status": entry.verification_status,
+            "comment": verification_note,
+        },
+    )
+
     notify_daily_task_work_verified(entry)
 
     return entry
@@ -1075,6 +1305,22 @@ def reject_daily_task_work(
 
     save_reviewed_work(entry)
     
+    create_activity_log(
+        actor=admin_user,
+        action="DAILY_TASK_WORK_REJECTED",
+        entity_type="DAILY_TASK_WORK",
+        entity_id=entry.id,
+        description="Daily task work rejected.",
+        metadata={
+            "daily_report_id": str(entry.daily_report_id),
+            "project_id": str(entry.daily_report.project_id),
+            "task_id": str(entry.task_id),
+            "old_status": DailyTaskWork.VerificationStatus.PENDING,
+            "new_status": entry.verification_status,
+            "comment": verification_note,
+        },
+    )
+
     notify_daily_task_work_rejected(entry)
     
     return entry
@@ -1235,6 +1481,22 @@ def correct_rejected_daily_task_work(
             }
         )
 
+    create_activity_log(
+        actor=supervisor,
+        action="DAILY_TASK_WORK_CORRECTED",
+        entity_type="DAILY_TASK_WORK",
+        entity_id=corrected_entry.id,
+        description="Rejected daily work corrected in a new draft report.",
+        metadata={
+            "project_id": str(new_report.project_id),
+            "daily_report_id": str(new_report.id),
+            "task_id": str(task.id),
+            "original_entry_id": str(original_entry.id),
+            "correction_entry_id": str(corrected_entry.id),
+            "original_daily_report_id": str(original_report.id),
+        },
+    )
+
     return corrected_entry
 
 
@@ -1335,6 +1597,22 @@ def create_delay_report(
 
     report.save()
     
+    create_activity_log(
+        actor=supervisor,
+        action="DELAY_REPORT_SUBMITTED",
+        entity_type="DELAY_REPORT",
+        entity_id=report.id,
+        description="Delay report submitted.",
+        metadata={
+            "delay_report_id": str(report.id),
+            "task_id": str(report.task_id),
+            "project_id": str(report.task.project_id),
+            "extension_requested": report.extension_requested,
+            "requested_end_date": report.requested_end_date.isoformat() if report.requested_end_date else None,
+            "new_status": report.status,
+        },
+    )
+
     notify_admins_delay_report_submitted(report)
 
     return report
@@ -1422,6 +1700,22 @@ def approve_delay_report(
 
     save_reviewed_delay_report(report)
     
+    create_activity_log(
+        actor=admin_user,
+        action="DELAY_REPORT_APPROVED",
+        entity_type="DELAY_REPORT",
+        entity_id=report.id,
+        description="Delay report approved.",
+        metadata={
+            "delay_report_id": str(report.id),
+            "task_id": str(report.task_id),
+            "project_id": str(report.task.project_id),
+            "old_status": DelayReport.Status.PENDING,
+            "new_status": report.status,
+            "comment": report.admin_comment,
+        },
+    )
+
     notify_delay_report_approved(report)
 
     # IMPORTANT:
@@ -1460,6 +1754,22 @@ def reject_delay_report(
     report.admin_comment = admin_comment
 
     save_reviewed_delay_report(report)
+
+    create_activity_log(
+        actor=admin_user,
+        action="DELAY_REPORT_REJECTED",
+        entity_type="DELAY_REPORT",
+        entity_id=report.id,
+        description="Delay report rejected.",
+        metadata={
+            "delay_report_id": str(report.id),
+            "task_id": str(report.task_id),
+            "project_id": str(report.task.project_id),
+            "old_status": DelayReport.Status.PENDING,
+            "new_status": report.status,
+            "comment": report.admin_comment,
+        },
+    )
 
     notify_delay_report_rejected(report)
 
@@ -1682,6 +1992,24 @@ def approve_delay_extension(
         },
     )
     
+    create_activity_log(
+        actor=admin_user,
+        action="EXTENSION_APPROVED",
+        entity_type="DELAY_REPORT",
+        entity_id=report.id,
+        description="Extension approved.",
+        metadata={
+            "delay_report_id": str(report.id),
+            "task_id": str(report.task_id),
+            "project_id": str(report.task.project_id),
+            "old_status": DelayReport.Status.PENDING,
+            "new_status": report.extension_status,
+            "old_end_date": old_end_date.isoformat() if old_end_date else None,
+            "new_end_date": new_end_date.isoformat(),
+            "comment": report.extension_admin_comment,
+        },
+    )
+
     notify_deadline_extension_approved(report)
 
     return report
@@ -1743,6 +2071,24 @@ def reject_delay_extension(
         },
     )
     
+    create_activity_log(
+        actor=admin_user,
+        action="EXTENSION_REJECTED",
+        entity_type="DELAY_REPORT",
+        entity_id=report.id,
+        description="Extension rejected.",
+        metadata={
+            "delay_report_id": str(report.id),
+            "task_id": str(report.task_id),
+            "project_id": str(report.task.project_id),
+            "old_status": DelayReport.Status.PENDING,
+            "new_status": report.extension_status,
+            "current_end_date": task.end_date.isoformat() if task.end_date else None,
+            "requested_end_date": report.requested_end_date.isoformat() if report.requested_end_date else None,
+            "comment": report.extension_admin_comment,
+        },
+    )
+
     notify_deadline_extension_rejected(report)
 
     # IMPORTANT:
