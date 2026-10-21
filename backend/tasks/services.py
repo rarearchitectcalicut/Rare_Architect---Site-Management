@@ -12,7 +12,19 @@ from .models import Task, TaskBatch, TaskHistory, Task, TaskChangeRequest
 from .serializers import TaskCreateSerializer, TaskResubmissionSerializer
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-
+from notifications.task_events import (
+    notify_admins_task_created,
+    notify_admins_bulk_tasks_created,
+    notify_task_approved,
+    notify_task_rejected,
+    notify_admins_task_resubmitted,
+    notify_admins_task_change_requested,
+    notify_task_change_approved,
+    notify_task_change_rejected,
+    notify_admins_timeline_reorder_requested,
+    notify_timeline_reorder_approved,
+    notify_timeline_reorder_rejected,
+)
 
 # =====================================================
 # PROJECT STATUS VALIDATION
@@ -81,6 +93,8 @@ def create_task(*, project, user, validated_data):
         },
     )
 
+    notify_admins_task_created(task)
+
     return task
 
 
@@ -91,11 +105,14 @@ def create_task(*, project, user, validated_data):
 
 @transaction.atomic
 def create_bulk_tasks(*, project, user, tasks_data):
+
+    # Lock project during bulk creation.
     project = Project.objects.select_for_update().get(pk=project.pk)
 
     validate_supervisor_assignment(project, user)
     validate_project_allows_tasks(project)
 
+    # Create one batch for the submission.
     batch = TaskBatch.objects.create(
         project=project,
         created_by=user,
@@ -104,6 +121,7 @@ def create_bulk_tasks(*, project, user, tasks_data):
     tasks = []
 
     for item in tasks_data:
+
         task = Task.objects.create(
             project=project,
             batch=batch,
@@ -125,6 +143,17 @@ def create_bulk_tasks(*, project, user, tasks_data):
         )
 
         tasks.append(task)
+
+    # Send ONE notification per active Admin
+    # for the entire batch, not per task.
+    #
+    # schedule_notifications() registers an
+    # on_commit callback, so notification records
+    # are created only after a successful commit.
+    notify_admins_bulk_tasks_created(
+        batch=batch,
+        task_count=len(tasks),
+    )
 
     return batch, tasks
 
@@ -172,6 +201,8 @@ def approve_task(*, task_id, admin_user, comment=""):
         },
     )
 
+    notify_task_approved(task)
+
     return task
 
 
@@ -216,6 +247,8 @@ def reject_task(*, task_id, admin_user, reason):
             "approval_status": "REJECTED",
         },
     )
+
+    notify_task_rejected(task)
 
     return task
 
@@ -457,6 +490,8 @@ def create_task_change_request(
         },
     )
 
+    notify_admins_task_change_requested(change_request)
+
     return change_request
 
 
@@ -585,6 +620,8 @@ def approve_task_change_request(
         },
     )
 
+    notify_task_change_approved(request_obj)
+
     return request_obj
 
 
@@ -647,6 +684,8 @@ def reject_task_change_request(
             "reason": admin_comment,
         },
     )
+
+    notify_task_change_rejected(request_obj)
 
     return request_obj
 
@@ -824,6 +863,11 @@ def create_timeline_reorder_request(
         },
     )
 
+    if change_request.change_type == TaskChangeRequest.ChangeType.ORDER_CHANGE:
+        notify_admins_timeline_reorder_requested(change_request)
+    else:
+        notify_admins_task_change_requested(change_request)
+
     return change_request
 
 
@@ -940,6 +984,8 @@ def approve_timeline_reorder_request(
         },
     )
 
+    notify_timeline_reorder_approved(change_request)
+
     return change_request
 
 
@@ -990,7 +1036,8 @@ def reject_timeline_reorder_request(
             "reason": admin_comment,
         },
     )
-
+    notify_timeline_reorder_rejected(change_request)
+    
     return change_request
 
 
@@ -1121,6 +1168,8 @@ def resubmit_task(*, task_id, supervisor, validated_data):
             "approval_status": "PENDING",
         },
     )
+
+    notify_admins_task_resubmitted(task)
 
     return task
 
