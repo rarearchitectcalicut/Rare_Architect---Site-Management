@@ -7,6 +7,7 @@ from rest_framework.exceptions import (
 from datetime import date, datetime
 from decimal import Decimal
 from projects.models import Project, ProjectSupervisor
+from activity.services import create_activity_log
 
 from .models import Task, TaskBatch, TaskHistory, Task, TaskChangeRequest
 from .serializers import TaskCreateSerializer, TaskResubmissionSerializer
@@ -93,6 +94,19 @@ def create_task(*, project, user, validated_data):
         },
     )
 
+    create_activity_log(
+        actor=user,
+        action="TASK_CREATED",
+        entity_type="TASK",
+        entity_id=task.id,
+        description=f"Task '{task.title}' created.",
+        metadata={
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+            "new_status": task.approval_status,
+        },
+    )
+
     notify_admins_task_created(task)
 
     return task
@@ -143,6 +157,19 @@ def create_bulk_tasks(*, project, user, tasks_data):
         )
 
         tasks.append(task)
+
+    create_activity_log(
+        actor=user,
+        action="TASK_BATCH_CREATED",
+        entity_type="TASK_BATCH",
+        entity_id=batch.id,
+        description="Task batch submitted for approval.",
+        metadata={
+            "batch_id": str(batch.id),
+            "project_id": str(project.id),
+            "task_count": len(tasks),
+        },
+    )
 
     # Send ONE notification per active Admin
     # for the entire batch, not per task.
@@ -201,6 +228,21 @@ def approve_task(*, task_id, admin_user, comment=""):
         },
     )
 
+    create_activity_log(
+        actor=admin_user,
+        action="TASK_APPROVED",
+        entity_type="TASK",
+        entity_id=task.id,
+        description=f"Task '{task.title}' approved.",
+        metadata={
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+            "old_status": Task.ApprovalStatus.PENDING,
+            "new_status": task.approval_status,
+            "comment": comment,
+        },
+    )
+
     notify_task_approved(task)
 
     return task
@@ -248,6 +290,21 @@ def reject_task(*, task_id, admin_user, reason):
         },
     )
 
+    create_activity_log(
+        actor=admin_user,
+        action="TASK_REJECTED",
+        entity_type="TASK",
+        entity_id=task.id,
+        description=f"Task '{task.title}' rejected.",
+        metadata={
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+            "old_status": Task.ApprovalStatus.PENDING,
+            "new_status": task.approval_status,
+            "reason": reason,
+        },
+    )
+
     notify_task_rejected(task)
 
     return task
@@ -291,6 +348,7 @@ def complete_task(*, task_id, user, comment=""):
             {"detail": "This task cannot be completed from its current status."}
         )
 
+    old_work_status = task.work_status
     task.work_status = Task.WorkStatus.COMPLETED
     task.save(update_fields=["work_status", "updated_at"])
 
@@ -301,6 +359,21 @@ def complete_task(*, task_id, user, comment=""):
         details={
             "comment": comment,
             "work_status": Task.WorkStatus.COMPLETED,
+        },
+    )
+
+    create_activity_log(
+        actor=user,
+        action="TASK_COMPLETED",
+        entity_type="TASK",
+        entity_id=task.id,
+        description=f"Task '{task.title}' completed.",
+        metadata={
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+            "old_status": old_work_status,
+            "new_status": task.work_status,
+            "comment": comment,
         },
     )
 
@@ -338,6 +411,7 @@ def cancel_task(*, task_id, admin_user, reason):
             {"detail": "Completed or cancelled tasks cannot be cancelled again."}
         )
 
+    old_work_status = task.work_status
     task.work_status = Task.WorkStatus.CANCELLED
     task.save(update_fields=["work_status", "updated_at"])
 
@@ -348,6 +422,21 @@ def cancel_task(*, task_id, admin_user, reason):
         details={
             "reason": reason,
             "work_status": Task.WorkStatus.CANCELLED,
+        },
+    )
+
+    create_activity_log(
+        actor=admin_user,
+        action="TASK_CANCELLED",
+        entity_type="TASK",
+        entity_id=task.id,
+        description=f"Task '{task.title}' cancelled.",
+        metadata={
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+            "old_status": old_work_status,
+            "new_status": task.work_status,
+            "reason": reason,
         },
     )
 
@@ -490,6 +579,22 @@ def create_task_change_request(
         },
     )
 
+    create_activity_log(
+        actor=supervisor,
+        action="TASK_EDIT_REQUESTED",
+        entity_type="TASK_CHANGE_REQUEST",
+        entity_id=change_request.id,
+        description="Task edit requested.",
+        metadata={
+            "change_request_id": str(change_request.id),
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+            "new_status": change_request.status,
+            "reason": reason,
+            "changed_fields": sorted(changed_values),
+        },
+    )
+
     notify_admins_task_change_requested(change_request)
 
     return change_request
@@ -620,6 +725,23 @@ def approve_task_change_request(
         },
     )
 
+    create_activity_log(
+        actor=admin_user,
+        action="TASK_EDIT_APPROVED",
+        entity_type="TASK_CHANGE_REQUEST",
+        entity_id=request_obj.id,
+        description="Task edit approved.",
+        metadata={
+            "change_request_id": str(request_obj.id),
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+            "new_status": request_obj.status,
+            "old_status": TaskChangeRequest.Status.PENDING,
+            "comment": admin_comment,
+            "changed_fields": sorted(changed_fields),
+        },
+    )
+
     notify_task_change_approved(request_obj)
 
     return request_obj
@@ -682,6 +804,22 @@ def reject_task_change_request(
         details={
             "change_request_id": str(request_obj.id),
             "reason": admin_comment,
+        },
+    )
+
+    create_activity_log(
+        actor=admin_user,
+        action="TASK_EDIT_REJECTED",
+        entity_type="TASK_CHANGE_REQUEST",
+        entity_id=request_obj.id,
+        description="Task edit rejected.",
+        metadata={
+            "change_request_id": str(request_obj.id),
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+            "new_status": request_obj.status,
+            "old_status": TaskChangeRequest.Status.PENDING,
+            "comment": admin_comment,
         },
     )
 
@@ -863,6 +1001,23 @@ def create_timeline_reorder_request(
         },
     )
 
+    create_activity_log(
+        actor=supervisor,
+        action="TIMELINE_REORDER_REQUESTED",
+        entity_type="TASK_CHANGE_REQUEST",
+        entity_id=change_request.id,
+        description="Timeline reorder requested.",
+        metadata={
+            "change_request_id": str(change_request.id),
+            "task_id": str(anchor_task.id),
+            "project_id": str(anchor_task.project_id),
+            "new_status": change_request.status,
+            "reason": reason,
+            "old_order": current_ids,
+            "proposed_order": proposed_ids,
+        },
+    )
+
     if change_request.change_type == TaskChangeRequest.ChangeType.ORDER_CHANGE:
         notify_admins_timeline_reorder_requested(change_request)
     else:
@@ -984,6 +1139,24 @@ def approve_timeline_reorder_request(
         },
     )
 
+    create_activity_log(
+        actor=admin_user,
+        action="TIMELINE_REORDER_APPROVED",
+        entity_type="TASK_CHANGE_REQUEST",
+        entity_id=change_request.id,
+        description="Timeline reorder approved.",
+        metadata={
+            "change_request_id": str(change_request.id),
+            "task_id": str(change_request.task.id),
+            "project_id": str(change_request.task.project_id),
+            "new_status": change_request.status,
+            "old_status": TaskChangeRequest.Status.PENDING,
+            "comment": admin_comment,
+            "old_order": [item["task_id"] for item in current_snapshot],
+            "new_order": proposed_ids,
+        },
+    )
+
     notify_timeline_reorder_approved(change_request)
 
     return change_request
@@ -1036,6 +1209,22 @@ def reject_timeline_reorder_request(
             "reason": admin_comment,
         },
     )
+    create_activity_log(
+        actor=admin_user,
+        action="TIMELINE_REORDER_REJECTED",
+        entity_type="TASK_CHANGE_REQUEST",
+        entity_id=change_request.id,
+        description="Timeline reorder rejected.",
+        metadata={
+            "change_request_id": str(change_request.id),
+            "task_id": str(change_request.task.id),
+            "project_id": str(change_request.task.project_id),
+            "new_status": change_request.status,
+            "old_status": TaskChangeRequest.Status.PENDING,
+            "comment": admin_comment,
+        },
+    )
+
     notify_timeline_reorder_rejected(change_request)
     
     return change_request
@@ -1166,6 +1355,22 @@ def resubmit_task(*, task_id, supervisor, validated_data):
             "old_values": old_values,
             "new_values": new_values,
             "approval_status": "PENDING",
+        },
+    )
+
+    create_activity_log(
+        actor=supervisor,
+        action="TASK_RESUBMITTED",
+        entity_type="TASK",
+        entity_id=task.id,
+        description=f"Task '{task.title}' resubmitted.",
+        metadata={
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+            "old_status": Task.ApprovalStatus.REJECTED,
+            "new_status": task.approval_status,
+            "changed_fields": sorted(cleaned_data),
+            "comment": resubmission_note,
         },
     )
 

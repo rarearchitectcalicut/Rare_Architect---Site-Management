@@ -34,7 +34,6 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
-    
     # Apps
     "users",
     "projects",
@@ -42,6 +41,7 @@ INSTALLED_APPS = [
     "reports",
     "documents",
     "notifications",
+    "activity",
 ]
 
 MIDDLEWARE = [

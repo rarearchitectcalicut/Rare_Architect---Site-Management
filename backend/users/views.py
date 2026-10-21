@@ -17,6 +17,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from rest_framework.exceptions import NotFound
+from django.db import transaction
+from activity.services import create_activity_log
 
 
 User = get_user_model()
@@ -151,6 +153,7 @@ class SupervisorResetPasswordView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
     serializer_class = SupervisorResetPasswordSerializer
 
+    @transaction.atomic
     def post(self, request, id):
         try:
             supervisor = User.objects.get(
@@ -169,6 +172,14 @@ class SupervisorResetPasswordView(generics.GenericAPIView):
         supervisor.set_password(serializer.validated_data["new_password"])
         supervisor.must_change_password = True
         supervisor.save(update_fields=["password", "must_change_password"])
+        create_activity_log(
+            actor=request.user,
+            action="USER_PASSWORD_RESET",
+            entity_type="USER",
+            entity_id=supervisor.id,
+            description="Supervisor password reset by an Admin.",
+            metadata={"user_id": str(supervisor.id)},
+        )
 
         return Response(
             {"detail": "Supervisor password reset successfully."},

@@ -13,6 +13,7 @@ from rest_framework.exceptions import (
 from projects.models import Project
 from tasks.models import Task
 from reports.services import accessible_projects
+from activity.services import create_activity_log
 
 from .models import (
     ProjectDocument,
@@ -158,6 +159,21 @@ def create_project_document(
 
         version.save()
 
+        create_activity_log(
+            actor=user,
+            action="PROJECT_DOCUMENT_UPLOADED",
+            entity_type="PROJECT_DOCUMENT",
+            entity_id=document.id,
+            description="Project document uploaded.",
+            metadata={
+                "project_id": str(document.project_id),
+                "document_id": str(document.id),
+                "version_id": str(version.id),
+                "version_number": version.version_number,
+                "file_size": version.file_size,
+            },
+        )
+
     except Exception:
         cleanup_private_file(
             version=version,
@@ -230,6 +246,21 @@ def upload_project_document_version(
 
         document.save(update_fields=["updated_at"])
 
+        create_activity_log(
+            actor=user,
+            action="PROJECT_DOCUMENT_VERSION_UPLOADED",
+            entity_type="PROJECT_DOCUMENT",
+            entity_id=document.id,
+            description="Project document version uploaded.",
+            metadata={
+                "project_id": str(document.project_id),
+                "document_id": str(document.id),
+                "version_id": str(version.id),
+                "version_number": version.version_number,
+                "file_size": version.file_size,
+            },
+        )
+
     except Exception:
         cleanup_private_file(
             version=version,
@@ -301,6 +332,22 @@ def create_task_document(
 
         version.save()
 
+        create_activity_log(
+            actor=user,
+            action="TASK_DOCUMENT_UPLOADED",
+            entity_type="TASK_DOCUMENT",
+            entity_id=document.id,
+            description="Task document uploaded.",
+            metadata={
+                "project_id": str(document.task.project_id),
+                "document_id": str(document.id),
+                "version_id": str(version.id),
+                "version_number": version.version_number,
+                "file_size": version.file_size,
+                "task_id": str(document.task_id),
+            },
+        )
+
     except Exception:
         cleanup_private_file(
             version=version,
@@ -371,6 +418,22 @@ def upload_task_document_version(
         version.save()
 
         document.save(update_fields=["updated_at"])
+
+        create_activity_log(
+            actor=user,
+            action="TASK_DOCUMENT_VERSION_UPLOADED",
+            entity_type="TASK_DOCUMENT",
+            entity_id=document.id,
+            description="Task document version uploaded.",
+            metadata={
+                "project_id": str(document.task.project_id),
+                "document_id": str(document.id),
+                "version_id": str(version.id),
+                "version_number": version.version_number,
+                "file_size": version.file_size,
+                "task_id": str(document.task_id),
+            },
+        )
 
     except Exception:
         cleanup_private_file(

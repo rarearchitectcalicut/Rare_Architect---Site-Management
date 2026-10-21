@@ -593,6 +593,7 @@ class TaskHistory(models.Model):
                         "DELAY_REPORTED",
                         "EXTENSION_REQUESTED",
                         "EXTENSION_APPROVED",
+                        "EXTENSION_REJECTED",
                         "COMPLETED",
                         "CANCELLED",
                     ]

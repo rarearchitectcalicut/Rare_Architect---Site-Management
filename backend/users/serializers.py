@@ -7,6 +7,7 @@ from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.password_validation import validate_password
+from activity.services import create_activity_log
 
 User = get_user_model()
 
@@ -72,7 +73,7 @@ class SupervisorCreateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        return User.objects.create_user(
+        user = User.objects.create_user(
             password="supervisor",
             role=User.Role.SUPERVISOR,
             is_active=True,
@@ -81,6 +82,15 @@ class SupervisorCreateSerializer(serializers.ModelSerializer):
             is_superuser=False,
             **validated_data,
         )
+        create_activity_log(
+            actor=self.context["request"].user,
+            action="USER_CREATED",
+            entity_type="USER",
+            entity_id=user.id,
+            description="Supervisor account created.",
+            metadata={"user_id": str(user.id), "role": user.role},
+        )
+        return user
 
 
 # Login Serializer with Phone
@@ -181,11 +191,20 @@ class ChangePasswordSerializer(serializers.Serializer):
 
         return attrs
 
+    @transaction.atomic
     def save(self, **kwargs):
         user = self.context["request"].user
         user.set_password(self.validated_data["new_password"])
         user.must_change_password = False
         user.save(update_fields=["password", "must_change_password"])
+        create_activity_log(
+            actor=user,
+            action="USER_PASSWORD_CHANGED",
+            entity_type="USER",
+            entity_id=user.id,
+            description="Account password changed.",
+            metadata={"user_id": str(user.id)},
+        )
         return user
 
 
@@ -208,6 +227,44 @@ class SupervisorListSerializer(serializers.ModelSerializer):
 
 # Update Supervisor
 class SupervisorUpdateSerializer(serializers.ModelSerializer):
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        instance = User.objects.select_for_update().get(pk=instance.pk)
+        changed_fields = [
+            field for field, value in validated_data.items()
+            if getattr(instance, field) != value
+        ]
+        old_active = instance.is_active
+        instance = super().update(instance, validated_data)
+        actor = self.context["request"].user
+        if "is_active" in changed_fields:
+            create_activity_log(
+                actor=actor,
+                action="USER_ACTIVATED" if instance.is_active else "USER_DEACTIVATED",
+                entity_type="USER",
+                entity_id=instance.id,
+                description="Supervisor account activation changed.",
+                metadata={
+                    "user_id": str(instance.id),
+                    "old_is_active": old_active,
+                    "new_is_active": instance.is_active,
+                },
+            )
+        profile_fields = sorted(set(changed_fields) - {"is_active"})
+        if profile_fields:
+            create_activity_log(
+                actor=actor,
+                action="USER_UPDATED",
+                entity_type="USER",
+                entity_id=instance.id,
+                description="Supervisor account details updated.",
+                metadata={
+                    "user_id": str(instance.id),
+                    "changed_fields": profile_fields,
+                },
+            )
+        return instance
 
     class Meta:
         model = User

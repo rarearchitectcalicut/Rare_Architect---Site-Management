@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/v1/", include("reports.urls")),
     path("api/v1/", include("notifications.urls")),
     path("api/v1/", include("documents.urls")),
+    path("api/v1/", include("activity.urls")),
 ]
 
 

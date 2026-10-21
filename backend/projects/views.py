@@ -25,6 +25,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 
 from .filters import ProjectFilter
 from .pagination import ProjectPagination
+from activity.services import create_activity_log
 
 # ============================================================
 # PROJECT CATEGORY LIST-CREATE VIEW
@@ -64,6 +65,18 @@ class ProjectCategoryListCreateView(generics.ListCreateAPIView):
             return ProjectCategoryListSerializer
 
         return ProjectCategorySerializer
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        category = serializer.save()
+        create_activity_log(
+            actor=self.request.user,
+            action="CATEGORY_CREATED",
+            entity_type="CATEGORY",
+            entity_id=category.id,
+            description=f"Category '{category.name}' created.",
+            metadata={"category_id": str(category.id)},
+        )
 
 
 # ============================================================
@@ -110,6 +123,45 @@ class ProjectCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
             queryset = queryset.filter(is_active=True)
 
         return queryset
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        instance = ProjectCategory.objects.select_for_update().get(
+            pk=serializer.instance.pk,
+        )
+        serializer.instance = instance
+        changed_fields = [
+            field for field, value in serializer.validated_data.items()
+            if not (field == "image" and value is None and not instance.image)
+            and getattr(instance, field) != value
+        ]
+        category = serializer.save()
+        if changed_fields:
+            create_activity_log(
+                actor=self.request.user,
+                action="CATEGORY_UPDATED",
+                entity_type="CATEGORY",
+                entity_id=category.id,
+                description=f"Category '{category.name}' updated.",
+                metadata={
+                    "category_id": str(category.id),
+                    "changed_fields": sorted(changed_fields),
+                },
+            )
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        category_id = instance.id
+        name = instance.name
+        instance.delete()
+        create_activity_log(
+            actor=self.request.user,
+            action="CATEGORY_DELETED",
+            entity_type="CATEGORY",
+            entity_id=category_id,
+            description=f"Category '{name}' deleted.",
+            metadata={"category_id": str(category_id)},
+        )
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -185,9 +237,18 @@ class ProjectListCreateView(generics.ListCreateAPIView):
 
         return ProjectListSerializer
 
+    @transaction.atomic
     def perform_create(self, serializer):
-        serializer.save(
+        project = serializer.save(
             created_by=self.request.user,
+        )
+        create_activity_log(
+            actor=self.request.user,
+            action="PROJECT_CREATED",
+            entity_type="PROJECT",
+            entity_id=project.id,
+            description=f"Project '{project.name}' created.",
+            metadata={"project_id": str(project.id), "new_status": project.status},
         )
 
     filter_backends = [
@@ -287,6 +348,44 @@ class ProjectDetailView(generics.RetrieveUpdateAPIView):
 
         return ProjectDetailSerializer
 
+    @transaction.atomic
+    def perform_update(self, serializer):
+        instance = Project.objects.select_for_update().get(pk=serializer.instance.pk)
+        serializer.instance = instance
+        old_status = instance.status
+        changed_fields = [
+            field for field, value in serializer.validated_data.items()
+            if not (field == "cover_image" and value is None and not instance.cover_image)
+            and getattr(instance, field) != value
+        ]
+        project = serializer.save()
+        if "status" in changed_fields:
+            create_activity_log(
+                actor=self.request.user,
+                action="PROJECT_STATUS_CHANGED",
+                entity_type="PROJECT",
+                entity_id=project.id,
+                description=f"Project '{project.name}' status changed.",
+                metadata={
+                    "project_id": str(project.id),
+                    "old_status": old_status,
+                    "new_status": project.status,
+                },
+            )
+        detail_fields = sorted(set(changed_fields) - {"status"})
+        if detail_fields:
+            create_activity_log(
+                actor=self.request.user,
+                action="PROJECT_UPDATED",
+                entity_type="PROJECT",
+                entity_id=project.id,
+                description=f"Project '{project.name}' updated.",
+                metadata={
+                    "project_id": str(project.id),
+                    "changed_fields": detail_fields,
+                },
+            )
+
 
 # ====================================
 # PROJECT SUPERVISOR LIST VIEW
@@ -385,6 +484,19 @@ class ProjectAssignSupervisorsView(generics.GenericAPIView):
                     assignment.full_clean()
                     assignment.save()
 
+                    create_activity_log(
+                        actor=request.user,
+                        action="SUPERVISOR_ASSIGNED",
+                        entity_type="PROJECT",
+                        entity_id=project.id,
+                        description=f"Supervisor assigned to project '{project.name}'.",
+                        metadata={
+                            "project_id": str(project.id),
+                            "supervisor_id": str(supervisor.id),
+                            "assignment_id": str(assignment.id),
+                        },
+                    )
+
                     assignments.append(assignment)
 
         except (IntegrityError, ValidationError) as exc:
@@ -429,14 +541,28 @@ class ProjectRemoveSupervisorView(generics.GenericAPIView):
         IsAdminRole,
     ]
 
+    @transaction.atomic
     def delete(self, request, project_id, supervisor_id):
         assignment = get_object_or_404(
-            ProjectSupervisor,
+            ProjectSupervisor.objects.select_for_update(),
             project_id=project_id,
             supervisor_id=supervisor_id,
         )
 
+        assignment_id = assignment.id
         assignment.delete()
+        create_activity_log(
+            actor=request.user,
+            action="SUPERVISOR_UNASSIGNED",
+            entity_type="PROJECT",
+            entity_id=project_id,
+            description="Supervisor removed from project.",
+            metadata={
+                "project_id": str(project_id),
+                "supervisor_id": str(supervisor_id),
+                "assignment_id": str(assignment_id),
+            },
+        )
 
         return Response(
             {"message": ("Supervisor removed from project successfully.")},
