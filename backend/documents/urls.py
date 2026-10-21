@@ -7,6 +7,8 @@ from .views import (
     ProjectDocumentVersionDownloadView,
     TaskDocumentListCreateView,
     TaskDocumentDetailView,
+    TaskDocumentVersionListCreateView,
+    TaskDocumentVersionDownloadView,
 )
 
 app_name = "documents"
@@ -41,5 +43,15 @@ urlpatterns = [
         "task-documents/<uuid:id>/",
         TaskDocumentDetailView.as_view(),
         name="task-document-detail",
+    ),
+    path(
+        "task-documents/<uuid:id>/versions/",
+        TaskDocumentVersionListCreateView.as_view(),
+        name="task-document-version-list-create",
+    ),
+    path(
+        "task-document-versions/<uuid:id>/download/",
+        TaskDocumentVersionDownloadView.as_view(),
+        name="task-document-version-download",
     ),
 ]
