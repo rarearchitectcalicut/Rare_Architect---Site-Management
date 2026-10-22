@@ -25,7 +25,7 @@ import SectionPlaceholder from "./pages/SectionPlaceholder";
 import AdminProjectOverview from "./pages/admin/ProjectOverview";
 import Supervisors from "./pages/admin/Supervisors";
 import SupervisorDetails from "./pages/admin/SupervisorDetails";
-
+import AdminProjects from "./pages/admin/Projects";
 // =====================================================
 // ROUTES AND LAYOUT
 // =====================================================
@@ -153,7 +153,7 @@ export default function App() {
           {/* PROJECTS LIST */}
           <Route
             path="/admin/projects"
-            element={<SectionPlaceholder />}
+            element={<AdminProjects />}
           />
 
           {/* CATEGORY PROJECT LISTING */}
