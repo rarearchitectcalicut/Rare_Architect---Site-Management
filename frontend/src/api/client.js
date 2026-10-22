@@ -17,19 +17,43 @@ const tokenClient = axios.create({
   timeout: 15000,
 });
 
-let accessToken = null;
-let refreshToken = null;
+const SESSION_KEY = "rare.auth.tokens";
+
+function readStoredTokens() {
+  try {
+    return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+const storedTokens = readStoredTokens();
+let accessToken = storedTokens.access ?? null;
+let refreshToken = storedTokens.refresh ?? null;
 let refreshPromise = null;
 let unauthorizedHandler = null;
 
 export function setAuthTokens(tokens) {
   accessToken = tokens?.access ?? null;
   refreshToken = tokens?.refresh ?? null;
+  try {
+    sessionStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({ access: accessToken, refresh: refreshToken })
+    );
+  } catch {
+    // Authentication still works in memory if browser storage is unavailable.
+  }
 }
 
 export function clearAuthTokens() {
   accessToken = null;
   refreshToken = null;
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // Browser storage may be unavailable.
+  }
 }
 
 export function setUnauthorizedHandler(handler) {
@@ -86,8 +110,10 @@ api.interceptors.response.use(
 
             // A backend with refresh rotation may return both.
             if (refreshToken === tokenUsed) {
-              accessToken = data.access;
-              refreshToken = data.refresh ?? refreshToken;
+              setAuthTokens({
+                access: data.access,
+                refresh: data.refresh ?? refreshToken,
+              });
             }
 
             return data.access;

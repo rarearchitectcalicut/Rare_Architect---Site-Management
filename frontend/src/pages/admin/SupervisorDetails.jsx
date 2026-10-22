@@ -255,7 +255,7 @@ function IconTile({ icon: Icon, tone = "sand" }) {
         justify-center rounded-2xl
         transition-all duration-300
         group-hover:-translate-y-0.5
-        group-hover:rotate-[-3deg]
+        group-hover:-rotate-3
         group-hover:shadow-sm
         motion-reduce:transform-none
         ${tones[tone]}
@@ -498,7 +498,7 @@ function ChangePasswordModal({
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="password-modal-title"
-                    className="w-full max-w-[510px] overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_24px_70px_rgba(33,30,26,0.25)]"
+                    className="w-full max-w-127.5 overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_24px_70px_rgba(33,30,26,0.25)]"
                 >
                     <div className="flex items-start justify-between gap-4 border-b border-[#EEE6DC] p-5 sm:p-6">
                         <div className="flex items-start gap-3">
@@ -690,7 +690,7 @@ function AssignedProjectCard({ project }) {
         <Link
             to={`/admin/projects/${project.id}`}
             className="
-        group flex min-h-[160px] overflow-hidden
+        group flex min-h-40 overflow-hidden
         rounded-[20px] border border-[#E7DED2]
         bg-[#FFFDFA]
         transition-all duration-300
@@ -722,7 +722,7 @@ function AssignedProjectCard({ project }) {
                         {project.category_name || "Project"}
                     </p>
 
-                    <h3 className="mt-2 break-words text-base font-bold text-[#211E1A]">
+                    <h3 className="mt-2 wrap-break-word text-base font-bold text-[#211E1A]">
                         {project.name}
                     </h3>
 

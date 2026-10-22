@@ -4,10 +4,12 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import { authApi } from "../api/authApi";
+import LoadingScreen from "../components/LoadingScreen";
 import {
   clearAuthTokens,
   getRefreshToken,
@@ -20,6 +22,8 @@ export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const restoreRequest = useRef(null);
 
   const clearSession = useCallback(() => {
     clearAuthTokens();
@@ -30,6 +34,40 @@ export function AuthProvider({ children }) {
     setUnauthorizedHandler(clearSession);
 
     return () => setUnauthorizedHandler(null);
+  }, [clearSession]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // Share the request across Strict Mode's effect setup/cleanup cycle.
+    if (!restoreRequest.current) {
+      restoreRequest.current = getRefreshToken()
+        ? authApi.getMe()
+        : Promise.resolve(null);
+    }
+
+    restoreRequest.current
+      .then((currentUser) => {
+        if (cancelled) return;
+        if (
+          currentUser &&
+          !["ADMIN", "SUPERVISOR"].includes(currentUser.role)
+        ) {
+          clearSession();
+          return;
+        }
+        setUser(currentUser);
+      })
+      .catch(() => {
+        if (!cancelled) clearSession();
+      })
+      .finally(() => {
+        if (!cancelled) setInitializing(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [clearSession]);
 
   const login = useCallback(async (phone, password) => {
@@ -103,7 +141,9 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {initializing ? (
+        <LoadingScreen message="Restoring your session..." standalone />
+      ) : children}
     </AuthContext.Provider>
   );
 }
