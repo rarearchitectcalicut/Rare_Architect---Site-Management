@@ -26,6 +26,20 @@ import AdminProjectOverview from "./pages/admin/ProjectOverview";
 import Supervisors from "./pages/admin/Supervisors";
 import SupervisorDetails from "./pages/admin/SupervisorDetails";
 import AdminProjects from "./pages/admin/Projects";
+import AdminSettings from "./pages/admin/Settings";
+
+
+
+
+// =====================================================
+//  SUPERVISOR PAGES
+// =====================================================
+import SupervisorSettings from "./pages/supervisor/Settings";
+
+
+
+
+
 // =====================================================
 // ROUTES AND LAYOUT
 // =====================================================
@@ -144,6 +158,11 @@ export default function App() {
       >
         <Route element={<AppLayout />}>
 
+          <Route
+            path="/admin/settings"
+            element={<AdminSettings />}
+          />
+
           {/* ADMIN DASHBOARD */}
           <Route
             path="/admin/dashboard"
@@ -248,6 +267,11 @@ export default function App() {
         }
       >
         <Route element={<AppLayout />}>
+
+          <Route
+            path="/supervisor/settings"
+            element={<SupervisorSettings />}
+          />
 
           {/* SUPERVISOR DASHBOARD */}
           <Route
