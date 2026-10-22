@@ -21,4 +21,12 @@ export const supervisorApi = {
         );
         return data;
     },
+    createSupervisor: async (payload) => {
+        const { data } = await api.post(
+            "users/supervisors/",
+            payload
+        );
+
+        return data;
+    },
 };

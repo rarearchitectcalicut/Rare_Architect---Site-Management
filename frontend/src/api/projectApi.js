@@ -57,4 +57,12 @@ export const projectApi = {
 
         return data;
     },
+    createProject: async (formData) => {
+        const { data } = await api.post(
+            "projects/",
+            formData
+        );
+
+        return data;
+    },
 };

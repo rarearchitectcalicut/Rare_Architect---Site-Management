@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ProjectCategories from "../components/dashboard/ProjectCategories";
+
 import {
   Activity,
   AlertTriangle,
@@ -20,6 +21,7 @@ import { useAuth } from "../hooks/useAuth";
 import { dashboardApi } from "../api/dashboardApi";
 import LoadingScreen from "../components/LoadingScreen";
 import AdminQuickActions from "../components/dashboard/AdminQuickActions";
+
 // =====================================================
 // MOTION SYSTEM
 // One orchestrated page-load sequence + hover feedback.
@@ -171,7 +173,32 @@ function ActionLink({ to, children }) {
   );
 }
 
-function StatCard({ label, value, icon: Icon, hint, delay = 0 }) {
+// Icon tile tones. Literal class strings so Tailwind can detect them.
+const iconTones = {
+  neutral:
+    "bg-[#f1eadf] text-[#211e1a] group-hover:bg-[#211e1a] group-hover:text-white",
+  blue:
+    "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB] group-hover:text-white",
+  green:
+    "bg-[#E6F4EA] text-[#16A34A] group-hover:bg-[#16A34A] group-hover:text-white",
+  orange:
+    "bg-[#FFF3E0] text-[#EA8A12] group-hover:bg-[#EA8A12] group-hover:text-white",
+  red:
+    "bg-[#fde8e6] text-[#9e3535] group-hover:bg-[#9e3535] group-hover:text-white",
+  violet:
+    "bg-[#F1ECFE] text-[#7C3AED] group-hover:bg-[#7C3AED] group-hover:text-white",
+  slate:
+    "bg-[#ece8e2] text-[#72675b] group-hover:bg-[#72675b] group-hover:text-white",
+};
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  hint,
+  delay = 0,
+  tone = "neutral",
+}) {
   return (
     <div
       className="rare-rise h-full min-w-0"
@@ -197,15 +224,16 @@ function StatCard({ label, value, icon: Icon, hint, delay = 0 }) {
           </p>
 
           <div
-            className="
-              shrink-0 rounded-xl bg-[#f1eadf]
-              p-2 text-[#211e1a]
-              transition-transform duration-300 ease-out
+            className={`
+              shrink-0 rounded-xl
+              p-2
+              transition-all duration-300 ease-out
               group-hover:scale-110 group-hover:-rotate-6
               motion-reduce:transition-none
               motion-reduce:group-hover:transform-none
               sm:p-2.5
-            "
+              ${iconTones[tone] || iconTones.neutral}
+            `}
           >
             <Icon size={19} strokeWidth={1.8} />
           </div>
@@ -259,11 +287,9 @@ function StatusPill({ status }) {
 function EmptyState({ message }) {
   return (
     <div className="rare-fade py-8 text-center sm:py-10">
-      <CheckCircle2
-        size={30}
-        className="mx-auto mb-3 text-[#928678]"
-        strokeWidth={1.5}
-      />
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#E6F4EA] text-[#16A34A]">
+        <CheckCircle2 size={26} strokeWidth={1.6} />
+      </div>
 
       <p className="text-sm text-[#8a8175]">
         {message}
@@ -302,7 +328,7 @@ function Panel({ title, subtitle, children, action, delay = 0 }) {
   );
 }
 
-function CountRow({ label, value, icon: Icon }) {
+function CountRow({ label, value, icon: Icon, tone = "neutral" }) {
   return (
     <div
       className="
@@ -316,20 +342,19 @@ function CountRow({ label, value, icon: Icon }) {
     >
       <div className="flex min-w-0 items-center gap-3">
         <div
-          className="
-            shrink-0 rounded-lg bg-[#f5efe7]
-            p-2 text-[#776f63]
+          className={`
+            shrink-0 rounded-lg p-2
             transition-all duration-300 ease-out
-            group-hover:bg-[#f1eadf] group-hover:text-[#211e1a]
             group-hover:scale-105
             motion-reduce:transition-none
             motion-reduce:group-hover:transform-none
-          "
+            ${iconTones[tone] || iconTones.neutral}
+          `}
         >
           <Icon size={17} strokeWidth={1.8} />
         </div>
 
-        <span className="min-w-0 break-words text-sm text-[#665e53] transition-colors duration-200 group-hover:text-[#211e1a]">
+        <span className="min-w-0 wrap-break-word text-sm text-[#665e53] transition-colors duration-200 group-hover:text-[#211e1a]">
           {label}
         </span>
       </div>
@@ -363,11 +388,11 @@ function ItemList({ items, getTitle, getSubtitle, getStatus }) {
           "
         >
           <div className="min-w-0">
-            <p className="break-words text-sm font-semibold text-[#211e1a]">
+            <p className="wrap-break-word text-sm font-semibold text-[#211e1a]">
               {getTitle(item)}
             </p>
 
-            <p className="mt-1 break-words text-xs text-[#8a8175]">
+            <p className="mt-1 wrap-break-word text-xs text-[#8a8175]">
               {getSubtitle(item)}
             </p>
           </div>
@@ -425,6 +450,7 @@ function AdminDashboard({ summary, reviewQueue }) {
           <StatCard
             delay={stagger(0)}
             label="Total Projects"
+            tone="blue"
             value={projects.total}
             icon={FolderKanban}
             hint={`${projects.active ?? 0} active projects`}
@@ -433,6 +459,7 @@ function AdminDashboard({ summary, reviewQueue }) {
           <StatCard
             delay={stagger(1)}
             label="Pending Tasks"
+            tone="orange"
             value={tasks.pending_approval}
             icon={ClipboardCheck}
             hint="Awaiting approval"
@@ -441,6 +468,7 @@ function AdminDashboard({ summary, reviewQueue }) {
           <StatCard
             delay={stagger(2)}
             label="Daily Reports"
+            tone="green"
             value={reports.total}
             icon={FileText}
             hint={`${reports.submitted ?? 0} submitted`}
@@ -449,6 +477,7 @@ function AdminDashboard({ summary, reviewQueue }) {
           <StatCard
             delay={stagger(3)}
             label="Pending Delays"
+            tone="red"
             value={delays.pending_review}
             icon={AlertTriangle}
             hint="Awaiting review"
@@ -456,14 +485,9 @@ function AdminDashboard({ summary, reviewQueue }) {
         </div>
       </section>
 
-      {/* Additional components  */}
-      
-        <AdminQuickActions />
-        <ProjectCategories />
-        
-      
-
-
+      {/* Additional components */}
+      <AdminQuickActions />
+      <ProjectCategories />
 
       {/* PROJECT AND TASK STATUS */}
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
@@ -474,16 +498,19 @@ function AdminDashboard({ summary, reviewQueue }) {
         >
           <CountRow
             label="Total projects"
+            tone="blue"
             value={projects.total}
             icon={FolderKanban}
           />
           <CountRow
             label="Active projects"
+            tone="green"
             value={projects.active}
             icon={CheckCircle2}
           />
           <CountRow
             label="Maintenance"
+            tone="orange"
             value={projects.maintenance}
             icon={Clock3}
           />
@@ -496,28 +523,30 @@ function AdminDashboard({ summary, reviewQueue }) {
         >
           <CountRow
             label="Total tasks"
+            tone="blue"
             value={tasks.total}
             icon={ListTodo}
           />
           <CountRow
             label="Approved"
+            tone="green"
             value={tasks.approved}
             icon={CheckCircle2}
           />
           <CountRow
             label="Rejected"
+            tone="red"
             value={tasks.rejected}
             icon={AlertTriangle}
           />
           <CountRow
             label="Completed work"
+            tone="violet"
             value={tasks.completed}
             icon={ClipboardCheck}
           />
         </Panel>
       </div>
-
-      
 
       {/* REVIEW QUEUES */}
       <section>
@@ -602,21 +631,25 @@ function AdminDashboard({ summary, reviewQueue }) {
           <Panel delay={stagger(11)} title="Other Pending Reviews">
             <CountRow
               label="Pending change requests"
+              tone="violet"
               value={changes.pending_total}
               icon={ShieldCheck}
             />
             <CountRow
               label="Work awaiting verification"
+              tone="orange"
               value={work.pending_verification}
               icon={ClipboardCheck}
             />
             <CountRow
               label="Pending extensions"
+              tone="blue"
               value={delays.pending_extensions}
               icon={Clock3}
             />
             <CountRow
               label="Unread notifications"
+              tone="red"
               value={notifications.unread_count}
               icon={Bell}
             />
@@ -651,14 +684,14 @@ function AdminDashboard({ summary, reviewQueue }) {
                 "
               >
                 <div
-                  className="
-                    shrink-0 rounded-xl bg-[#f1eadf]
-                    p-2.5 text-[#211e1a]
-                    transition-transform duration-300 ease-out
+                  className={`
+                    shrink-0 rounded-xl p-2.5
+                    transition-all duration-300 ease-out
                     group-hover:scale-110
                     motion-reduce:transition-none
                     motion-reduce:group-hover:transform-none
-                  "
+                    ${iconTones.blue}
+                  `}
                 >
                   <Activity size={18} />
                 </div>
@@ -764,6 +797,7 @@ function SupervisorDashboard({ summary, actionItems }) {
           <StatCard
             delay={stagger(0)}
             label="Assigned Projects"
+            tone="blue"
             value={projects.total_assigned}
             icon={FolderKanban}
             hint={`${projects.active ?? 0} active`}
@@ -772,6 +806,7 @@ function SupervisorDashboard({ summary, actionItems }) {
           <StatCard
             delay={stagger(1)}
             label="My Tasks"
+            tone="orange"
             value={tasks.total_created}
             icon={ListTodo}
             hint={`${tasks.pending_approval ?? 0} pending approval`}
@@ -780,6 +815,7 @@ function SupervisorDashboard({ summary, actionItems }) {
           <StatCard
             delay={stagger(2)}
             label="Project Reports"
+            tone="green"
             value={reports.total}
             icon={FileText}
             hint={`${reports.submitted ?? 0} submitted`}
@@ -788,6 +824,7 @@ function SupervisorDashboard({ summary, actionItems }) {
           <StatCard
             delay={stagger(3)}
             label="My Pending Delays"
+            tone="red"
             value={delays.pending_review}
             icon={AlertTriangle}
             hint="Awaiting Admin review"
@@ -800,26 +837,31 @@ function SupervisorDashboard({ summary, actionItems }) {
         <Panel delay={stagger(4)} title="My Tasks">
           <CountRow
             label="Created tasks"
+            tone="blue"
             value={tasks.total_created}
             icon={ListTodo}
           />
           <CountRow
             label="Pending approval"
+            tone="orange"
             value={tasks.pending_approval}
             icon={Clock3}
           />
           <CountRow
             label="Approved"
+            tone="green"
             value={tasks.approved}
             icon={CheckCircle2}
           />
           <CountRow
             label="Rejected"
+            tone="red"
             value={tasks.rejected}
             icon={AlertTriangle}
           />
           <CountRow
             label="Completed"
+            tone="violet"
             value={tasks.completed}
             icon={ClipboardCheck}
           />
@@ -828,26 +870,31 @@ function SupervisorDashboard({ summary, actionItems }) {
         <Panel delay={stagger(5)} title="Assigned Project Work">
           <CountRow
             label="Submitted daily reports"
+            tone="blue"
             value={reports.submitted}
             icon={FileText}
           />
           <CountRow
             label="Draft daily reports"
+            tone="slate"
             value={reports.draft}
             icon={FileText}
           />
           <CountRow
             label="Work awaiting verification"
+            tone="orange"
             value={work.pending_verification}
             icon={Clock3}
           />
           <CountRow
             label="Verified work entries"
+            tone="green"
             value={work.verified}
             icon={CheckCircle2}
           />
           <CountRow
             label="Unread notifications"
+            tone="red"
             value={notifications.unread_count}
             icon={Bell}
           />
@@ -992,11 +1039,9 @@ export default function Dashboard() {
       >
         <DashboardStyles />
 
-        <AlertTriangle
-          size={34}
-          strokeWidth={1.6}
-          className="mx-auto text-[#9e3535]"
-        />
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#fde8e6] text-[#9e3535]">
+          <AlertTriangle size={28} strokeWidth={1.6} />
+        </div>
 
         <h2 className="mt-4 text-xl font-bold text-[#211e1a]">
           Dashboard unavailable
