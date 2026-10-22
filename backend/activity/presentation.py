@@ -63,6 +63,7 @@ def activity_details(logs):
         role = (details["subject_role"] or "USER").capitalize()
         subject_label = f'{role} {name}'
         summaries = {
+            "USER_LOGGED_IN": f"{subject_label} signed in successfully.",
             "USER_CREATED": f"Created {subject_label}'s account.",
             "USER_UPDATED": f"Updated {subject_label}'s account details.",
             "USER_ACTIVATED": f"Activated {subject_label}'s account.",

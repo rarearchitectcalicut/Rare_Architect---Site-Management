@@ -102,6 +102,7 @@ class PhoneLoginSerializer(serializers.Serializer):
         style={"input_type": "password"},
     )
 
+    @transaction.atomic
     def validate(self, attrs):
         phone = attrs["phone"].strip()
         password = attrs["password"]
@@ -121,6 +122,15 @@ class PhoneLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError({"detail": "This account is inactive."})
 
         refresh = RefreshToken.for_user(user)
+
+        create_activity_log(
+            actor=user,
+            action="USER_LOGGED_IN",
+            entity_type="USER",
+            entity_id=user.id,
+            description="Signed in successfully.",
+            metadata={"user_id": str(user.id)},
+        )
 
         return {
             "refresh": str(refresh),

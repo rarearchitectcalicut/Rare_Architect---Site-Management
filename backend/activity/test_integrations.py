@@ -113,6 +113,54 @@ class ActivityIntegrationTests(TestCase):
     def pdf(self):
         return SimpleUploadedFile("evidence.pdf", b"%PDF-1.4\nTest file", "application/pdf")
 
+    def test_successful_logins_record_each_users_identity_and_time(self):
+        client = APIClient()
+        for user in (self.admin, self.supervisor):
+            response, log = self.event(
+                "USER_LOGGED_IN",
+                lambda: client.post(reverse("users:login"), {
+                    "phone": user.phone, "password": "Initial!safe879",
+                }), actor=user, entity_id=user.id,
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(log.metadata["actor_name"], user.get_full_name())
+            self.assertEqual(log.metadata["actor_role"], user.role)
+            self.assertIsNotNone(log.created_at)
+            recorded = log.description + json.dumps(log.metadata)
+            for secret in ("Initial!safe879", response.data["access"], response.data["refresh"]):
+                self.assertNotIn(secret, recorded)
+            client.credentials(HTTP_AUTHORIZATION=f'Bearer {response.data["access"]}')
+            self.assertEqual(self.no_event(lambda: client.get(reverse("users:current-user"))).status_code, 200)
+            self.assertEqual(self.no_event(lambda: client.post(reverse("users:token-refresh"), {
+                "refresh": response.data["refresh"],
+            })).status_code, 200)
+            client.credentials()
+
+    def test_failed_or_inactive_logins_create_no_success_activity(self):
+        client = APIClient()
+        response = self.no_event(lambda: client.post(reverse("users:login"), {
+            "phone": self.supervisor.phone, "password": "incorrect",
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.supervisor.is_active = False
+        self.supervisor.save(update_fields=["is_active"])
+        response = self.no_event(lambda: client.post(reverse("users:login"), {
+            "phone": self.supervisor.phone, "password": "Initial!safe879",
+        }))
+        self.assertEqual(response.status_code, 400)
+
+    def test_login_token_record_rolls_back_if_activity_logging_fails(self):
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+        count = OutstandingToken.objects.count()
+        with patch("users.serializers.create_activity_log", side_effect=RuntimeError("audit failed")):
+            with self.assertRaises(RuntimeError):
+                APIClient().post(reverse("users:login"), {
+                    "phone": self.supervisor.phone, "password": "Initial!safe879",
+                })
+        self.assertEqual(OutstandingToken.objects.count(), count)
+        self.assertFalse(ActivityLog.objects.exists())
+
     def test_user_creation_actor_and_validation(self):
         payload = dict(
             username="new", email="new@example.com", phone="+919444444444",

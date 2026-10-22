@@ -88,7 +88,7 @@ An unchanged PATCH, including clearing an already-empty image, creates no activi
 - Delay report editing/deletion and document metadata editing/deletion: no implemented business endpoints/services.
 - Task status transitions such as starting work or setting `DELAYED`: no standalone implemented transition service. Creation, approval, resubmission, completion, and cancellation are covered.
 - Notification creation, listing, unread counts, and read-state writes remain unlogged, as requested.
-- Authentication, refresh/logout, reads, downloads, and failed/denied operations create no success activity.
+- Successful phone/password sign-ins create `USER_LOGGED_IN` activity with the user's name, role, and timestamp. Passwords and tokens are excluded. Refresh, session restoration, logout, reads, downloads, and failed/denied operations create no success activity.
 - Generic Django admin edits, management commands, and direct ORM/database writes do not pass through these business-operation boundaries. No signals or middleware were introduced to intercept them.
 
 ## Validation results
