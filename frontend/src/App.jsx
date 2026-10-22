@@ -17,7 +17,14 @@ import ChangePassword from "./pages/ChangePassword";
 import Dashboard from "./pages/Dashboard";
 import CategoryProjectList from "./pages/CategoryProjectList";
 import SectionPlaceholder from "./pages/SectionPlaceholder";
+
+
+// =====================================================
+//  ADMIN PAGES
+// =====================================================
 import AdminProjectOverview from "./pages/admin/ProjectOverview";
+import Supervisors from "./pages/admin/Supervisors";
+import SupervisorDetails from "./pages/admin/SupervisorDetails";
 
 // =====================================================
 // ROUTES AND LAYOUT
@@ -182,7 +189,12 @@ export default function App() {
           {/* SUPERVISORS */}
           <Route
             path="/admin/supervisors"
-            element={<SectionPlaceholder />}
+            element={<Supervisors />}
+          />
+
+          <Route
+            path="/admin/supervisors/:supervisorId"
+            element={<SupervisorDetails />}
           />
 
           {/* ADD SUPERVISOR — UPCOMING */}

@@ -2,8 +2,11 @@
 import { api } from "./client";
 
 export const supervisorApi = {
-    list: async () => {
-        const { data } = await api.get("users/supervisors/");
+    list: async (params = {}) => {
+        const { data } = await api.get(
+            "users/supervisors/",
+            { params }
+        );
         return data;
     },
 
@@ -27,6 +30,36 @@ export const supervisorApi = {
             payload
         );
 
+        return data;
+    },
+    getSupervisor: async (id) => {
+        const { data } = await api.get(
+            `users/supervisors/${id}/`
+        );
+        return data;
+    },
+
+    updateSupervisor: async (id, payload) => {
+        const { data } = await api.patch(
+            `users/supervisors/${id}/`,
+            payload
+        );
+        return data;
+    },
+
+    resetPassword: async (supervisorId, payload) => {
+        const { data } = await api.post(
+            `users/supervisors/${supervisorId}/reset-password/`,
+            payload
+        );
+
+        return data;
+    },
+    
+    getProjectSupervisors: async (projectId) => {
+        const { data } = await api.get(
+            `projects/${projectId}/supervisors/`
+        );
         return data;
     },
 };
