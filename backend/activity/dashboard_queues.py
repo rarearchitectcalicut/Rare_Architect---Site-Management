@@ -1,4 +1,5 @@
 from activity.models import ActivityLog
+from .serializers import ActivityLogSerializer
 
 from tasks.models import Task, TaskChangeRequest
 from reports.models import (
@@ -149,18 +150,7 @@ def get_admin_dashboard_review_queue(*, user):
         "-created_at", "-id"
     )[:10]
 
-    activity_items = [
-        {
-            "id": str(log.id),
-            "actor_id": (str(log.actor_id) if log.actor_id else None),
-            "action": log.action,
-            "entity_type": log.entity_type,
-            "entity_id": (str(log.entity_id) if log.entity_id else None),
-            "description": log.description,
-            "created_at": log.created_at.isoformat(),
-        }
-        for log in recent_logs
-    ]
+    activity_items = ActivityLogSerializer(recent_logs, many=True).data
 
     # ---------------------------------------------
     # RETURN DASHBOARD DATA

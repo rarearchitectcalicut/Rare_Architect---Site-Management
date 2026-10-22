@@ -8,6 +8,7 @@ from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
 from .models import ActivityLog
+from .presentation import activity_details
 
 # =====================================================
 # ACTIVITY LOG CREATION
@@ -56,6 +57,15 @@ def create_activity_log(
         description=description.strip(),
         metadata=metadata if metadata is not None else {},
     )
+
+    # Preserve identities at the time of the event, even after later renames.
+    if isinstance(log.metadata, dict):
+        details = activity_details([log])[str(log.id)]
+        log.metadata = {
+            **log.metadata,
+            **{key: value for key, value in details.items()
+               if key != "summary" and value is not None},
+        }
 
     try:
         log.full_clean()

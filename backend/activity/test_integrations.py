@@ -155,7 +155,10 @@ class ActivityIntegrationTests(TestCase):
             ), actor=self.admin,
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(log.metadata, {"user_id": str(self.supervisor.id)})
+        self.assertEqual(log.metadata, {
+            "user_id": str(self.supervisor.id), "actor_name": "Admin", "actor_role": "ADMIN",
+            "subject_name": "Supervisor", "subject_role": "SUPERVISOR",
+        })
         self.supervisor.refresh_from_db()
         self.client.force_authenticate(self.supervisor)
         response, log = self.event(
@@ -167,7 +170,10 @@ class ActivityIntegrationTests(TestCase):
             }),
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(log.metadata, {"user_id": str(self.supervisor.id)})
+        self.assertEqual(log.metadata, {
+            "user_id": str(self.supervisor.id), "actor_name": "Supervisor", "actor_role": "SUPERVISOR",
+            "subject_name": "Supervisor", "subject_role": "SUPERVISOR",
+        })
         self.assertNotIn(password, log.description + json.dumps(log.metadata))
 
     def test_user_write_rolls_back_when_logging_fails(self):
@@ -257,7 +263,10 @@ class ActivityIntegrationTests(TestCase):
                 project=self.project, user=self.supervisor,
                 tasks_data=[{"title": "One"}, {"title": "Two"}],
             ))
-        self.assertEqual(log.metadata, {"batch_id": str(batch.id), "project_id": str(self.project.id), "task_count": 2})
+        self.assertEqual(log.metadata, {
+            "batch_id": str(batch.id), "project_id": str(self.project.id), "task_count": 2,
+            "actor_name": "Supervisor", "actor_role": "SUPERVISOR", "project_name": "Test project",
+        })
         self.assertEqual(TaskHistory.objects.filter(task__in=created).count(), 2)
         self.assertEqual(Notification.objects.filter(reference_id=batch.id).count(), 1)
         self.assertEqual(ActivityLog.objects.filter(action="TASK_CREATED").count(), 1)

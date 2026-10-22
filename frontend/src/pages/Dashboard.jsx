@@ -698,8 +698,32 @@ function AdminDashboard({ summary, reviewQueue }) {
 
                 <div className="min-w-0 flex-1">
                   <p className="break-words text-sm font-medium text-[#211e1a]">
-                    {entry.description || entry.action}
+                    {entry.summary || entry.description || entry.action}
                   </p>
+
+                  <p className="mt-1 text-xs font-medium wrap-anywhere text-[#665e53]">
+                    By {entry.actor_name || "System / unavailable user"}
+                    {entry.actor_role && ` (${entry.actor_role === "ADMIN" ? "Admin" : "Supervisor"})`}
+                  </p>
+
+                  {entry.project_name && (
+                    <p className="mt-1 text-xs wrap-anywhere text-[#665e53]">
+                      Project: {entry.project_name}
+                    </p>
+                  )}
+
+                  {Array.isArray(entry.metadata?.changed_fields) && entry.metadata.changed_fields.length > 0 && (
+                    <p className="mt-1 text-xs wrap-anywhere text-[#665e53]">
+                      Updated: {entry.metadata.changed_fields.map((field) => String(field).replaceAll("_", " ")).join(", ")}
+                    </p>
+                  )}
+
+                  {entry.metadata?.new_status && (
+                    <p className="mt-1 text-xs text-[#665e53]">
+                      Status: {entry.metadata.old_status && `${entry.metadata.old_status.replaceAll("_", " ")} → `}
+                      {entry.metadata.new_status.replaceAll("_", " ")}
+                    </p>
+                  )}
 
                   <p className="mt-1 break-words text-xs text-[#8a8175]">
                     {entry.entity_type || "System"}
