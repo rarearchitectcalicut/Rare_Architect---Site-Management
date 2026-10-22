@@ -6,8 +6,11 @@ import { api } from "./client";
 // =====================================================
 
 export const projectApi = {
-    getCategories: async () => {
-        const { data } = await api.get("project-categories/");
+    getCategories: async (params = {}) => {
+        const { data } = await api.get(
+            "project-categories/",
+            { params }
+        );
         return data;
     },
 
@@ -60,6 +63,14 @@ export const projectApi = {
     createProject: async (formData) => {
         const { data } = await api.post(
             "projects/",
+            formData
+        );
+
+        return data;
+    },
+    updateProject: async (projectId, formData) => {
+        const { data } = await api.patch(
+            `projects/${projectId}/`,
             formData
         );
 

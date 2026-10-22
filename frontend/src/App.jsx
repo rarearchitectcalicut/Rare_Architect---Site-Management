@@ -121,7 +121,7 @@ export default function App() {
 
   if (isInitializing) {
     return (
-      <LoadingScreen message="Loading RARE..." />
+      <LoadingScreen message="Loading RARE..." standalone />
     );
   }
 

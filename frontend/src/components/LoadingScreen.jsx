@@ -1,20 +1,32 @@
+import { createPortal } from "react-dom";
+import loginBg from "../assets/images/login-bg.jpg";
 import rareLogo from "../assets/images/rare-logo.png";
 
-export default function LoadingScreen({ message = "Loading..." }) {
-    return (
+export default function LoadingScreen({ message = "Loading...", standalone = false }) {
+    return createPortal(
         <div
             role="status"
             aria-live="polite"
             aria-label={message}
             className="
-                fixed inset-0 z-9999
+                fixed inset-0 z-9999 isolate
                 flex min-h-dvh items-center justify-center
-                bg-[#f1eadf]/40
-                backdrop-blur-md
                 px-6
             "
         >
-            <div className="flex flex-col items-center justify-center gap-7">
+            {standalone && (
+                <img
+                    src={loginBg}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 -z-20 h-full w-full object-cover"
+                />
+            )}
+            <div
+                aria-hidden="true"
+                className="absolute inset-0 -z-10 bg-[#f1eadf]/40 backdrop-blur-xl backdrop-saturate-125"
+            />
+            <div className="flex max-w-full flex-col items-center justify-center gap-7">
 
                 {/* Centered RARE Logo */}
                 <img
@@ -43,6 +55,7 @@ export default function LoadingScreen({ message = "Loading..." }) {
                 </p>
 
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
