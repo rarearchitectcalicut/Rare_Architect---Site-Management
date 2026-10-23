@@ -27,6 +27,8 @@ import Supervisors from "./pages/admin/Supervisors";
 import SupervisorDetails from "./pages/admin/SupervisorDetails";
 import AdminProjects from "./pages/admin/Projects";
 import AdminSettings from "./pages/admin/Settings";
+import AdminApprovals from "./pages/admin/Approvals";
+import AdminNotifications from "./pages/admin/Notifications";
 
 
 
@@ -34,9 +36,12 @@ import AdminSettings from "./pages/admin/Settings";
 // =====================================================
 //  SUPERVISOR PAGES
 // =====================================================
-import SupervisorSettings from "./pages/supervisor/Settings";
-
-
+import SupervisorSettings from "./pages/supervisor/Settings"; 
+import SupervisorProjects from "./pages/supervisor/Projects";
+import SupervisorProjectOverview from "./pages/supervisor/ProjectOverview";
+import SupervisorProjectWorkspace from "./pages/supervisor/ProjectWorkspace";
+import SupervisorProjectTasks from "./pages/supervisor/ProjectTasks";
+import SupervisorNotifications from "./pages/supervisor/Notifications";
 
 
 
@@ -202,7 +207,7 @@ export default function App() {
           {/* APPROVALS */}
           <Route
             path="/admin/approvals"
-            element={<SectionPlaceholder />}
+            element={<AdminApprovals />}
           />
 
           {/* SUPERVISORS */}
@@ -243,7 +248,7 @@ export default function App() {
           {/* NOTIFICATIONS */}
           <Route
             path="/admin/notifications"
-            element={<SectionPlaceholder />}
+            element={<AdminNotifications />}
           />
 
           {/* ACTIVITY LOGS */}
@@ -282,13 +287,24 @@ export default function App() {
           {/* ASSIGNED PROJECTS */}
           <Route
             path="/supervisor/projects"
-            element={<SectionPlaceholder />}
+            element={<SupervisorProjects />}
           />
 
           {/* PROJECT DETAILS — UPCOMING */}
           <Route
             path="/supervisor/projects/:projectId"
-            element={<SectionPlaceholder />}
+            element={<SupervisorProjectOverview />}
+          />
+
+          <Route
+            path="/supervisor/projects/:projectId/tasks"
+            element={<SupervisorProjectTasks />}
+          />
+
+
+          <Route
+            path="/supervisor/projects/:projectId/:section"
+            element={<SupervisorProjectWorkspace />}
           />
 
           {/* TASKS */}
@@ -318,7 +334,7 @@ export default function App() {
           {/* NOTIFICATIONS */}
           <Route
             path="/supervisor/notifications"
-            element={<SectionPlaceholder />}
+            element={<SupervisorNotifications />}
           />
 
         </Route>

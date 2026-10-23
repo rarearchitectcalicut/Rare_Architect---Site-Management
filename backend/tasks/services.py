@@ -3,7 +3,8 @@ from rest_framework.exceptions import (
     PermissionDenied,
     ValidationError,
 )
-
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 from datetime import date, datetime
 from decimal import Decimal
 from projects.models import Project, ProjectSupervisor
@@ -26,6 +27,21 @@ from notifications.task_events import (
     notify_timeline_reorder_approved,
     notify_timeline_reorder_rejected,
 )
+
+
+# HELPER
+def json_safe(value):
+    """
+    Convert Django-specific objects into JSON-safe values.
+
+    Handles:
+    - Decimal -> string
+    - UUID -> string
+    - date/datetime -> ISO string
+    - Nested dictionaries and lists
+    """
+    return json.loads(json.dumps(value, cls=DjangoJSONEncoder))
+
 
 # =====================================================
 # PROJECT STATUS VALIDATION
@@ -1226,13 +1242,15 @@ def reject_timeline_reorder_request(
     )
 
     notify_timeline_reorder_rejected(change_request)
-    
+
     return change_request
 
 
 # =====================================================
 # RESUBMIT REJECTED TASK
 # =====================================================
+
+
 @transaction.atomic
 def resubmit_task(*, task_id, supervisor, validated_data):
     """
@@ -1249,8 +1267,10 @@ def resubmit_task(*, task_id, supervisor, validated_data):
     - A RESUBMITTED history entry is created.
     """
 
-    # Lock project first, consistent with other
-    # project-level write operations.
+    # -------------------------------------------------
+    # 1. LOCK PROJECT
+    # -------------------------------------------------
+
     existing_task = get_object_or_404(
         Task.objects.only("id", "project_id"),
         pk=task_id,
@@ -1260,24 +1280,27 @@ def resubmit_task(*, task_id, supervisor, validated_data):
 
     project = Project.objects.select_for_update().get(pk=existing_task.project_id)
 
-    # Lock task against simultaneous reviews/updates.
+    # -------------------------------------------------
+    # 2. LOCK TASK
+    # -------------------------------------------------
+
     task = get_object_or_404(
         Task.objects.select_for_update(),
         pk=task_id,
         project=project,
     )
 
-    # Check original creator.
+    # -------------------------------------------------
+    # 3. PERMISSIONS & WORKFLOW VALIDATION
+    # -------------------------------------------------
+
     if task.created_by_id != supervisor.id:
         raise PermissionDenied("Only the original task creator can resubmit.")
 
-    # Check current supervisor assignment.
     validate_supervisor_assignment(project, supervisor)
 
-    # Check project status.
     validate_project_allows_tasks(project)
 
-    # Check approval state.
     if task.approval_status != Task.ApprovalStatus.REJECTED:
         raise ValidationError({"detail": "Only rejected tasks can be resubmitted."})
 
@@ -1291,36 +1314,41 @@ def resubmit_task(*, task_id, supervisor, validated_data):
             }
         )
 
-    # Revalidate input against the locked task.
-    # This also ensures the correction is not empty.
+    # -------------------------------------------------
+    # 4. VALIDATE CORRECTIONS
+    # -------------------------------------------------
+
     serializer = TaskResubmissionSerializer(
         instance=task,
         data=validated_data,
         partial=True,
     )
+
     serializer.is_valid(raise_exception=True)
 
     cleaned_data = dict(serializer.validated_data)
 
-    # The note belongs in history, not the Task model.
+    # Resubmission note is saved in history,
+    # not as a Task model field.
     resubmission_note = cleaned_data.pop("resubmission_note")
 
-    # Record old values for the audit trail.
+    # -------------------------------------------------
+    # 5. RECORD PREVIOUS VALUES
+    # -------------------------------------------------
+
     old_values = {}
 
     for field in cleaned_data:
-        value = getattr(task, field)
+        old_values[field] = json_safe(getattr(task, field))
 
-        if field in {"start_date", "end_date"}:
-            value = value.isoformat() if value else None
+    # -------------------------------------------------
+    # 6. APPLY CORRECTIONS
+    # -------------------------------------------------
 
-        old_values[field] = value
-
-    # Apply corrected fields.
     for field, value in cleaned_data.items():
         setattr(task, field, value)
 
-    # Restart the approval cycle.
+    # Restart the approval workflow.
     task.approval_status = Task.ApprovalStatus.PENDING
     task.approved_by = None
     task.approved_at = None
@@ -1335,16 +1363,18 @@ def resubmit_task(*, task_id, supervisor, validated_data):
         ]
     )
 
-    # JSON-compatible new values for history.
+    # -------------------------------------------------
+    # 7. RECORD UPDATED VALUES
+    # -------------------------------------------------
+
     new_values = {}
 
     for field in cleaned_data:
-        value = getattr(task, field)
+        new_values[field] = json_safe(getattr(task, field))
 
-        if field in {"start_date", "end_date"}:
-            value = value.isoformat() if value else None
-
-        new_values[field] = value
+    # -------------------------------------------------
+    # 8. CREATE TASK HISTORY
+    # -------------------------------------------------
 
     TaskHistory.objects.create(
         task=task,
@@ -1357,6 +1387,10 @@ def resubmit_task(*, task_id, supervisor, validated_data):
             "approval_status": "PENDING",
         },
     )
+
+    # -------------------------------------------------
+    # 9. CREATE ACTIVITY LOG
+    # -------------------------------------------------
 
     create_activity_log(
         actor=supervisor,
@@ -1373,6 +1407,10 @@ def resubmit_task(*, task_id, supervisor, validated_data):
             "comment": resubmission_note,
         },
     )
+
+    # -------------------------------------------------
+    # 10. NOTIFY ADMINS
+    # -------------------------------------------------
 
     notify_admins_task_resubmitted(task)
 

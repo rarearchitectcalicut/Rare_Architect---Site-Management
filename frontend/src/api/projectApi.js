@@ -22,14 +22,6 @@ export const projectApi = {
         return data;
     },
 
-    getProjects: async (params = {}) => {
-        const { data } = await api.get("projects/", {
-            params,
-        });
-
-        return data;
-    },
-
     getProject: async (projectId) => {
         const { data } = await api.get(
             `projects/${projectId}/`
@@ -38,14 +30,6 @@ export const projectApi = {
         return data;
     },
 
-    getProjectOverview: async (projectId) => {
-        const { data } = await api.get(
-            `projects/${projectId}/overview/`
-        );
-
-        return data;
-    },
-
     getProjects: async (params = {}) => {
         const { data } = await api.get("projects/", {
             params,
@@ -53,6 +37,7 @@ export const projectApi = {
 
         return data;
     },
+
     getProjectOverview: async (projectId) => {
         const { data } = await api.get(
             `projects/${projectId}/overview/`
