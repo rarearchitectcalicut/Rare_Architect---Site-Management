@@ -8,6 +8,7 @@ import {
 import { Bell } from "lucide-react";
 
 import { useAuth } from "../hooks/useAuth";
+import { notificationApi } from "../api/notificationApi";
 import LoadingScreen from "../components/LoadingScreen";
 
 import DesktopSidebar from "../components/layout/DesktopSidebar";
@@ -62,10 +63,46 @@ export default function AppLayout() {
     const [loggingOut, setLoggingOut] = useState(false);
     const [moreOpen, setMoreOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const closeMore = useCallback(() => {
         setMoreOpen(false);
     }, []);
+
+    useEffect(() => {
+        if (loggingOut) return;
+
+        let cancelled = false;
+        let latestRequest = 0;
+
+        const refreshUnreadCount = async () => {
+            if (document.visibilityState === "hidden") return;
+
+            const request = ++latestRequest;
+            try {
+                const data = await notificationApi.unreadCount();
+                if (!cancelled && request === latestRequest) {
+                    setUnreadCount(data.unread_count);
+                }
+            } catch {
+                // Keep the last known count if a background refresh fails.
+            }
+        };
+
+        refreshUnreadCount();
+        const interval = window.setInterval(refreshUnreadCount, 30000);
+        window.addEventListener("rare:notifications-updated", refreshUnreadCount);
+        window.addEventListener("focus", refreshUnreadCount);
+        document.addEventListener("visibilitychange", refreshUnreadCount);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(interval);
+            window.removeEventListener("rare:notifications-updated", refreshUnreadCount);
+            window.removeEventListener("focus", refreshUnreadCount);
+            document.removeEventListener("visibilitychange", refreshUnreadCount);
+        };
+    }, [user.id, loggingOut]);
 
     // ---------------------------------------------
     // HEADER GETS A SHADOW ONCE THE PAGE SCROLLS
@@ -154,16 +191,15 @@ export default function AppLayout() {
           `}
                 >
                     <div
-                        className={`
+                        className="
               mx-auto flex
+              min-h-19
               max-w-[1600px]
               items-center justify-between
               gap-4 px-5
-              transition-[min-height] duration-300 ease-out
               sm:px-8
               lg:px-10
-              ${scrolled ? "min-h-16" : "min-h-19"}
-            `}
+            "
                     >
                         {/* TITLE */}
                         <div className="min-w-0">
@@ -194,9 +230,11 @@ export default function AppLayout() {
                                         ? "/admin/notifications"
                                         : "/supervisor/notifications"
                                 }
-                                aria-label="Notifications"
+                                aria-label={unreadCount > 0
+                                    ? `Notifications, ${unreadCount} unread`
+                                    : "Notifications"}
                                 className="
-                  rare-bell group
+                  rare-bell group relative shrink-0
                   flex h-11 w-11
                   items-center justify-center
                   rounded-xl border
@@ -218,6 +256,14 @@ export default function AppLayout() {
                                     size={20}
                                     className="rare-bell-icon"
                                 />
+                                {unreadCount > 0 && (
+                                    <span
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-[#f1eadf]"
+                                    >
+                                        {unreadCount > 99 ? "99+" : unreadCount}
+                                    </span>
+                                )}
                             </NavLink>
 
                             {/* PROFILE PILL */}

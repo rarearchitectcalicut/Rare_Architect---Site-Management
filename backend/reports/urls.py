@@ -5,6 +5,7 @@ from .views import (
     DailyReportDetailView,
     DailyReportSubmitView,
     DailyTaskWorkListCreateView,
+    DailyWorkQueueView,
     DailyTaskWorkDetailView,
     DailyManpowerListCreateView,
     DailyManpowerDetailView,
@@ -29,6 +30,7 @@ from .views import (
 app_name = "reports"
 
 urlpatterns = [
+    path("daily-task-work/", DailyWorkQueueView.as_view(), name="daily-work-queue"),
     path(
         "projects/<uuid:project_id>/daily-reports/",
         ProjectDailyReportListCreateView.as_view(),

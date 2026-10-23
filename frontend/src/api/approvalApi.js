@@ -2,6 +2,7 @@
 import { api } from "./client";
 
 export const approvalApi = {
+    taskDecisions: async (params = {}) => (await api.get("task-decisions/", { params })).data,
     getTaskApprovals: async (params = {}) => {
         const { data } = await api.get("task-approvals/", {
             params,
@@ -9,10 +10,10 @@ export const approvalApi = {
         return data;
     },
 
-    approveTask: async (taskId) => {
+    approveTask: async (taskId, comment = "") => {
         const { data } = await api.post(
             `tasks/${taskId}/approve/`,
-            {}
+            { comment }
         );
         return data;
     },
@@ -40,10 +41,10 @@ export const approvalApi = {
         return data;
     },
 
-    approveChange: async (requestId) => {
+    approveChange: async (requestId, comment = "") => {
         const { data } = await api.post(
             `task-change-requests/${requestId}/approve/`,
-            {}
+            { admin_comment: comment }
         );
         return data;
     },
@@ -51,7 +52,7 @@ export const approvalApi = {
     rejectChange: async (requestId, reason) => {
         const { data } = await api.post(
             `task-change-requests/${requestId}/reject/`,
-            { reason }
+            { admin_comment: reason }
         );
         return data;
     },

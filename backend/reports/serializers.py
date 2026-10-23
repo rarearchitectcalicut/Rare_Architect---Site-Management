@@ -286,6 +286,11 @@ class DailyTaskWorkCreateSerializer(serializers.ModelSerializer):
 # DAILY TASK WORK DETAIL SERIALIZER
 # =====================================================
 class DailyTaskWorkDetailSerializer(serializers.ModelSerializer):
+    project_id = serializers.UUIDField(source="daily_report.project_id", read_only=True)
+    project_name = serializers.CharField(source="daily_report.project.name", read_only=True)
+    report_date = serializers.DateField(source="daily_report.report_date", read_only=True)
+    reported_by_name = serializers.CharField(source="daily_report.reported_by.username", read_only=True)
+    report_status = serializers.CharField(source="daily_report.status", read_only=True)
 
     task_title = serializers.CharField(
         source="task.title",
@@ -323,6 +328,11 @@ class DailyTaskWorkDetailSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "daily_report",
+            "project_id",
+            "project_name",
+            "report_date",
+            "reported_by_name",
+            "report_status",
             "task",
             "task_title",
             "measurement_method",
@@ -970,6 +980,10 @@ class DelayReportCreateSerializer(serializers.ModelSerializer):
 
 
 class DelayReportDetailSerializer(serializers.ModelSerializer):
+    project_name = serializers.CharField(source="task.project.name", read_only=True)
+    current_end_date = serializers.DateField(source="task.end_date", read_only=True, allow_null=True)
+    reviewed_by_name = serializers.CharField(source="reviewed_by.username", read_only=True, allow_null=True)
+    extension_reviewed_by_name = serializers.CharField(source="extension_reviewed_by.username", read_only=True, allow_null=True)
 
     task_title = serializers.CharField(
         source="task.title",
@@ -982,7 +996,7 @@ class DelayReportDetailSerializer(serializers.ModelSerializer):
     )
 
     reported_by_name = serializers.CharField(
-        source="reported_by.name",
+        source="reported_by.username",
         read_only=True,
         allow_null=True,
     )
@@ -995,6 +1009,8 @@ class DelayReportDetailSerializer(serializers.ModelSerializer):
             "task",
             "task_title",
             "project_id",
+            "project_name",
+            "current_end_date",
             "reported_by",
             "reported_by_name",
             "delay_type",
@@ -1006,9 +1022,11 @@ class DelayReportDetailSerializer(serializers.ModelSerializer):
             "status",
             "extension_status",
             "reviewed_by",
+            "reviewed_by_name",
             "reviewed_at",
             "admin_comment",
             "extension_reviewed_by",
+            "extension_reviewed_by_name",
             "extension_reviewed_at",
             "extension_admin_comment",
             "reported_at",

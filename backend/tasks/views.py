@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 
-from rest_framework import generics, status
+from rest_framework import generics, status, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -200,7 +200,7 @@ class BulkTaskCreateView(generics.GenericAPIView):
 # ====================================================
 class TaskApprovalListView(generics.ListAPIView):
     """
-    Admin can see all pending task approvals.
+    Admin can list task approvals by status (pending by default).
     """
 
     serializer_class = TaskApprovalListSerializer
@@ -214,8 +214,13 @@ class TaskApprovalListView(generics.ListAPIView):
     pagination_class = ProjectPagination
 
     def get_queryset(self):
+        requested_status = self.request.query_params.get("status", Task.ApprovalStatus.PENDING)
+        if requested_status not in Task.ApprovalStatus.values:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"status": "Invalid task approval status."})
+
         return (
-            Task.objects.filter(approval_status=Task.ApprovalStatus.PENDING)
+            Task.objects.filter(approval_status=requested_status)
             .select_related(
                 "project",
                 "created_by",
@@ -395,9 +400,23 @@ class TaskHistoryView(generics.ListAPIView):
 
         return (
             TaskHistory.objects.filter(task=task)
-            .select_related("actor")
+            .select_related("actor", "task__project")
             .order_by("-created_at", "-id")
         )
+
+
+class TaskDecisionListView(generics.ListAPIView):
+    """Read-only task approval cycles, including decisions before resubmission."""
+    permission_classes = [IsAuthenticated, MustChangePasswordPermission, IsAdminRole]
+    serializer_class = TaskHistorySerializer
+    pagination_class = ProjectPagination
+
+    def get_queryset(self):
+        queryset = TaskHistory.objects.filter(action__in=["APPROVED", "REJECTED"])
+        project = self.request.query_params.get("project")
+        if project:
+            queryset = queryset.filter(task__project_id=serializers.UUIDField().run_validation(project))
+        return queryset.select_related("actor", "task__project").order_by("-created_at", "-id")
 
 
 # =====================================================

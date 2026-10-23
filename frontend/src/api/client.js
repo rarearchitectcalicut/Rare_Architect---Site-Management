@@ -86,15 +86,30 @@ api.interceptors.response.use(
     if (
       !originalRequest ||
       error.response?.status !== 401 ||
-      originalRequest._retry ||
-      !refreshToken ||
       originalRequest.url?.includes("auth/login/") ||
       originalRequest.url?.includes("auth/refresh/")
     ) {
       return Promise.reject(error);
     }
 
+    const requestToken = originalRequest.headers?.Authorization;
+
+    if (originalRequest._retry || !refreshToken) {
+      if (accessToken && requestToken === `Bearer ${accessToken}`) {
+        clearAuthTokens();
+        unauthorizedHandler?.();
+      }
+      return Promise.reject(error);
+    }
+
     originalRequest._retry = true;
+
+    // A concurrent request may already have refreshed this expired token.
+    if (accessToken && requestToken !== `Bearer ${accessToken}`) {
+      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+      return api(originalRequest);
+    }
+
     const tokenUsed = refreshToken;
 
     try {

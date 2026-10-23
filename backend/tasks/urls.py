@@ -8,6 +8,7 @@ from .views import (
     TaskRejectView,
     TaskDetailView,
     TaskHistoryView,
+    TaskDecisionListView,
     TaskCompleteView,
     TaskCancelView,
     TaskChangeRequestCreateView,
@@ -26,6 +27,7 @@ from .views import (
 app_name = "tasks"
 
 urlpatterns = [
+    path("task-decisions/", TaskDecisionListView.as_view(), name="task-decision-list"),
     path(
         "projects/<uuid:project_id>/tasks/",
         ProjectTaskListCreateView.as_view(),

@@ -12,6 +12,7 @@ import {
 
 import { taskApi } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
+import { useConfirmation } from "../../hooks/useConfirmation";
 
 const makeRow = (key) => ({
     key,
@@ -140,6 +141,7 @@ export default function BulkAddTasks({
 }) {
     const nextKey = useRef(1);
     const savingRef = useRef(false);
+    const { confirm, cancelConfirmation, confirmationModal } = useConfirmation();
 
     const [rows, setRows] = useState([makeRow(0)]);
     const [rowErrors, setRowErrors] = useState({});
@@ -158,9 +160,10 @@ export default function BulkAddTasks({
         document.body.style.overflow = "hidden";
 
         return () => {
+            cancelConfirmation();
             document.body.style.overflow = oldOverflow;
         };
-    }, [open]);
+    }, [open, cancelConfirmation]);
 
     useEffect(() => {
         if (!open) return;
@@ -254,14 +257,19 @@ export default function BulkAddTasks({
             return;
         }
 
+        const payload = rows.map(serializeRow);
+        if (!await confirm({
+            title: "Add this task batch?",
+            message: `Submit ${payload.length} ${payload.length === 1 ? "task" : "tasks"} for Admin approval? Each task will start as Pending Approval.`,
+            confirmLabel: payload.length === 1 ? "Add Task" : `Add ${payload.length} Tasks`,
+        })) return;
+
         savingRef.current = true;
         setSaving(true);
         setError("");
         setRowErrors({});
 
         try {
-            const payload = rows.map(serializeRow);
-
             await taskApi.bulkCreate(projectId, payload);
 
             onSaved?.();
@@ -288,6 +296,7 @@ export default function BulkAddTasks({
 
     return (
         <>
+            {confirmationModal}
             {saving && (
                 <LoadingScreen message="Submitting task batch..." />
             )}

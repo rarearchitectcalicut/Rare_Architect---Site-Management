@@ -20,8 +20,8 @@ export const taskApi = {
     requestChange: async (taskId, payload) =>
         (await api.post(`tasks/${taskId}/change-requests/`, payload)).data,
 
-    history: async (taskId) =>
-        (await api.get(`tasks/${taskId}/history/`)).data,
+    history: async (taskId, params = {}) =>
+        (await api.get(`tasks/${taskId}/history/`, { params })).data,
 
     documents: async (taskId, params = {}) => {
         const { data } = await api.get(

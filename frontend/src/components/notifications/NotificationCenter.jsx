@@ -19,6 +19,9 @@ import {
 
 import { notificationApi } from "../../api/notificationApi";
 import { taskApi } from "../../api/taskApi";
+import { approvalApi } from "../../api/approvalApi";
+import { delayApi } from "../../api/delayApi";
+import { dailyReportApi } from "../../api/dailyReportApi";
 import LoadingScreen from "../LoadingScreen";
 
 const PAGE_SIZE = 10;
@@ -82,7 +85,10 @@ async function fetchNotifications() {
         }
 
         const response = await notificationApi.list({ page });
-        items.push(...itemsFrom(response));
+        items.push(...itemsFrom(response).map((notification) => ({
+            ...notification,
+            type: notification.notification_type || notification.type,
+        })));
 
         hasNext =
             !Array.isArray(response) && Boolean(response.next);
@@ -192,7 +198,7 @@ async function resolveDestination(notification, role) {
         notification.reference_type || ""
     ).toUpperCase();
 
-    const type = String(notification.type || "").toUpperCase();
+    const type = String(notification.notification_type || notification.type || "").toUpperCase();
 
     const ref = idOf(notification.reference_id);
 
@@ -213,6 +219,27 @@ async function resolveDestination(notification, role) {
 
     if (["TASK", "TASK_APPROVAL"].includes(kind) && ref) {
         taskId = ref;
+    }
+
+    if (["TASK_CHANGE_REQUEST", "CHANGE_REQUEST"].includes(kind) && ref) {
+        const request = await approvalApi.getChangeRequest(ref);
+        const timeline = request.change_type === "ORDER_CHANGE";
+        if (supervisor) return `/supervisor/projects/${request.project_id}/${timeline ? "timeline" : `tasks?task=${encodeURIComponent(idOf(request.task))}`}`;
+        return `/admin/approvals?tab=${timeline ? "timeline" : "changes"}&request=${encodeURIComponent(ref)}`;
+    }
+    if (["DELAY_REPORT", "EXTENSION_REQUEST"].includes(type) && ref) {
+        const report = await delayApi.get(ref);
+        return supervisor
+            ? `/supervisor/projects/${report.project_id}/delays?request=${encodeURIComponent(ref)}`
+            : `/admin/delays?request=${encodeURIComponent(ref)}&type=${type === "EXTENSION_REQUEST" ? "extension" : "delay"}`;
+    }
+    if (kind === "DAILY_TASK_WORK" && ref) {
+        const entry = await dailyReportApi.work(ref);
+        return supervisor ? `/supervisor/projects/${entry.project_id}/daily-reports` : `/admin/approvals?tab=work&entry=${encodeURIComponent(ref)}`;
+    }
+    if (kind === "DAILY_REPORT" && ref) {
+        const report = await dailyReportApi.get(ref);
+        return supervisor ? `/supervisor/projects/${report.project}/daily-reports` : `/admin/reports?report=${encodeURIComponent(ref)}`;
     }
 
     const taskRelated =
@@ -951,12 +978,12 @@ export default function NotificationCenter({
 
                             <h2
                                 id="notification-detail-title"
-                                className="mt-1.5 break-words text-xl font-bold leading-snug text-[#211E1A]"
+                                className="mt-1.5 wrap-break-word text-xl font-bold leading-snug text-[#211E1A]"
                             >
                                 {openedNotification.title || "Notification"}
                             </h2>
 
-                            <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-[#665E53]">
+                            <p className="mt-4 whitespace-pre-wrap wrap-break-word text-sm leading-7 text-[#665E53]">
                                 {openedNotification.message}
                             </p>
 

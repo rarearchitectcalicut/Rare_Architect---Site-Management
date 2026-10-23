@@ -213,6 +213,9 @@ def approve_task(*, task_id, admin_user, comment=""):
     approval/rejection requests.
     """
 
+    # Serialize timeline membership changes with project-first reorder decisions.
+    reference = get_object_or_404(Task.objects.only("project_id"), pk=task_id)
+    Project.objects.select_for_update().get(pk=reference.project_id)
     task = get_object_or_404(
         Task.objects.select_for_update(),
         pk=task_id,
@@ -411,6 +414,8 @@ def cancel_task(*, task_id, admin_user, reason):
     ):
         raise PermissionDenied("Only Admin can cancel tasks.")
 
+    reference = get_object_or_404(Task.objects.only("project_id"), pk=task_id)
+    Project.objects.select_for_update().get(pk=reference.project_id)
     task = get_object_or_404(
         Task.objects.select_related("project").select_for_update(),
         pk=task_id,

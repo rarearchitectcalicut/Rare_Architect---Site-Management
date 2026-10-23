@@ -14,6 +14,7 @@ import {
 
 import { taskApi } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
+import { useConfirmation } from "../../hooks/useConfirmation";
 
 const DOCUMENT_TYPES = [
     "DESIGN",
@@ -102,6 +103,8 @@ function DocumentUploadForm({
     const [saving, setSaving] = useState(false);
 
     const fileRef = useRef(null);
+    const savingRef = useRef(false);
+    const { confirm, cancelConfirmation, confirmationModal } = useConfirmation();
 
     useEffect(() => {
         setTitle("");
@@ -109,12 +112,13 @@ function DocumentUploadForm({
         setDocumentType("DRAWING");
         setFile(null);
         setError("");
-    }, [taskId, documentId]);
+        return cancelConfirmation;
+    }, [taskId, documentId, cancelConfirmation]);
 
     async function submit(event) {
         event.preventDefault();
 
-        if (saving) return;
+        if (savingRef.current) return;
 
         if (!file) {
             setError("Choose a file to upload.");
@@ -126,6 +130,15 @@ function DocumentUploadForm({
             return;
         }
 
+        if (!await confirm({
+            title: versionMode ? "Upload a new version?" : "Upload this document?",
+            message: versionMode
+                ? `Upload "${file.name}" as the latest version of this task document?`
+                : `Upload "${file.name}" as "${title.trim()}" to this task?`,
+            confirmLabel: versionMode ? "Upload Version" : "Upload Document",
+        })) return;
+
+        savingRef.current = true;
         setSaving(true);
         onBusyChange?.(true);
         setError("");
@@ -153,6 +166,7 @@ function DocumentUploadForm({
         } catch (err) {
             setError(getError(err));
         } finally {
+            savingRef.current = false;
             setSaving(false);
             onBusyChange?.(false);
         }
@@ -163,6 +177,7 @@ function DocumentUploadForm({
             onSubmit={submit}
             className="space-y-4 rounded-2xl border border-[#D8C7B2] bg-[#FFFDFA] p-4 sm:p-5"
         >
+            {confirmationModal}
             <div className="flex items-center justify-between gap-3">
                 <h4 className="text-sm font-bold text-[#211E1A]">
                     {versionMode

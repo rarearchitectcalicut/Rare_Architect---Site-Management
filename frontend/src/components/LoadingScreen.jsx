@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import loginBg from "../assets/images/login-bg.jpg";
 import rareLogo from "../assets/images/rare-logo.png";
 
-export default function LoadingScreen({ message = "Loading...", standalone = false }) {
+export default function LoadingScreen({ message = "Loading...", standalone = false, portalTarget = document.body }) {
     return createPortal(
         <div
             role="status"
@@ -56,6 +56,6 @@ export default function LoadingScreen({ message = "Loading...", standalone = fal
 
             </div>
         </div>,
-        document.body
+        portalTarget
     );
 }

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ClipboardPlus, Save, X } from "lucide-react";
 import { taskApi } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
+import { useConfirmation } from "../../hooks/useConfirmation";
 
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 const METHODS = ["COMPLETION_ONLY", "QUANTITY"];
@@ -74,6 +75,7 @@ export default function TaskForm({
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
     const savingRef = useRef(false);
+    const { confirm, cancelConfirmation, confirmationModal } = useConfirmation();
 
     const isEdit = Boolean(task?.id);
     const isRejected = task?.approval_status === "REJECTED";
@@ -90,9 +92,10 @@ export default function TaskForm({
         document.body.style.overflow = "hidden";
 
         return () => {
+            cancelConfirmation();
             document.body.style.overflow = oldOverflow;
         };
-    }, [open, task]);
+    }, [open, task, cancelConfirmation]);
 
     if (!open) return null;
 
@@ -163,6 +166,11 @@ export default function TaskForm({
                 "A reason is required for an approved-task change.";
         }
 
+        if (isApproved && form.end_date !== (task.end_date || "")) {
+            nextErrors.end_date =
+                "Use an extension request to change an approved task's end date.";
+        }
+
         if (Object.keys(nextErrors).length) {
             setErrors(nextErrors);
             return;
@@ -204,6 +212,16 @@ export default function TaskForm({
             return;
         }
 
+        const confirmation = !isEdit
+            ? { title: "Add this task?", confirmLabel: "Add Task", message: `Submit "${values.title}" for Admin approval?` }
+            : isRejected
+                ? { title: "Resubmit this task?", confirmLabel: "Resubmit Task", message: `Send the corrected task "${values.title}" back to Admin for approval?` }
+                : isApproved
+                    ? { title: "Submit change request?", confirmLabel: "Submit Request", message: `Request changes to "${values.title}"? The approved task will be updated after Admin approval.` }
+                    : { title: "Save task changes?", confirmLabel: "Save Changes", message: `Save your changes to the pending task "${values.title}"?` };
+
+        if (!await confirm(confirmation)) return;
+
         savingRef.current = true;
         setSaving(true);
         setErrors({});
@@ -220,7 +238,7 @@ export default function TaskForm({
                 // This is a change request, not a direct edit.
                 // Django validates its supported change-request fields.
                 await taskApi.requestChange(task.id, {
-                    ...changes,
+                    new_values: changes,
                     reason: form.change_reason.trim(),
                 });
             } else if (isPending) {
@@ -237,6 +255,16 @@ export default function TaskForm({
             const backendErrors = {};
 
             if (data && typeof data === "object") {
+                const changeErrors = data.new_values;
+                if (changeErrors && typeof changeErrors === "object" && !Array.isArray(changeErrors)) {
+                    for (const key of Object.keys(emptyTask)) {
+                        if (changeErrors[key]) backendErrors[key] = asText(changeErrors[key]);
+                    }
+                    backendErrors.general = asText(changeErrors.non_field_errors);
+                } else if (changeErrors) {
+                    backendErrors.general = asText(changeErrors);
+                }
+
                 for (const key of [
                     ...Object.keys(emptyTask),
                     "reason",
@@ -275,6 +303,7 @@ export default function TaskForm({
 
     return (
         <>
+            {confirmationModal}
             {saving && (
                 <LoadingScreen
                     message={

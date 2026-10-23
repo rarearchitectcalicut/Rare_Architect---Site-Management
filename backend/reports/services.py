@@ -123,6 +123,7 @@ def accessible_delay_reports(user):
             "task__project",
             "reported_by",
             "reviewed_by",
+            "extension_reviewed_by",
         )
         .distinct()
     )
@@ -1584,6 +1585,11 @@ def create_delay_report(
         reported_by=supervisor,
         **serializer.validated_data,
     )
+
+    if report.extension_requested and DelayReport.objects.filter(
+        task=task, extension_status=DelayReport.Status.PENDING,
+    ).exists():
+        raise ValidationError({"extension_requested": "This task already has a pending deadline extension."})
 
     # Use the model's defaults for pending review
     # and pending/not-requested extension status.

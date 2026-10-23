@@ -1,14 +1,14 @@
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse, Http404
 from pathlib import Path
-from rest_framework import generics, status
+from rest_framework import generics, status, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from projects.pagination import ProjectPagination
-from users.permissions import MustChangePasswordPermission
-from projects.pagination import ProjectPagination
+from users.permissions import MustChangePasswordPermission, IsAdminRole
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
-from .models import DailyReport, DailyTaskWork, DailyManpower,DailyMaterialEntry,DailyReportAttachment
+from .models import DelayReport, DailyReport, DailyTaskWork, DailyManpower, DailyMaterialEntry, DailyReportAttachment
 from .serializers import (
     DailyReportCreateSerializer,
     DailyReportDetailSerializer,
@@ -227,6 +227,28 @@ class DailyReportSubmitView(generics.GenericAPIView):
 # =====================================================
 
 
+class DailyWorkQueueView(generics.ListAPIView):
+    """Admin review queue; drafts never enter the verification workflow."""
+    permission_classes = [IsAuthenticated, MustChangePasswordPermission, IsAdminRole]
+    serializer_class = DailyTaskWorkDetailSerializer
+    pagination_class = ProjectPagination
+
+    def get_queryset(self):
+        queryset = DailyTaskWork.objects.filter(daily_report__status=DailyReport.Status.SUBMITTED)
+        review_status = self.request.query_params.get("status")
+        if review_status:
+            if review_status not in DailyTaskWork.VerificationStatus.values:
+                raise ValidationError({"status": "Invalid verification status."})
+            queryset = queryset.filter(verification_status=review_status)
+        for key, field in [("project", "daily_report__project_id"), ("report", "daily_report_id")]:
+            value = self.request.query_params.get(key)
+            if value:
+                queryset = queryset.filter(**{field: serializers.UUIDField().run_validation(value)})
+        return queryset.select_related(
+            "task", "verified_by", "daily_report__project", "daily_report__reported_by",
+        ).order_by("-created_at", "-id")
+
+
 class DailyTaskWorkListCreateView(generics.ListCreateAPIView):
     permission_classes = [
         IsAuthenticated,
@@ -249,6 +271,8 @@ class DailyTaskWorkListCreateView(generics.ListCreateAPIView):
             .select_related(
                 "task",
                 "daily_report",
+                "daily_report__project",
+                "daily_report__reported_by",
                 "verified_by",
             )
             .order_by("created_at", "id")
@@ -921,10 +945,26 @@ class DelayReportListView(generics.ListAPIView):
         report_status = self.request.query_params.get("status")
 
         if task_id:
-            queryset = queryset.filter(task_id=task_id)
+            queryset = queryset.filter(task_id=serializers.UUIDField().run_validation(task_id))
 
         if report_status:
+            if report_status not in DelayReport.Status.values:
+                raise ValidationError({"status": "Invalid delay report status."})
             queryset = queryset.filter(status=report_status)
+
+        project = self.request.query_params.get("project")
+        if project:
+            queryset = queryset.filter(task__project_id=serializers.UUIDField().run_validation(project))
+        delay_type = self.request.query_params.get("delay_type")
+        if delay_type:
+            if delay_type not in DelayReport.DelayType.values:
+                raise ValidationError({"delay_type": "Invalid delay type."})
+            queryset = queryset.filter(delay_type=delay_type)
+        extension_status = self.request.query_params.get("extension_status")
+        if extension_status:
+            if extension_status not in DelayReport.Status.values:
+                raise ValidationError({"extension_status": "Invalid extension status."})
+            queryset = queryset.filter(extension_status=extension_status)
 
         return queryset.order_by("-reported_at", "-id")
 

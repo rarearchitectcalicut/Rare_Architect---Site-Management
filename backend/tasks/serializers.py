@@ -406,6 +406,9 @@ class TaskApprovalListSerializer(serializers.ModelSerializer):
 # =====================================================
 from .models import TaskHistory
 class TaskHistorySerializer(serializers.ModelSerializer):
+    task_title = serializers.CharField(source="task.title", read_only=True)
+    project_id = serializers.UUIDField(source="task.project_id", read_only=True)
+    project_name = serializers.CharField(source="task.project.name", read_only=True)
     actor_name = serializers.CharField(
         source="actor.username",
         read_only=True,
@@ -423,6 +426,9 @@ class TaskHistorySerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "task",
+            "task_title",
+            "project_id",
+            "project_name",
             "actor",
             "actor_name",
             "action",

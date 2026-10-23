@@ -28,6 +28,8 @@ import SupervisorDetails from "./pages/admin/SupervisorDetails";
 import AdminProjects from "./pages/admin/Projects";
 import AdminSettings from "./pages/admin/Settings";
 import AdminApprovals from "./pages/admin/Approvals";
+import AdminDelays from "./pages/admin/Delays";
+import AdminDailyReports from "./pages/admin/DailyReports";
 import AdminNotifications from "./pages/admin/Notifications";
 
 
@@ -42,7 +44,9 @@ import SupervisorProjectOverview from "./pages/supervisor/ProjectOverview";
 import SupervisorProjectWorkspace from "./pages/supervisor/ProjectWorkspace";
 import SupervisorProjectTasks from "./pages/supervisor/ProjectTasks";
 import SupervisorNotifications from "./pages/supervisor/Notifications";
-
+import SupervisorProjectTimeline from "./pages/supervisor/ProjectTimeline";
+import SupervisorProjectDelays from "./pages/supervisor/ProjectDelays";
+import SupervisorDelays from "./pages/supervisor/Delays";
 
 
 // =====================================================
@@ -230,8 +234,9 @@ export default function App() {
           {/* DAILY REPORTS */}
           <Route
             path="/admin/reports"
-            element={<SectionPlaceholder />}
+            element={<AdminDailyReports />}
           />
+          <Route path="/admin/daily-reports" element={<AdminDailyReports />} />
 
           {/* DOCUMENTS */}
           <Route
@@ -242,7 +247,7 @@ export default function App() {
           {/* DELAYS */}
           <Route
             path="/admin/delays"
-            element={<SectionPlaceholder />}
+            element={<AdminDelays />}
           />
 
           {/* NOTIFICATIONS */}
@@ -301,6 +306,12 @@ export default function App() {
             element={<SupervisorProjectTasks />}
           />
 
+          <Route
+            path="/supervisor/projects/:projectId/timeline"
+            element={<SupervisorProjectTimeline />}
+          />
+          <Route path="/supervisor/projects/:projectId/delays" element={<SupervisorProjectDelays />} />
+
 
           <Route
             path="/supervisor/projects/:projectId/:section"
@@ -328,7 +339,7 @@ export default function App() {
           {/* DELAYS */}
           <Route
             path="/supervisor/delays"
-            element={<SectionPlaceholder />}
+            element={<SupervisorDelays />}
           />
 
           {/* NOTIFICATIONS */}
