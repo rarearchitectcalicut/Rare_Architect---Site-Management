@@ -2,7 +2,14 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
+from django.db import connection, connections, close_old_connections
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
+from unittest import skipUnless
+from io import BytesIO
+from PIL import Image
+from uuid import uuid4
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -13,6 +20,12 @@ from tasks.models import Task, TaskHistory
 from tasks.services import reject_task, resubmit_task, create_timeline_reorder_request
 from .models import DailyReport, DailyTaskWork, DelayReport
 from .progress import calculate_task_progress
+from .models import DailyReportAttachment
+from activity.models import ActivityLog
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.storage import FileSystemStorage
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 
 class ApprovalWorkflowTests(TestCase):
@@ -194,3 +207,462 @@ class ApprovalWorkflowTests(TestCase):
         self.task.refresh_from_db(); second.refresh_from_db(); request.refresh_from_db()
         self.assertEqual([self.task.display_order, second.display_order], [1, 2])
         self.assertEqual(request.status, "PENDING")
+
+
+@skipUnless(connection.vendor == "postgresql", "Report row-lock tests require PostgreSQL")
+class DailyReportDeleteConcurrencyTests(TransactionTestCase):
+    def setUp(self):
+        ApprovalWorkflowTests.setUpTestData.__func__(self)
+
+    def test_submit_and_delete_can_only_commit_one_transition(self):
+        report = DailyReport.objects.create(project=self.project, reported_by=self.supervisor, report_date=date(2026, 10, 26), work_summary="Site diary")
+        barrier = Barrier(2)
+        actor_id, report_id = self.supervisor.id, report.id
+
+        def act(action):
+            close_old_connections()
+            try:
+                actor = get_user_model().objects.get(pk=actor_id)
+                client = APIClient(); client.force_authenticate(actor)
+                barrier.wait(timeout=10)
+                if action == "submit":
+                    return client.post(reverse("reports:daily-report-submit", args=[report_id]), {}).status_code
+                return client.delete(reverse("reports:daily-report-detail", args=[report_id])).status_code
+            finally:
+                connections.close_all()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            submit = executor.submit(act, "submit")
+            delete = executor.submit(act, "delete")
+            statuses = (submit.result(timeout=20), delete.result(timeout=20))
+        self.assertIn(statuses, [(200, 400), (404, 204)])
+        if statuses[0] == 200:
+            report.refresh_from_db()
+            self.assertEqual(report.status, "SUBMITTED")
+            self.assertFalse(ActivityLog.objects.filter(action="DAILY_REPORT_DELETED").exists())
+        else:
+            self.assertFalse(DailyReport.objects.filter(pk=report_id).exists())
+            self.assertFalse(ActivityLog.objects.filter(action="DAILY_REPORT_SUBMITTED").exists())
+
+    def test_concurrent_correction_draft_retries_create_one_report(self):
+        source = DailyReport.objects.create(project=self.project, reported_by=self.supervisor, report_date=date(2026, 10, 26), work_summary="Source", status="SUBMITTED", submitted_at=timezone.now())
+        DailyTaskWork.objects.create(daily_report=source, task=self.task, work_description="Rejected", quantity_completed_today=25, verification_status="REJECTED", verified_by=self.admin, verified_at=timezone.now(), verification_note="Remeasure")
+        actor_id, project_id, source_id, draft_id = self.supervisor.id, self.project.id, source.id, uuid4()
+        barrier = Barrier(2)
+
+        def create():
+            close_old_connections()
+            try:
+                client = APIClient(); client.force_authenticate(get_user_model().objects.get(pk=actor_id))
+                barrier.wait(timeout=10)
+                response = client.post(reverse("reports:project-daily-report-list-create", args=[project_id]), {"source_report": str(source_id), "client_id": str(draft_id), "report_date": "2026-10-26"}, format="json")
+                return response.status_code, response.data.get("id")
+            finally:
+                connections.close_all()
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            first, second = executor.submit(create), executor.submit(create)
+            self.assertEqual(first.result(timeout=20), (201, str(draft_id)))
+            self.assertEqual(second.result(timeout=20), (201, str(draft_id)))
+        self.assertEqual(DailyReport.objects.filter(status="DRAFT").count(), 1)
+        self.assertEqual(ActivityLog.objects.filter(action="DAILY_REPORT_CREATED", entity_id=draft_id).count(), 1)
+
+
+class DailyReportsWorkspaceTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        ApprovalWorkflowTests.setUpTestData.__func__(cls)
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(self.supervisor)
+
+    def create_report(self, **fields):
+        response = self.client.post(reverse("reports:project-daily-report-list-create", args=[self.project.id]), {"report_date": "2026-10-26", **fields}, format="json")
+        self.assertEqual(response.status_code, 201, response.data)
+        return DailyReport.objects.get(id=response.data["id"])
+
+    def add_work(self, report, **fields):
+        response = self.client.post(reverse("reports:daily-task-work-list-create", args=[report.id]), {"task": str(self.task.id), "work_description": "Measured plastering", "quantity_completed_today": "25", **fields}, format="json")
+        self.assertEqual(response.status_code, 201, response.data)
+        return DailyTaskWork.objects.get(id=response.data["id"])
+
+    def submit(self, report):
+        return self.client.post(reverse("reports:daily-report-submit", args=[report.id]), {}, format="json")
+
+    def rejected_source(self):
+        report = self.create_report(work_summary="Original diary", site_notes="Original site notes", weather_condition="RAINY", issues="Safety observation", next_day_plan="Continue work")
+        entry = self.add_work(report)
+        self.assertEqual(self.submit(report).status_code, 200)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.post(reverse("reports:daily-task-work-reject", args=[entry.id]), {"verification_note": "Remeasure the wall"}).status_code, 200)
+        self.client.force_authenticate(self.supervisor)
+        return report, entry
+
+    def test_correction_source_eligibility_ownership_and_independent_retry_safe_draft(self):
+        source, entry = self.rejected_source()
+        url = reverse("reports:project-daily-report-list-create", args=[self.project.id])
+        detail = self.client.get(reverse("reports:daily-report-detail", args=[source.id]))
+        self.assertEqual(detail.data["correction_summary"]["eligible_count"], 1)
+        self.assertEqual(detail.data["correction_summary"]["entries"][0]["verification_note"], "Remeasure the wall")
+        listed = self.client.get(url).data["results"][0]
+        self.assertEqual(listed["correction_summary"]["rejected_count"], 1)
+        client_id = str(uuid4())
+        payload = {"source_report": str(source.id), "client_id": client_id, "report_date": "2026-10-25", "work_summary": "Reviewed copied diary", "site_notes": source.site_notes}
+        for _ in range(2):
+            response = self.client.post(url, payload, format="json")
+            self.assertEqual(response.status_code, 201, response.data)
+            self.assertEqual(response.data["id"], client_id)
+        draft = DailyReport.objects.get(pk=client_id)
+        self.assertEqual(draft.report_date, date(2026, 10, 25))
+        self.assertEqual(draft.work_entries.count(), 0)
+        self.assertEqual(draft.attachments.count(), 0)
+        self.assertEqual(DailyReport.objects.count(), 2)
+        self.assertEqual(ActivityLog.objects.filter(action="DAILY_REPORT_CREATED", entity_id=client_id).count(), 1)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.get(reverse("reports:daily-report-detail", args=[draft.id])).status_code, 404)
+        self.assertEqual(self.client.post(url, {**payload, "client_id": str(uuid4())}, format="json").status_code, 403)
+        self.client.force_authenticate(self.other)
+        ProjectSupervisor.objects.create(project=self.project, supervisor=self.other, assigned_by=self.admin)
+        self.assertEqual(self.client.post(url, {**payload, "client_id": str(uuid4())}, format="json").status_code, 403)
+        self.client.force_authenticate(self.supervisor)
+        self.assertEqual(self.client.patch(reverse("reports:daily-report-detail", args=[draft.id]), {"source_report": str(source.id)}, format="json").status_code, 400)
+        source.refresh_from_db(); entry.refresh_from_db()
+        self.assertEqual(source.work_summary, "Original diary")
+        self.assertEqual(source.status, "SUBMITTED")
+        self.assertEqual(entry.verification_status, "REJECTED")
+
+    def test_correction_prefill_rejects_drafts_no_rejections_and_foreign_projects(self):
+        draft = self.create_report(work_summary="No rejected work")
+        url = reverse("reports:project-daily-report-list-create", args=[self.project.id])
+        payload = {"report_date": "2026-10-26", "source_report": str(draft.id)}
+        self.assertEqual(self.client.post(url, payload, format="json").status_code, 400)
+        self.submit(draft)
+        self.assertEqual(self.client.post(url, payload, format="json").status_code, 400)
+        source, entry = self.rejected_source()
+        ProjectSupervisor.objects.create(project=self.other_project, supervisor=self.supervisor, assigned_by=self.admin)
+        self.assertEqual(self.client.post(reverse("reports:project-daily-report-list-create", args=[self.other_project.id]), {**payload, "source_report": str(source.id)}, format="json").status_code, 403)
+        Task.objects.filter(pk=entry.task_id).update(work_status="CANCELLED")
+        self.assertEqual(self.client.post(url, {**payload, "source_report": str(source.id)}, format="json").status_code, 400)
+
+    def test_multiple_corrections_exclude_verified_pending_and_preserve_progress(self):
+        source, rejected = self.rejected_source()
+        completion_task = Task.objects.create(project=self.project, created_by=self.supervisor, title="Inspection", approval_status="APPROVED", measurement_method="COMPLETION_ONLY", completion_criteria="Signed inspection")
+        rejected_completion = DailyTaskWork.objects.create(daily_report=source, task=completion_task, work_description="Original inspection", completion_claimed=True, verification_status="REJECTED", verified_by=self.admin, verified_at=timezone.now(), verification_note="Provide inspection evidence")
+        verified_task = Task.objects.create(project=self.project, created_by=self.supervisor, title="Verified paint", approval_status="APPROVED", measurement_method="QUANTITY", planned_quantity=100, measurement_unit="SQM")
+        verified = DailyTaskWork.objects.create(daily_report=source, task=verified_task, work_description="Accepted work", quantity_completed_today=10, verification_status="VERIFIED", verified_by=self.admin, verified_at=timezone.now())
+        pending_task = Task.objects.create(project=self.project, created_by=self.supervisor, title="Pending work", approval_status="APPROVED", measurement_method="COMPLETION_ONLY")
+        pending = DailyTaskWork.objects.create(daily_report=source, task=pending_task, work_description="Pending measurement", completion_claimed=True)
+        draft = self.create_report(source_report=str(source.id), client_id=str(uuid4()), work_summary=source.work_summary)
+        corrections = []
+        for original, values in [(rejected, {"quantity_completed_today": "20"}), (rejected_completion, {"completion_claimed": True})]:
+            url = reverse("reports:daily-task-work-correct", args=[original.id])
+            payload = {"new_daily_report": str(draft.id), "work_description": "Corrected measurement", **values}
+            response = self.client.post(url, payload, format="json")
+            self.assertEqual(response.status_code, 201, response.data)
+            retry = self.client.post(url, payload, format="json")
+            self.assertEqual(retry.status_code, 201, retry.data)
+            self.assertEqual(retry.data["id"], response.data["id"])
+            corrections.append(response.data["id"])
+            other_draft = self.create_report()
+            self.assertEqual(self.client.post(url, {**payload, "new_daily_report": str(other_draft.id)}, format="json").status_code, 400)
+        self.assertEqual(draft.work_entries.count(), 2)
+        summary = self.client.get(reverse("reports:daily-report-detail", args=[source.id])).data["correction_summary"]
+        self.assertEqual(summary["eligible_count"], 0)
+        self.assertTrue(all(row["correction_report"]["status"] == "DRAFT" for row in summary["entries"]))
+        self.assertEqual(calculate_task_progress(verified_task)["verified_quantity"], "10.000")
+        for reference in [verified, pending]:
+            response = self.client.post(reverse("reports:daily-task-work-correct", args=[reference.id]), {"new_daily_report": str(draft.id), "work_description": "Illegal correction", "completion_claimed": True}, format="json")
+            self.assertEqual(response.status_code, 400)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.get(reverse("reports:daily-work-queue")).data["count"], 4)
+        self.client.force_authenticate(self.supervisor)
+        self.assertEqual(self.submit(draft).status_code, 200)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.get(reverse("reports:daily-work-queue"), {"status": "PENDING"}).data["count"], 3)
+        row = self.client.get(reverse("reports:daily-task-work-detail", args=[corrections[0]])).data
+        self.assertEqual(row["original_work"]["quantity_completed_today"], "25.000")
+        self.assertEqual(row["original_work"]["verification_note"], "Remeasure the wall")
+        self.assertEqual(self.client.post(reverse("reports:daily-task-work-verify", args=[corrections[0]]), {}).status_code, 200)
+        self.assertEqual(calculate_task_progress(self.task)["verified_quantity"], "20.000")
+        self.assertEqual(calculate_task_progress(verified_task)["verified_quantity"], "10.000")
+        rejected.refresh_from_db(); pending.refresh_from_db(); source.refresh_from_db()
+        self.assertEqual(rejected.verification_status, "REJECTED")
+        self.assertEqual(pending.verification_status, "PENDING")
+        self.assertEqual(source.status, "SUBMITTED")
+
+    def test_confirmed_site_rows_are_retry_safe_and_partial_draft_can_be_deleted(self):
+        source, original = self.rejected_source()
+        draft = self.create_report(source_report=str(source.id), client_id=str(uuid4()))
+        for name, payload, relation in [("daily-manpower-list-create", {"trade": "MASON", "worker_count": 2, "client_id": str(uuid4())}, "manpower_entries"), ("daily-material-list-create", {"material_name": "Cement", "entry_type": "USED", "quantity": "2", "unit": "bags", "client_id": str(uuid4())}, "material_entries")]:
+            url = reverse(f"reports:{name}", args=[draft.id])
+            first = self.client.post(url, payload, format="json")
+            second = self.client.post(url, payload, format="json")
+            self.assertEqual(first.status_code, 201, first.data)
+            self.assertEqual(second.status_code, 201, second.data)
+            self.assertEqual(first.data["id"], second.data["id"])
+            self.assertEqual(getattr(draft, relation).count(), 1)
+        self.assertEqual(self.client.post(reverse("reports:daily-material-list-create", args=[draft.id]), {"material_name": "Invalid", "quantity": -1}, format="json").status_code, 400)
+        self.assertEqual(self.client.get(reverse("reports:daily-report-detail", args=[draft.id])).status_code, 200)
+        self.assertEqual(self.client.delete(reverse("reports:daily-report-detail", args=[draft.id])).status_code, 204)
+        self.assertTrue(DailyReport.objects.filter(pk=source.id).exists())
+        self.assertTrue(DailyTaskWork.objects.filter(pk=original.id, verification_status="REJECTED").exists())
+        replay = self.client.post(reverse("reports:project-daily-report-list-create", args=[self.project.id]), {"source_report": str(source.id), "client_id": str(draft.id), "report_date": "2026-10-26"}, format="json")
+        self.assertEqual(replay.status_code, 400)
+        self.assertFalse(DailyReport.objects.filter(pk=draft.id).exists())
+
+    def test_correction_original_evidence_is_not_copied_and_upload_retry_is_safe(self):
+        source, _ = self.rejected_source()
+        field = DailyReportAttachment._meta.get_field("file")
+        with TemporaryDirectory() as root, patch.object(field, "storage", FileSystemStorage(location=root)):
+            original = source.attachments.create(original_filename="original.pdf", file_size=16, uploaded_by=self.supervisor)
+            original.file.save("original.pdf", SimpleUploadedFile("original.pdf", b"%PDF-1.4\nOriginal"))
+            draft = self.create_report(source_report=str(source.id), client_id=str(uuid4()))
+            self.assertEqual(draft.attachments.count(), 0)
+            client_id = str(uuid4())
+            for _ in range(2):
+                response = self.client.post(reverse("reports:daily-report-attachment-upload", args=[draft.id]), {"client_id": client_id, "file": SimpleUploadedFile("new.pdf", b"%PDF-1.4\nNew evidence", content_type="application/pdf")}, format="multipart")
+                self.assertEqual(response.status_code, 201, response.data)
+            self.assertEqual(draft.attachments.count(), 1)
+            new = draft.attachments.get()
+            self.assertNotEqual(new.file.name, original.file.name)
+            with self.captureOnCommitCallbacks(execute=True):
+                self.assertEqual(self.client.delete(reverse("reports:daily-report-detail", args=[draft.id])).status_code, 204)
+            self.assertFalse(new.file.storage.exists(new.file.name))
+            self.assertTrue(original.file.storage.exists(original.file.name))
+            self.assertTrue(DailyReportAttachment.objects.filter(pk=original.id).exists())
+
+    def test_draft_privacy_covers_all_nested_resources_counts_and_reporters(self):
+        report = self.create_report(work_summary="Private diary")
+        work = self.add_work(report)
+        manpower = report.manpower_entries.create(trade="MASON", worker_count=2)
+        material = report.material_entries.create(material_name="Cement", entry_type="USED")
+        attachment = report.attachments.create(file="private.pdf", original_filename="private.pdf", file_size=10, uploaded_by=self.supervisor)
+        list_url = reverse("reports:project-daily-report-list-create", args=[self.project.id])
+        paths = [("daily-report-detail", report.id), ("daily-task-work-detail", work.id), ("daily-manpower-detail", manpower.id), ("daily-material-detail", material.id), ("daily-report-attachment-detail", attachment.id), ("daily-report-attachment-download", attachment.id)]
+        paths += [(name, report.id) for name in ["daily-task-work-list-create", "daily-manpower-list-create", "daily-material-list-create", "daily-report-attachment-upload"]]
+        self.assertEqual(self.client.get(list_url).data["count"], 1)
+        self.assertEqual(self.client.get(reverse("reports:daily-report-detail", args=[report.id])).status_code, 200)
+        ProjectSupervisor.objects.create(project=self.project, supervisor=self.other, assigned_by=self.admin)
+        for user in [self.admin, self.other]:
+            self.client.force_authenticate(user)
+            listing = self.client.get(list_url)
+            self.assertEqual(listing.data["count"], 0)
+            self.assertEqual(listing.data["summary"]["total"], 0)
+            self.assertEqual(listing.data["reporters"], [])
+            if user == self.admin:
+                self.assertNotIn("drafts", listing.data["summary"])
+            for name, pk in paths:
+                self.assertEqual(self.client.get(reverse(f"reports:{name}", args=[pk]), {"preview": 1}).status_code, 404, name)
+            self.assertEqual(self.client.delete(reverse("reports:daily-report-detail", args=[report.id])).status_code, 404)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.post(reverse("reports:daily-task-work-verify", args=[work.id]), {}).status_code, 400)
+        self.client.force_authenticate(self.supervisor)
+        self.assertEqual(self.submit(report).status_code, 200)
+        for user in [self.admin, self.other]:
+            self.client.force_authenticate(user)
+            self.assertEqual(self.client.get(list_url).data["count"], 1)
+            self.assertEqual(self.client.get(reverse("reports:daily-task-work-detail", args=[work.id])).status_code, 200)
+
+    def test_own_draft_deletion_removes_children_and_private_files_after_commit(self):
+        report = self.create_report(work_summary="Draft evidence")
+        work = self.add_work(report)
+        report.manpower_entries.create(trade="MASON", worker_count=2)
+        report.material_entries.create(material_name="Sand", entry_type="REQUIRED")
+        field = DailyReportAttachment._meta.get_field("file")
+        with TemporaryDirectory() as root, patch.object(field, "storage", FileSystemStorage(location=root)):
+            response = self.client.post(reverse("reports:daily-report-attachment-upload", args=[report.id]), {"file": SimpleUploadedFile("draft.pdf", b"%PDF-1.4\nDraft", content_type="application/pdf"), "task_work": str(work.id)}, format="multipart")
+            self.assertEqual(response.status_code, 201)
+            attachment = DailyReportAttachment.objects.get(pk=response.data["id"])
+            storage, name = attachment.file.storage, attachment.file.name
+            with self.captureOnCommitCallbacks(execute=True) as callbacks:
+                response = self.client.delete(reverse("reports:daily-report-detail", args=[report.id]))
+                self.assertEqual(response.status_code, 204)
+                self.assertTrue(storage.exists(name))
+            self.assertEqual(len(callbacks), 1)
+            self.assertFalse(storage.exists(name))
+            self.assertFalse(DailyReport.objects.filter(pk=report.id).exists())
+            self.assertFalse(DailyTaskWork.objects.filter(pk=work.id).exists())
+            self.assertTrue(Task.objects.filter(pk=self.task.id).exists())
+            self.assertTrue(ActivityLog.objects.filter(action="DAILY_REPORT_DELETED", entity_id=report.id).exists())
+
+    def test_submitted_admin_inactive_and_unassigned_deletion_are_blocked(self):
+        report = self.create_report(work_summary="Site diary")
+        url = reverse("reports:daily-report-detail", args=[report.id])
+        self.supervisor.is_active = False
+        self.assertEqual(self.client.delete(url).status_code, 404)
+        self.supervisor.is_active = True
+        ProjectSupervisor.objects.filter(project=self.project, supervisor=self.supervisor).delete()
+        self.assertEqual(self.client.delete(url).status_code, 404)
+        ProjectSupervisor.objects.create(project=self.project, supervisor=self.supervisor, assigned_by=self.admin)
+        self.assertEqual(self.submit(report).status_code, 200)
+        self.assertEqual(self.client.delete(url).status_code, 400)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.delete(url).status_code, 403)
+        self.assertTrue(DailyReport.objects.filter(pk=report.id).exists())
+
+    def test_delete_audit_failure_rolls_back_children_and_preserves_files(self):
+        report = self.create_report(work_summary="Draft")
+        work = self.add_work(report)
+        attachment = report.attachments.create(file="preserved.pdf", original_filename="preserved.pdf", file_size=10, uploaded_by=self.supervisor)
+        with patch("reports.services.create_activity_log", side_effect=RuntimeError("Audit unavailable")), patch.object(attachment.file.storage, "delete") as remove:
+            with self.captureOnCommitCallbacks(execute=True):
+                with self.assertRaises(RuntimeError):
+                    self.client.delete(reverse("reports:daily-report-detail", args=[report.id]))
+            remove.assert_not_called()
+        self.assertTrue(DailyReport.objects.filter(pk=report.id).exists())
+        self.assertTrue(DailyTaskWork.objects.filter(pk=work.id).exists())
+        self.assertTrue(DailyReportAttachment.objects.filter(pk=attachment.id).exists())
+
+    def test_previews_verify_mime_inline_allowlist_and_keep_download(self):
+        report = self.create_report(work_summary="Evidence")
+        field = DailyReportAttachment._meta.get_field("file")
+        picture = BytesIO(); Image.new("RGB", (4, 3), "white").save(picture, format="PNG")
+        with TemporaryDirectory() as root, patch.object(field, "storage", FileSystemStorage(location=root)):
+            for filename, content, mime in [("image.png", picture.getvalue(), "image/png"), ("evidence.pdf", b"%PDF-1.4\nEvidence", "application/pdf")]:
+                response = self.client.post(reverse("reports:daily-report-attachment-upload", args=[report.id]), {"file": SimpleUploadedFile(filename, content, content_type=mime)}, format="multipart")
+                self.assertEqual(response.status_code, 201, response.data)
+                url = reverse("reports:daily-report-attachment-download", args=[response.data["id"]])
+                for preview in [False, True]:
+                    stream = self.client.get(url, {"preview": 1} if preview else {})
+                    self.assertEqual(stream["Content-Type"], mime)
+                    self.assertTrue(stream["Content-Disposition"].startswith("inline" if preview else "attachment"))
+                    self.assertEqual(stream["X-Content-Type-Options"], "nosniff")
+                    self.assertEqual(b"".join(stream.streaming_content), content)
+                self.client.force_authenticate(self.admin)
+                self.assertEqual(self.client.get(url, {"preview": 1}).status_code, 404)
+                self.client.force_authenticate(self.supervisor)
+            self.submit(report)
+            self.client.force_authenticate(self.admin)
+            stream = self.client.get(url, {"preview": 1})
+            self.assertEqual(stream.status_code, 200)
+            self.assertIn("inline", stream["Content-Disposition"])
+            b"".join(stream.streaming_content)
+            # Unknown legacy files and misleading image names never render inline.
+            for filename in ["legacy.docx", "fake.png"]:
+                self.client.force_authenticate(self.supervisor)
+                draft = self.create_report()
+                attachment = draft.attachments.create(original_filename=filename, file_size=10, uploaded_by=self.supervisor)
+                attachment.file.save(filename, SimpleUploadedFile(filename, b"<html>unsafe</html>"))
+                stream = self.client.get(reverse("reports:daily-report-attachment-download", args=[attachment.id]), {"preview": 1})
+                self.assertEqual(stream["Content-Type"], "application/octet-stream")
+                self.assertIn("attachment", stream["Content-Disposition"])
+                b"".join(stream.streaming_content)
+
+    def test_blank_drafts_multiple_reports_same_date_and_explanatory_no_work_submission(self):
+        first, second = self.create_report(), self.create_report()
+        self.assertNotEqual(first.id, second.id)
+        self.assertEqual(first.work_summary, "")
+        self.assertEqual(self.submit(first).status_code, 400)
+        response = self.client.patch(reverse("reports:daily-report-detail", args=[first.id]), {"work_summary": "No work due to heavy rain", "weather_condition": "HEAVY_RAIN"}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.submit(first).status_code, 200)
+        first.refresh_from_db(); self.task.refresh_from_db()
+        self.assertEqual(first.status, "SUBMITTED")
+        self.assertEqual(self.task.work_status, "NOT_STARTED")
+
+    def test_full_draft_records_become_read_only_after_submission(self):
+        report = self.create_report(work_summary="Plastering on first floor")
+        work = self.add_work(report)
+        manpower_url = reverse("reports:daily-manpower-list-create", args=[report.id])
+        materials_url = reverse("reports:daily-material-list-create", args=[report.id])
+        self.assertEqual(self.client.post(manpower_url, {"trade": "MASON", "contractor_name": "Site contractor", "worker_count": 3, "hours_worked": "8", "remarks": "Wall work"}, format="json").status_code, 201)
+        self.assertEqual(self.client.post(materials_url, {"material_name": "Cement", "entry_type": "USED", "quantity": "10", "unit": "bags"}, format="json").status_code, 201)
+        self.assertEqual(self.submit(report).status_code, 200)
+        for url, payload in [(reverse("reports:daily-report-detail", args=[report.id]), {"work_summary": "Changed evidence"}), (reverse("reports:daily-task-work-detail", args=[work.id]), {"work_description": "Changed measurement"})]:
+            self.assertEqual(self.client.patch(url, payload, format="json").status_code, 400)
+        self.assertEqual(self.client.post(manpower_url, {"trade": "MASON", "worker_count": 1}, format="json").status_code, 400)
+        self.assertEqual(self.client.post(materials_url, {"material_name": "Sand", "entry_type": "REQUIRED"}, format="json").status_code, 400)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.get(manpower_url).data["count"], 1)
+        self.assertEqual(self.client.get(materials_url).data["count"], 1)
+
+    def test_project_register_has_complete_totals_filters_and_distinct_pending_work_count(self):
+        draft = self.create_report(work_summary="Draft wall work")
+        self.add_work(draft)
+        submitted = self.create_report(work_summary="Submitted concrete work")
+        self.add_work(submitted)
+        self.submit(submitted)
+        url = reverse("reports:project-daily-report-list-create", args=[self.project.id])
+        response = self.client.get(url, {"page_size": 1, "status": "DRAFT", "search": "wall", "date_from": "2026-10-26", "date_to": "2026-10-26", "reported_by": self.supervisor.id})
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["summary"], {"total": 2, "drafts": 1, "submitted": 1, "pending_work": 1})
+        self.assertEqual(response.data["results"][0]["work_counts"], {"pending": 1, "verified": 0, "rejected": 0})
+        first = self.client.get(url, {"page_size": 1, "sort": "oldest"})
+        second = self.client.get(url, {"page_size": 1, "sort": "oldest", "page": 2})
+        self.assertNotEqual(first.data["results"][0]["id"], second.data["results"][0]["id"])
+        self.assertIsNotNone(first.data["next"])
+        for params in [{"status": "APPROVED"}, {"date_from": "bad"}, {"date_from": "2026-10-26", "date_to": "2026-10-25"}, {"reported_by": "bad"}]:
+            self.assertEqual(self.client.get(url, params).status_code, 400)
+
+    def test_permissions_block_cross_project_work_and_other_supervisor_draft_edits(self):
+        report = self.create_report(work_summary="Site work")
+        foreign = Task.objects.create(project=self.other_project, created_by=self.other, title="Other task", approval_status="APPROVED", measurement_method="COMPLETION_ONLY")
+        response = self.client.post(reverse("reports:daily-task-work-list-create", args=[report.id]), {"task": str(foreign.id), "work_description": "Foreign work", "completion_claimed": True}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.client.force_authenticate(self.other)
+        self.assertEqual(self.client.get(reverse("reports:project-daily-report-list-create", args=[self.project.id])).status_code, 404)
+        ProjectSupervisor.objects.create(project=self.project, supervisor=self.other, assigned_by=self.admin)
+        self.assertEqual(self.client.get(reverse("reports:daily-report-detail", args=[report.id])).status_code, 404)
+        self.assertEqual(self.client.patch(reverse("reports:daily-report-detail", args=[report.id]), {"work_summary": "Not my draft"}, format="json").status_code, 404)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.patch(reverse("reports:daily-report-detail", args=[report.id]), {"work_summary": "Admin rewrite"}, format="json").status_code, 404)
+
+    def test_submitted_entry_verification_and_audited_correction_preserve_original(self):
+        report = self.create_report(work_summary="Plastering")
+        entry = self.add_work(report)
+        self.submit(report)
+        verify = reverse("reports:daily-task-work-verify", args=[entry.id])
+        reject = reverse("reports:daily-task-work-reject", args=[entry.id])
+        self.assertEqual(self.client.post(verify, {}, format="json").status_code, 403)
+        self.assertEqual(self.client.post(reject, {"verification_note": "Not authorized"}, format="json").status_code, 403)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.post(reject, {}, format="json").status_code, 400)
+        self.assertEqual(self.client.post(reject, {"verification_note": "Remeasure on site"}, format="json").status_code, 200)
+        self.assertEqual(calculate_task_progress(self.task)["verified_quantity"], "0.000")
+        self.client.force_authenticate(self.supervisor)
+        draft = self.create_report(work_summary="Corrected site measurements")
+        correction = self.client.post(reverse("reports:daily-task-work-correct", args=[entry.id]), {"new_daily_report": str(draft.id), "work_description": "Corrected plastering", "quantity_completed_today": "20"}, format="json")
+        self.assertEqual(correction.status_code, 201, correction.data)
+        original = self.client.get(reverse("reports:daily-task-work-detail", args=[entry.id]))
+        self.assertEqual(original.data["verification_status"], "REJECTED")
+        self.assertEqual(original.data["verification_note"], "Remeasure on site")
+        self.assertEqual(original.data["correction_id"], correction.data["id"])
+        self.client.force_authenticate(self.admin)
+        self.assertIsNone(self.client.get(reverse("reports:daily-task-work-detail", args=[entry.id])).data["correction_id"])
+        self.client.force_authenticate(self.supervisor)
+        # Deleting a correction draft must preserve the rejected source entry.
+        self.assertEqual(self.client.delete(reverse("reports:daily-report-detail", args=[draft.id])).status_code, 204)
+        self.assertTrue(DailyTaskWork.objects.filter(pk=entry.id, verification_status="REJECTED").exists())
+        draft = self.create_report(work_summary="Corrected site measurements")
+        correction = self.client.post(reverse("reports:daily-task-work-correct", args=[entry.id]), {"new_daily_report": str(draft.id), "work_description": "Corrected plastering", "quantity_completed_today": "20"}, format="json")
+        self.assertEqual(correction.status_code, 201, correction.data)
+        self.assertEqual(self.submit(draft).status_code, 200)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.post(reverse("reports:daily-task-work-verify", args=[correction.data["id"]]), {"verification_note": "Measured"}, format="json").status_code, 200)
+        self.assertEqual(calculate_task_progress(self.task)["verified_quantity"], "20.000")
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.work_status, "NOT_STARTED")
+        self.assertTrue(ActivityLog.objects.filter(action="DAILY_TASK_WORK_CORRECTED").exists())
+
+    def test_private_attachments_upload_download_and_submitted_evidence_lock(self):
+        report = self.create_report(work_summary="Site photographs and evidence")
+        entry = self.add_work(report)
+        field = DailyReportAttachment._meta.get_field("file")
+        with TemporaryDirectory() as root, patch.object(field, "storage", FileSystemStorage(location=root)):
+            url = reverse("reports:daily-report-attachment-upload", args=[report.id])
+            response = self.client.post(url, {"file": SimpleUploadedFile("evidence.pdf", b"%PDF-1.4\nSite evidence", content_type="application/pdf"), "task_work": str(entry.id), "caption": "Measured wall"}, format="multipart")
+            self.assertEqual(response.status_code, 201, response.data)
+            self.assertNotIn("file", response.data)
+            self.assertEqual(str(response.data["task_work"]), str(entry.id))
+            download = reverse("reports:daily-report-attachment-download", args=[response.data["id"]])
+            file_response = self.client.get(download)
+            self.assertEqual(file_response.status_code, 200)
+            self.assertIn(b"Site evidence", b"".join(file_response.streaming_content))
+            self.submit(report)
+            remove = reverse("reports:daily-report-attachment-detail", args=[response.data["id"]])
+            self.assertEqual(self.client.delete(remove).status_code, 400)
+            self.client.force_authenticate(self.other)
+            self.assertEqual(self.client.get(download).status_code, 404)
+            self.client.force_authenticate(None)
+            self.assertEqual(self.client.get(download).status_code, 401)

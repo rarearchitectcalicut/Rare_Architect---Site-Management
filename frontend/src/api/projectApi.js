@@ -6,10 +6,10 @@ import { api } from "./client";
 // =====================================================
 
 export const projectApi = {
-    getCategories: async (params = {}) => {
+    getCategories: async (params = {}, signal) => {
         const { data } = await api.get(
             "project-categories/",
-            { params }
+            { params, signal }
         );
         return data;
     },
@@ -30,9 +30,10 @@ export const projectApi = {
         return data;
     },
 
-    getProjects: async (params = {}) => {
+    getProjects: async (params = {}, signal) => {
         const { data } = await api.get("projects/", {
             params,
+            signal,
         });
 
         return data;

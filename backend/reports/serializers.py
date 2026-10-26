@@ -29,10 +29,20 @@ class DailyReportCreateSerializer(serializers.ModelSerializer):
     - status = DRAFT
     """
 
+    source_report = serializers.PrimaryKeyRelatedField(queryset=DailyReport.objects.all(), required=False, write_only=True)
+    client_id = serializers.UUIDField(required=False, write_only=True)
+
+    def validate(self, attrs):
+        if self.instance and ({"source_report", "client_id"} & set(attrs)):
+            raise serializers.ValidationError("Source and retry identifiers are accepted only when creating a draft.")
+        return attrs
+
     class Meta:
         model = DailyReport
 
         fields = (
+            "source_report",
+            "client_id",
             "report_date",
             "weather_condition",
             "site_condition",
@@ -88,6 +98,23 @@ class DailyReportDetailSerializer(serializers.ModelSerializer):
     )
 
     work_entry_count = serializers.SerializerMethodField()
+    work_counts = serializers.SerializerMethodField()
+    correction_summary = serializers.SerializerMethodField()
+
+    def get_correction_summary(self, obj):
+        user = getattr(self.context.get("request"), "user", None)
+        if not user or user.role != "SUPERVISOR" or user.is_staff or not user.is_active or obj.reported_by_id != user.id or obj.status != "SUBMITTED":
+            return None
+        rejected = obj.work_entries.filter(verification_status="REJECTED")
+        eligible = rejected.filter(correction__isnull=True, task__approval_status="APPROVED").exclude(task__work_status__in=["COMPLETED", "CANCELLED"])
+        def preview(row):
+            correction = getattr(row, "correction", None)
+            target = correction.daily_report if correction else None
+            visible = target and (target.status == "SUBMITTED" or target.reported_by_id == user.id)
+            return {"id": str(row.id), "task_title": row.task.title, "verification_note": row.verification_note,
+                    "correction_report": {"id": str(target.id), "status": target.status} if visible else None}
+        return {"rejected_count": obj.rejected_count if hasattr(obj, "rejected_count") else rejected.count(), "eligible_count": (obj.eligible_corrections if hasattr(obj, "eligible_corrections") else eligible.count()) if obj.project.status in ["ACTIVE", "MAINTENANCE"] else 0,
+                "entries": [preview(row) for row in (obj.rejected_preview if hasattr(obj, "rejected_preview") else rejected.select_related("task", "correction__daily_report").order_by("created_at", "id")[:5])]}
 
     class Meta:
         model = DailyReport
@@ -108,6 +135,8 @@ class DailyReportDetailSerializer(serializers.ModelSerializer):
             "status",
             "submitted_at",
             "work_entry_count",
+            "work_counts",
+            "correction_summary",
             "created_at",
             "updated_at",
         )
@@ -115,7 +144,31 @@ class DailyReportDetailSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_work_entry_count(self, obj):
-        return obj.work_entries.count()
+        return obj.entry_count if hasattr(obj, "entry_count") else obj.work_entries.count()
+
+    def get_work_counts(self, obj):
+        if hasattr(obj, "pending_count"):
+            return {"pending": obj.pending_count, "verified": obj.verified_count, "rejected": obj.rejected_count}
+        from django.db.models import Count, Q
+        return obj.work_entries.aggregate(
+            pending=Count("id", filter=Q(verification_status="PENDING")),
+            verified=Count("id", filter=Q(verification_status="VERIFIED")),
+            rejected=Count("id", filter=Q(verification_status="REJECTED")),
+        )
+
+
+class DailyReportQuerySerializer(serializers.Serializer):
+    search = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    status = serializers.ChoiceField(choices=DailyReport.Status.choices, required=False)
+    date_from = serializers.DateField(required=False)
+    date_to = serializers.DateField(required=False)
+    reported_by = serializers.UUIDField(required=False)
+    sort = serializers.ChoiceField(choices=["newest", "oldest"], default="newest")
+
+    def validate(self, attrs):
+        if attrs.get("date_from") and attrs.get("date_to") and attrs["date_from"] > attrs["date_to"]:
+            raise serializers.ValidationError({"date_to": "End date must be on or after start date."})
+        return attrs
 
 
 # =====================================================
@@ -207,7 +260,7 @@ class DailyTaskWorkCreateSerializer(serializers.ModelSerializer):
         if DailyTaskWork.objects.filter(
             daily_report=daily_report,
             task=task,
-        ).exists():
+        ).exclude(pk=self.instance.pk if self.instance else None).exists():
             raise serializers.ValidationError(
                 {"task": ("This task is already included " "in the daily report.")}
             )
@@ -286,6 +339,46 @@ class DailyTaskWorkCreateSerializer(serializers.ModelSerializer):
 # DAILY TASK WORK DETAIL SERIALIZER
 # =====================================================
 class DailyTaskWorkDetailSerializer(serializers.ModelSerializer):
+    completion_criteria = serializers.CharField(source="task.completion_criteria", read_only=True)
+    task_work_status = serializers.CharField(source="task.work_status", read_only=True)
+    correction_id = serializers.SerializerMethodField()
+    correction_report = serializers.SerializerMethodField()
+    original_work = serializers.SerializerMethodField()
+    can_correct = serializers.SerializerMethodField()
+
+    def get_can_correct(self, obj):
+        user = getattr(self.context.get("request"), "user", None)
+        return bool(user and user.is_active and user.role == "SUPERVISOR" and not user.is_staff and obj.daily_report.reported_by_id == user.id
+                    and obj.daily_report.status == "SUBMITTED" and obj.verification_status == "REJECTED" and not hasattr(obj, "correction")
+                    and obj.task.approval_status == "APPROVED" and obj.task.work_status not in ["COMPLETED", "CANCELLED"]
+                    and obj.daily_report.project.status in ["ACTIVE", "MAINTENANCE"])
+
+    def get_correction_report(self, obj):
+        if not self.get_correction_id(obj):
+            return None
+        report = obj.correction.daily_report
+        return {"id": str(report.id), "status": report.status}
+
+    def get_original_work(self, obj):
+        if not obj.correction_of_id:
+            return None
+        original = obj.correction_of
+        return {"id": str(original.id), "daily_report": str(original.daily_report_id), "verification_status": original.verification_status,
+                "work_description": original.work_description, "location_detail": original.location_detail,
+                "quantity_completed_today": str(original.quantity_completed_today) if original.quantity_completed_today is not None else None,
+                "completion_claimed": original.completion_claimed, "verification_note": original.verification_note}
+
+    def get_correction_id(self, obj):
+        try:
+            correction = obj.correction
+            user = getattr(self.context.get("request"), "user", None)
+            if correction.daily_report.status == DailyReport.Status.DRAFT and (
+                user is None or correction.daily_report.reported_by_id != user.id
+            ):
+                return None
+            return str(correction.id)
+        except DailyTaskWork.DoesNotExist:
+            return None
     project_id = serializers.UUIDField(source="daily_report.project_id", read_only=True)
     project_name = serializers.CharField(source="daily_report.project.name", read_only=True)
     report_date = serializers.DateField(source="daily_report.report_date", read_only=True)
@@ -336,6 +429,12 @@ class DailyTaskWorkDetailSerializer(serializers.ModelSerializer):
             "task",
             "task_title",
             "measurement_method",
+            "completion_criteria",
+            "task_work_status",
+            "correction_id",
+            "correction_report",
+            "original_work",
+            "can_correct",
             "measurement_unit",
             "planned_quantity",
             "work_description",
@@ -359,11 +458,13 @@ class DailyTaskWorkDetailSerializer(serializers.ModelSerializer):
 # DAILY MANPOWER CREATE SERIALIZER
 # =====================================================
 class DailyManpowerCreateSerializer(serializers.ModelSerializer):
+    client_id = serializers.UUIDField(required=False, write_only=True)
 
     class Meta:
         model = DailyManpower
 
         fields = (
+            "client_id",
             "trade",
             "contractor_name",
             "worker_count",
@@ -418,11 +519,13 @@ class DailyManpowerDetailSerializer(serializers.ModelSerializer):
 
 
 class DailyMaterialEntryCreateSerializer(serializers.ModelSerializer):
+    client_id = serializers.UUIDField(required=False, write_only=True)
 
     class Meta:
         model = DailyMaterialEntry
 
         fields = (
+            "client_id",
             "material_name",
             "entry_type",
             "quantity",
@@ -505,6 +608,7 @@ class DailyMaterialEntryDetailSerializer(serializers.ModelSerializer):
 # DAILY REPORT ATTACHMENT UPLOAD SERIALIZER
 # =====================================================
 class DailyReportAttachmentUploadSerializer(serializers.Serializer):
+    client_id = serializers.UUIDField(required=False, write_only=True)
     file = serializers.FileField(
         allow_empty_file=False,
     )

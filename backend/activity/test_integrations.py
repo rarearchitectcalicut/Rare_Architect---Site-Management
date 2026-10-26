@@ -324,7 +324,7 @@ class ActivityIntegrationTests(TestCase):
         self.event("TASK_APPROVED", lambda: tasks.approve_task(task_id=task.id, admin_user=self.admin, comment="Proceed"), actor=self.admin)
         self.event("TASK_COMPLETED", lambda: tasks.complete_task(task_id=task.id, user=self.supervisor))
         task = self.task()
-        self.event("TASK_CANCELLED", lambda: tasks.cancel_task(task_id=task.id, admin_user=self.admin, reason="Cancelled"), actor=self.admin)
+        self.event("TASK_CANCELLED", lambda: tasks.cancel_task(task_id=task.id, user=self.admin, reason="Cancelled"), actor=self.admin)
         task = self.task(approval_status="PENDING")
         self.event("TASK_REJECTED", lambda: tasks.reject_task(task_id=task.id, admin_user=self.admin, reason="Revise"), actor=self.admin)
         self.event("TASK_RESUBMITTED", lambda: tasks.resubmit_task(task_id=task.id, supervisor=self.supervisor, validated_data={"title": "Revised", "resubmission_note": "Corrected title"}))

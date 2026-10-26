@@ -23,14 +23,17 @@ import SectionPlaceholder from "./pages/SectionPlaceholder";
 //  ADMIN PAGES
 // =====================================================
 import AdminProjectOverview from "./pages/admin/ProjectOverview";
+import AdminProjectTasks, { GlobalTaskRegister } from "./pages/admin/ProjectTasks";
+import AdminTaskDetails from "./pages/admin/TaskDetails";
 import Supervisors from "./pages/admin/Supervisors";
 import SupervisorDetails from "./pages/admin/SupervisorDetails";
 import AdminProjects from "./pages/admin/Projects";
 import AdminSettings from "./pages/admin/Settings";
 import AdminApprovals from "./pages/admin/Approvals";
 import AdminDelays from "./pages/admin/Delays";
-import AdminDailyReports from "./pages/admin/DailyReports";
+import AdminDailyReports, { ProjectDailyReports } from "./pages/admin/DailyReports";
 import AdminNotifications from "./pages/admin/Notifications";
+import AdminActivity from "./pages/admin/Activity";
 
 
 
@@ -203,9 +206,11 @@ export default function App() {
           />
 
           {/* TASKS */}
+          <Route path="/admin/projects/:projectId/tasks" element={<AdminProjectTasks />} />
+          <Route path="/admin/projects/:projectId/tasks/:taskId" element={<AdminTaskDetails />} />
           <Route
             path="/admin/tasks"
-            element={<SectionPlaceholder />}
+            element={<GlobalTaskRegister role="ADMIN" />}
           />
 
           {/* APPROVALS */}
@@ -237,6 +242,7 @@ export default function App() {
             element={<AdminDailyReports />}
           />
           <Route path="/admin/daily-reports" element={<AdminDailyReports />} />
+          <Route path="/admin/projects/:projectId/daily-reports" element={<ProjectDailyReports role="ADMIN" />} />
 
           {/* DOCUMENTS */}
           <Route
@@ -259,7 +265,7 @@ export default function App() {
           {/* ACTIVITY LOGS */}
           <Route
             path="/admin/activity"
-            element={<SectionPlaceholder />}
+            element={<AdminActivity />}
           />
 
         </Route>
@@ -311,6 +317,7 @@ export default function App() {
             element={<SupervisorProjectTimeline />}
           />
           <Route path="/supervisor/projects/:projectId/delays" element={<SupervisorProjectDelays />} />
+          <Route path="/supervisor/projects/:projectId/daily-reports" element={<ProjectDailyReports role="SUPERVISOR" />} />
 
 
           <Route
@@ -321,7 +328,7 @@ export default function App() {
           {/* TASKS */}
           <Route
             path="/supervisor/tasks"
-            element={<SectionPlaceholder />}
+            element={<GlobalTaskRegister role="SUPERVISOR" />}
           />
 
           {/* DAILY REPORTS */}

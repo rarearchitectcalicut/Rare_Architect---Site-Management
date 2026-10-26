@@ -223,6 +223,7 @@ function buildMonthGroups(days, cellWidth) {
 function ScheduleTaskRow({
     task,
     projectId,
+    getTaskHref,
     windowStart,
     windowEnd,
     numberOfDays,
@@ -263,9 +264,9 @@ function ScheduleTaskRow({
         }
     }
 
-    const href =
-        `/supervisor/projects/${projectId}/tasks` +
-        `?task=${encodeURIComponent(task.id)}`;
+    const href = getTaskHref
+        ? getTaskHref(task)
+        : `/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`;
 
     return (
         <div className="flex min-h-[78px] border-b border-[#EEE6DC] last:border-b-0">
@@ -375,6 +376,7 @@ function ScheduleTaskRow({
 export default function TimelineSchedule({
     tasks = [],
     projectId,
+    getTaskHref,
 }) {
     const [scale, setScale] = useState("month");
     const [offset, setOffset] = useState(0);
@@ -636,6 +638,7 @@ export default function TimelineSchedule({
                                         key={task.id}
                                         task={task}
                                         projectId={projectId}
+                                        getTaskHref={getTaskHref}
                                         windowStart={windowStart}
                                         windowEnd={windowEnd}
                                         numberOfDays={config.days}

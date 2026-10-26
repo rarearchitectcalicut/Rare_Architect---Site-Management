@@ -12,10 +12,10 @@ export const timelineApi = {
     // GET PROJECT TIMELINE
     // ----------------------------------------------
 
-    getTimeline: async (projectId, params = {}) => {
+    getTimeline: async (projectId, params = {}, signal) => {
         const { data } = await api.get(
             `projects/${projectId}/timeline/`,
-            { params }
+            { params, signal }
         );
 
         return data;
@@ -44,10 +44,10 @@ export const timelineApi = {
     // GET TIMELINE CHANGE REQUESTS
     // ----------------------------------------------
 
-    getChangeRequests: async (params = {}) => {
+    getChangeRequests: async (params = {}, signal) => {
         const { data } = await api.get(
             "timeline-change-requests/",
-            { params }
+            { params, signal }
         );
 
         return data;

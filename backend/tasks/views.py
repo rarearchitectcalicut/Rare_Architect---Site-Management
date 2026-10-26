@@ -1,10 +1,13 @@
 from django.shortcuts import get_object_or_404
+from django.db.models import Case, Count, F, IntegerField, Q, When
+from django.db.models.functions import Lower
+from django.utils import timezone
 
 from rest_framework import generics, status, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from projects.models import Project
+from projects.models import Project, ProjectSupervisor
 from projects.pagination import ProjectPagination
 
 from users.permissions import MustChangePasswordPermission,IsAdminRole
@@ -15,6 +18,8 @@ from .serializers import (
     TaskCreateSerializer,
     BulkTaskCreateSerializer,
     TaskListSerializer,
+    TaskRegisterSerializer,
+    TaskRegisterQuerySerializer,
     TaskDetailSerializer,
     TaskApprovalSerializer,
     TaskRejectionSerializer,
@@ -22,6 +27,7 @@ from .serializers import (
     TaskDetailSerializer,
     TaskHistorySerializer,
     TaskCancelSerializer,
+    TaskReopenSerializer,
     TaskCompleteSerializer,
     TaskChangeRequestCreateSerializer,
     TaskChangeRequestDetailSerializer,
@@ -38,7 +44,9 @@ from .services import (
     approve_task,
     reject_task,
     cancel_task,
+    reopen_task,
     complete_task,
+    start_task,
     create_task_change_request,
     approve_task_change_request,
     reject_task_change_request,
@@ -77,6 +85,91 @@ def get_accessible_project(user, project_id):
 # =====================================================
 # SINGLE TASK CREATE + TASK LIST
 # =====================================================
+
+
+class TaskRegisterView(generics.ListAPIView):
+    """Read-only, server-paginated register over the user's accessible projects."""
+    serializer_class = TaskRegisterSerializer
+    permission_classes = [IsAuthenticated, MustChangePasswordPermission, IsAdminRole | IsSupervisorRole]
+    pagination_class = ProjectPagination
+
+    def accessible_projects(self):
+        projects = Project.objects.all()
+        if self.request.user.role == "SUPERVISOR":
+            projects = projects.filter(supervisor_assignments__supervisor=self.request.user)
+        return projects
+
+    def get_queryset(self):
+        return Task.objects.filter(project__in=self.accessible_projects()).select_related(
+            "project", "created_by",
+        ).prefetch_related("project__supervisor_assignments__supervisor")
+
+    def list(self, request, *args, **kwargs):
+        validator = TaskRegisterQuerySerializer(data=request.query_params)
+        validator.is_valid(raise_exception=True)
+        filters = validator.validated_data
+        if request.user.role != "ADMIN" and "supervisor" in filters:
+            raise serializers.ValidationError({"supervisor": "Supervisor filtering is only available to Admins."})
+
+        base = self.get_queryset()
+        overdue = Q(approval_status=Task.ApprovalStatus.APPROVED, end_date__lt=timezone.localdate()) & ~Q(
+            work_status__in=[Task.WorkStatus.COMPLETED, Task.WorkStatus.CANCELLED],
+        )
+        summary = base.aggregate(
+            total=Count("id"), pending_approval=Count("id", filter=Q(approval_status=Task.ApprovalStatus.PENDING)),
+            not_started=Count("id", filter=Q(work_status=Task.WorkStatus.NOT_STARTED)),
+            in_progress=Count("id", filter=Q(work_status=Task.WorkStatus.IN_PROGRESS)),
+            completed=Count("id", filter=Q(work_status=Task.WorkStatus.COMPLETED)), overdue=Count("id", filter=overdue),
+        )
+        queryset = base
+        for field in ("approval_status", "work_status", "priority"):
+            if field in filters:
+                queryset = queryset.filter(**{field: filters[field]})
+        if "project" in filters:
+            # Validate access before filtering, matching project-task URL authorization.
+            project = get_object_or_404(self.accessible_projects(), pk=filters["project"])
+            queryset = queryset.filter(project=project)
+        if "supervisor" in filters:
+            assigned_projects = ProjectSupervisor.objects.filter(supervisor_id=filters["supervisor"]).values("project_id")
+            queryset = queryset.filter(project_id__in=assigned_projects)
+        for key, lookup in {"start_from": "start_date__gte", "start_to": "start_date__lte", "end_from": "end_date__gte", "end_to": "end_date__lte"}.items():
+            if key in filters:
+                queryset = queryset.filter(**{lookup: filters[key]})
+        if filters["overdue"]:
+            queryset = queryset.filter(overdue)
+        for term in filters.get("search", "").split():
+            queryset = queryset.filter(Q(title__icontains=term) | Q(description__icontains=term) | Q(worker_name__icontains=term) | Q(project__name__icontains=term))
+
+        sort = filters["sort"]
+        ordering = {
+            "order": ["project__name", "project_id", "display_order", "created_at", "id"],
+            "newest": ["-created_at", "-id"], "oldest": ["created_at", "id"],
+            "start_date": [F("start_date").asc(nulls_last=True), "id"],
+            "end_date": [F("end_date").asc(nulls_last=True), "id"],
+            "title": [Lower("title"), "id"],
+            "priority": ["priority_rank", "project__name", "display_order", "id"],
+        }
+        if sort == "priority":
+            queryset = queryset.annotate(priority_rank=Case(
+                *[When(priority=value, then=index) for index, value in enumerate(["URGENT", "HIGH", "MEDIUM", "LOW"])],
+                default=4, output_field=IntegerField(),
+            ))
+        queryset = queryset.order_by(*ordering[sort])
+        page = self.paginate_queryset(queryset)
+        response = self.get_paginated_response(self.get_serializer(page, many=True).data)
+        projects = self.accessible_projects()
+        assignments = ProjectSupervisor.objects.filter(project__in=projects).order_by("supervisor__username").values(
+            "supervisor_id", "supervisor__first_name", "supervisor__last_name", "supervisor__username",
+        ).distinct()
+        response.data["summary"] = summary
+        response.data["filter_options"] = {
+            "projects": list(projects.order_by("name", "id").values("id", "name")),
+            "supervisors": [
+                {"id": item["supervisor_id"], "name": " ".join(filter(None, [item["supervisor__first_name"], item["supervisor__last_name"]])).strip() or item["supervisor__username"]}
+                for item in assignments
+            ] if request.user.role == "ADMIN" else [],
+        }
+        return response
 
 
 class ProjectTaskListCreateView(generics.ListCreateAPIView):
@@ -420,6 +513,32 @@ class TaskDecisionListView(generics.ListAPIView):
 
 
 # =====================================================
+# START TASK VIEW
+# =====================================================
+
+
+class TaskStartView(generics.GenericAPIView):
+    serializer_class = serializers.Serializer
+    permission_classes = [
+        IsAuthenticated,
+        MustChangePasswordPermission,
+        IsSupervisorRole,
+    ]
+
+    def post(self, request, id):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        task = start_task(task_id=id, user=request.user)
+        return Response(
+            {
+                "message": "Task started successfully.",
+                "task": TaskDetailSerializer(task, context={"request": request}).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+# =====================================================
 # COMPLETE TASK VIEW
 # =====================================================
 
@@ -466,7 +585,7 @@ class TaskCancelView(generics.GenericAPIView):
     permission_classes = [
         IsAuthenticated,
         MustChangePasswordPermission,
-        IsAdminRole,
+        IsAdminRole | IsSupervisorRole,
     ]
 
     def post(self, request, id):
@@ -475,7 +594,7 @@ class TaskCancelView(generics.GenericAPIView):
 
         task = cancel_task(
             task_id=id,
-            admin_user=request.user,
+            user=request.user,
             reason=serializer.validated_data["reason"],
         )
 
@@ -492,8 +611,27 @@ class TaskCancelView(generics.GenericAPIView):
 
 
 # =====================================================
+# REOPEN COMPLETED TASK
+# =====================================================
+
+class TaskReopenView(generics.GenericAPIView):
+    serializer_class = TaskReopenSerializer
+    permission_classes = [IsAuthenticated, MustChangePasswordPermission, IsAdminRole]
+
+    def post(self, request, id):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        task = reopen_task(task_id=id, admin_user=request.user, reason=serializer.validated_data["reason"])
+        return Response(
+            {"message": "Task reopened successfully.", "task": TaskDetailSerializer(task, context={"request": request}).data},
+            status=status.HTTP_200_OK,
+        )
+
+
+# =====================================================
 # CREATE TASK CHANGE REQUEST
 # =====================================================
+
 
 class TaskChangeRequestCreateView(generics.GenericAPIView):
     serializer_class = TaskChangeRequestCreateSerializer

@@ -530,6 +530,7 @@ class TaskHistory(models.Model):
         EXTENSION_REJECTED = "EXTENSION_REJECTED", "Extension Rejected"
 
         COMPLETED = "COMPLETED", "Completed"
+        REOPENED = "REOPENED", "Reopened"
         CANCELLED = "CANCELLED", "Cancelled"
 
     id = models.UUIDField(
@@ -595,6 +596,7 @@ class TaskHistory(models.Model):
                         "EXTENSION_APPROVED",
                         "EXTENSION_REJECTED",
                         "COMPLETED",
+                        "REOPENED",
                         "CANCELLED",
                     ]
                 ),

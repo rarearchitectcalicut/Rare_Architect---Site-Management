@@ -245,6 +245,43 @@ class TaskListSerializer(serializers.ModelSerializer):
 # =====================================================
 # TASK DETAIL SERIALIZER
 # =====================================================
+class TaskRegisterSerializer(TaskListSerializer):
+    project_name = serializers.CharField(source="project.name", read_only=True)
+    supervisors = serializers.SerializerMethodField()
+
+    class Meta(TaskListSerializer.Meta):
+        fields = (*TaskListSerializer.Meta.fields, "description", "project_name", "supervisors")
+        read_only_fields = fields
+
+    def get_supervisors(self, obj):
+        return [
+            {"id": str(assignment.supervisor_id), "name": assignment.supervisor.get_full_name().strip() or assignment.supervisor.username}
+            for assignment in obj.project.supervisor_assignments.all()
+        ]
+
+
+class TaskRegisterQuerySerializer(serializers.Serializer):
+    search = serializers.CharField(required=False, allow_blank=True, max_length=200, trim_whitespace=True)
+    project = serializers.UUIDField(required=False)
+    supervisor = serializers.UUIDField(required=False)
+    approval_status = serializers.ChoiceField(choices=Task.ApprovalStatus.choices, required=False)
+    work_status = serializers.ChoiceField(choices=Task.WorkStatus.choices, required=False)
+    priority = serializers.ChoiceField(choices=Task.Priority.choices, required=False)
+    start_from = serializers.DateField(required=False)
+    start_to = serializers.DateField(required=False)
+    end_from = serializers.DateField(required=False)
+    end_to = serializers.DateField(required=False)
+    overdue = serializers.BooleanField(required=False, default=False)
+    sort = serializers.ChoiceField(choices=["order", "newest", "oldest", "start_date", "end_date", "priority", "title"], default="order")
+
+    def validate(self, attrs):
+        for prefix in ("start", "end"):
+            lower, upper = attrs.get(f"{prefix}_from"), attrs.get(f"{prefix}_to")
+            if lower and upper and lower > upper:
+                raise serializers.ValidationError({f"{prefix}_to": "The upper date must be on or after the lower date."})
+        return attrs
+
+
 class TaskDetailSerializer(serializers.ModelSerializer):
 
     project_name = serializers.CharField(
@@ -455,6 +492,12 @@ class TaskCompleteSerializer(serializers.Serializer):
 # =====================================================
 # TASK CANCELLATION SERIALIZER
 # =====================================================
+class TaskReopenSerializer(serializers.Serializer):
+    reason = serializers.CharField(
+        required=True, allow_blank=False, trim_whitespace=True, max_length=1000,
+    )
+
+
 class TaskCancelSerializer(serializers.Serializer):
     reason = serializers.CharField(
         required=True,
