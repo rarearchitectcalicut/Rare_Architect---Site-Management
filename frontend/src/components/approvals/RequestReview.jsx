@@ -29,8 +29,8 @@ export default function RequestReview({ item, onClose, onSuccess, readOnly = fal
         : requestType === "work"
             ? { reviewer: record?.verified_by_name, date: record?.verified_at, comment: record?.verification_note }
             : { reviewer: record?.reviewed_by_name, date: record?.reviewed_at, comment: record?.admin_comment };
-    const canDecide = !readOnly && !item.historyId && status === "PENDING" && record && !loading;
-    const approveBlocked = requestType === "extension" && record?.status !== "APPROVED" || requestType === "changes" && !getChanges(record).length;
+    const canDecide = !readOnly && !item.historyId && status === "PENDING" && record && !loading && (requestType !== "work" || record.report_status === "SUBMITTED");
+    const approveBlocked = requestType === "extension" && record?.status !== "APPROVED" || requestType === "changes" && !getChanges(record).length || requestType === "work" && record?.task_work_status === "CANCELLED";
     return <ApprovalModal onClose={onClose} error={action ? "" : error}>
         <header className="sticky top-0 z-10 flex items-start justify-between gap-4 bg-[#252B2A] p-6 text-white sm:px-8">
             <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#CBB99A]">RARE / Request review</p><h2 className="mt-2 text-xl font-semibold">{requestLabels[requestType]}</h2></div>

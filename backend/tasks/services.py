@@ -330,6 +330,58 @@ def reject_task(*, task_id, admin_user, reason):
 
 
 # =====================================================
+# START TASK
+# =====================================================
+
+
+@transaction.atomic
+def start_task(*, task_id, user):
+    if (
+        not user.is_authenticated
+        or not user.is_active
+        or user.role != "SUPERVISOR"
+        or user.is_staff
+    ):
+        raise PermissionDenied("Only active Supervisors can start tasks.")
+
+    task = get_object_or_404(
+        Task.objects.select_related("project").select_for_update(of=("self",)),
+        pk=task_id,
+    )
+    assignment = ProjectSupervisor.objects.select_for_update().filter(
+        project_id=task.project_id,
+        supervisor=user,
+    ).first()
+    if assignment is None:
+        raise PermissionDenied("You are not assigned to this task's project.")
+
+    if task.approval_status != Task.ApprovalStatus.APPROVED:
+        raise ValidationError({"detail": "Only approved tasks can be started."})
+    if task.work_status != Task.WorkStatus.NOT_STARTED:
+        raise ValidationError({"detail": "Only tasks that have not started can be started."})
+
+    old_work_status = task.work_status
+    task.work_status = Task.WorkStatus.IN_PROGRESS
+    task.save(update_fields=["work_status", "updated_at"])
+
+    # TaskHistory's constrained action list has no STARTED event.
+    create_activity_log(
+        actor=user,
+        action="TASK_STARTED",
+        entity_type="TASK",
+        entity_id=task.id,
+        description=f"Task '{task.title}' started.",
+        metadata={
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+            "old_status": old_work_status,
+            "new_status": task.work_status,
+        },
+    )
+    return task
+
+
+# =====================================================
 # COMPLETE TASK
 # =====================================================
 
@@ -404,15 +456,22 @@ def complete_task(*, task_id, user, comment=""):
 # =====================================================
 
 
+def validate_lifecycle_reason(reason):
+    if not isinstance(reason, str) or not reason.strip():
+        raise ValidationError({"reason": "An explanation is required."})
+    reason = reason.strip()
+    if len(reason) > 1000:
+        raise ValidationError({"reason": "Use no more than 1000 characters."})
+    return reason
+
+
 @transaction.atomic
-def cancel_task(*, task_id, admin_user, reason):
-    if (
-        not admin_user.is_authenticated
-        or not admin_user.is_active
-        or admin_user.role != "ADMIN"
-        or not admin_user.is_staff
-    ):
-        raise PermissionDenied("Only Admin can cancel tasks.")
+def cancel_task(*, task_id, user, reason):
+    is_admin = user.is_authenticated and user.is_active and user.role == "ADMIN" and user.is_staff
+    is_supervisor = user.is_authenticated and user.is_active and user.role == "SUPERVISOR" and not user.is_staff
+    if not (is_admin or is_supervisor):
+        raise PermissionDenied("Only Admins and assigned Supervisors can cancel tasks.")
+    reason = validate_lifecycle_reason(reason)
 
     reference = get_object_or_404(Task.objects.only("project_id"), pk=task_id)
     Project.objects.select_for_update().get(pk=reference.project_id)
@@ -420,6 +479,11 @@ def cancel_task(*, task_id, admin_user, reason):
         Task.objects.select_related("project").select_for_update(),
         pk=task_id,
     )
+
+    if is_supervisor:
+        validate_supervisor_assignment(task.project, user)
+        if not ProjectSupervisor.objects.select_for_update().filter(project_id=task.project_id, supervisor=user).first():
+            raise PermissionDenied("You are not assigned to this project.")
 
     if task.approval_status != Task.ApprovalStatus.APPROVED:
         raise ValidationError({"detail": "Only approved tasks can be cancelled."})
@@ -438,16 +502,18 @@ def cancel_task(*, task_id, admin_user, reason):
 
     TaskHistory.objects.create(
         task=task,
-        actor=admin_user,
+        actor=user,
         action=TaskHistory.Action.CANCELLED,
         details={
             "reason": reason,
+            "old_status": old_work_status,
+            "new_status": task.work_status,
             "work_status": Task.WorkStatus.CANCELLED,
         },
     )
 
     create_activity_log(
-        actor=admin_user,
+        actor=user,
         action="TASK_CANCELLED",
         entity_type="TASK",
         entity_id=task.id,
@@ -463,6 +529,33 @@ def cancel_task(*, task_id, admin_user, reason):
 
     return task
 
+
+# =====================================================
+# REOPEN COMPLETED TASK
+# =====================================================
+
+@transaction.atomic
+def reopen_task(*, task_id, admin_user, reason):
+    if not (admin_user.is_authenticated and admin_user.is_active and admin_user.role == "ADMIN" and admin_user.is_staff):
+        raise PermissionDenied("Only active Admins can reopen tasks.")
+    reason = validate_lifecycle_reason(reason)
+    reference = get_object_or_404(Task.objects.only("project_id"), pk=task_id)
+    Project.objects.select_for_update().get(pk=reference.project_id)
+    task = get_object_or_404(Task.objects.select_for_update().select_related("project"), pk=task_id)
+    if task.approval_status != Task.ApprovalStatus.APPROVED or task.work_status != Task.WorkStatus.COMPLETED:
+        raise ValidationError({"detail": "Only approved, completed tasks can be reopened."})
+
+    old_work_status = task.work_status
+    task.work_status = Task.WorkStatus.IN_PROGRESS
+    task.save(update_fields=["work_status", "updated_at"])
+    details = {"reason": reason, "old_status": old_work_status, "new_status": task.work_status, "work_status": task.work_status}
+    TaskHistory.objects.create(task=task, actor=admin_user, action=TaskHistory.Action.REOPENED, details=details)
+    create_activity_log(
+        actor=admin_user, action="TASK_REOPENED", entity_type="TASK", entity_id=task.id,
+        description=f"Task '{task.title}' reopened.",
+        metadata={**details, "task_id": str(task.id), "project_id": str(task.project_id)},
+    )
+    return task
 
 # =====================================================
 # TASK CHANGE REQUEST HELPERS

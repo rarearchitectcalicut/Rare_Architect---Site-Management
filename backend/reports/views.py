@@ -1,6 +1,8 @@
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse, Http404
 from pathlib import Path
+from PIL import Image, UnidentifiedImageError
+from django.db.models import Count, Q, Prefetch
 from rest_framework import generics, status, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -12,6 +14,7 @@ from .models import DelayReport, DailyReport, DailyTaskWork, DailyManpower, Dail
 from .serializers import (
     DailyReportCreateSerializer,
     DailyReportDetailSerializer,
+    DailyReportQuerySerializer,
     DailyTaskWorkCreateSerializer,
     DailyTaskWorkDetailSerializer,
     DailyTaskWorkUpdateSerializer,
@@ -45,6 +48,7 @@ from .services import (
     delete_daily_material,
     upload_daily_report_attachment,
     delete_daily_report_attachment,
+    delete_daily_report,
     verify_daily_task_work,
     reject_daily_task_work,
     correct_rejected_daily_task_work,
@@ -70,12 +74,12 @@ def accessible_daily_reports(user):
     )
 
     if is_admin(user):
-        return queryset
+        return queryset.filter(status=DailyReport.Status.SUBMITTED)
 
     if is_supervisor(user):
         return queryset.filter(
             project__supervisor_assignments__supervisor=user
-        ).distinct()
+        ).filter(Q(status=DailyReport.Status.SUBMITTED) | Q(reported_by=user)).distinct()
 
     return queryset.none()
 
@@ -108,12 +112,39 @@ class ProjectDailyReportListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         project = self.get_project()
+        validator = DailyReportQuerySerializer(data=self.request.query_params)
+        validator.is_valid(raise_exception=True)
+        filters = validator.validated_data
+        queryset = accessible_daily_reports(self.request.user).filter(project=project)
+        for key in ("status", "reported_by"):
+            if key in filters:
+                queryset = queryset.filter(**{key: filters[key]})
+        for key, lookup in [("date_from", "report_date__gte"), ("date_to", "report_date__lte")]:
+            if key in filters:
+                queryset = queryset.filter(**{lookup: filters[key]})
+        for term in filters.get("search", "").split():
+            queryset = queryset.filter(Q(work_summary__icontains=term) | Q(site_notes__icontains=term) | Q(issues__icontains=term) | Q(site_condition__icontains=term) | Q(next_day_plan__icontains=term))
+        ordering = ["report_date", "created_at", "id"] if filters["sort"] == "oldest" else ["-report_date", "-created_at", "-id"]
+        return queryset.annotate(
+            entry_count=Count("work_entries"),
+            pending_count=Count("work_entries", filter=Q(work_entries__verification_status="PENDING")),
+            verified_count=Count("work_entries", filter=Q(work_entries__verification_status="VERIFIED")),
+            rejected_count=Count("work_entries", filter=Q(work_entries__verification_status="REJECTED")),
+            eligible_corrections=Count("work_entries", filter=Q(work_entries__verification_status="REJECTED", work_entries__correction__isnull=True, work_entries__task__approval_status="APPROVED") & ~Q(work_entries__task__work_status__in=["COMPLETED", "CANCELLED"])),
+        ).prefetch_related(Prefetch("work_entries", queryset=DailyTaskWork.objects.filter(verification_status="REJECTED").select_related("task", "correction__daily_report").order_by("created_at", "id")[:5], to_attr="rejected_preview")).order_by(*ordering)
 
-        return (
-            accessible_daily_reports(self.request.user)
-            .filter(project=project)
-            .order_by("-report_date", "-created_at")
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        reports = accessible_daily_reports(request.user).filter(project=self.get_project())
+        summary = reports.aggregate(
+            total=Count("id"), drafts=Count("id", filter=Q(status="DRAFT")), submitted=Count("id", filter=Q(status="SUBMITTED")),
         )
+        summary["pending_work"] = DailyTaskWork.objects.filter(daily_report__in=reports, daily_report__status="SUBMITTED", verification_status="PENDING").count()
+        if is_admin(request.user):
+            summary.pop("drafts")
+        response.data["summary"] = summary
+        response.data["reporters"] = list(reports.order_by("reported_by__username").values("reported_by", "reported_by__username").distinct())
+        return response
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -152,6 +183,11 @@ class DailyReportDetailView(generics.GenericAPIView):
         IsAuthenticated,
         MustChangePasswordPermission,
     ]
+
+    def delete(self, request, id):
+        report = get_accessible_daily_report(request.user, id)
+        delete_daily_report(report_id=report.id, supervisor=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get(self, request, id):
         report = get_accessible_daily_report(
@@ -245,7 +281,7 @@ class DailyWorkQueueView(generics.ListAPIView):
             if value:
                 queryset = queryset.filter(**{field: serializers.UUIDField().run_validation(value)})
         return queryset.select_related(
-            "task", "verified_by", "daily_report__project", "daily_report__reported_by",
+            "task", "verified_by", "daily_report__project", "daily_report__reported_by", "correction__daily_report", "correction_of__daily_report",
         ).order_by("-created_at", "-id")
 
 
@@ -274,6 +310,7 @@ class DailyTaskWorkListCreateView(generics.ListCreateAPIView):
                 "daily_report__project",
                 "daily_report__reported_by",
                 "verified_by",
+                "correction__daily_report", "correction_of__daily_report",
             )
             .order_by("created_at", "id")
         )
@@ -334,6 +371,7 @@ class DailyTaskWorkDetailView(generics.GenericAPIView):
                 "task",
                 "daily_report",
                 "verified_by",
+                "correction__daily_report", "correction_of__daily_report",
             ),
             pk=id,
         )
@@ -727,11 +765,31 @@ class DailyReportAttachmentDownloadView(generics.GenericAPIView):
         # supplied by the client.
         filename = Path(attachment.original_filename).name
 
+        # Uploaded names and client MIME headers are not sufficient evidence.
+        # Re-identify allowlisted content before serving anything inline.
+        content_type = "application/octet-stream"
+        extension = Path(filename).suffix.lower()
+        try:
+            if extension == ".pdf" and file_handle.read(5) == b"%PDF-":
+                content_type = "application/pdf"
+            elif extension in {".jpg", ".jpeg", ".png", ".webp"}:
+                file_handle.seek(0)
+                with Image.open(file_handle) as picture:
+                    image_format = picture.format
+                    picture.verify()
+                expected = {".jpg": "JPEG", ".jpeg": "JPEG", ".png": "PNG", ".webp": "WEBP"}
+                if image_format == expected[extension]:
+                    content_type = Image.MIME[image_format]
+        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+            pass
+        finally:
+            file_handle.seek(0)
+        inline = request.query_params.get("preview") == "1" and content_type != "application/octet-stream"
         response = FileResponse(
             file_handle,
-            as_attachment=True,
+            as_attachment=not inline,
             filename=filename or "attachment",
-            content_type="application/octet-stream",
+            content_type=content_type,
         )
 
         response["X-Content-Type-Options"] = "nosniff"

@@ -20,7 +20,7 @@ export function getNavigation(role) {
             path: `${prefix}/projects`,
         },
         {
-            label: "Tasks",
+            label: role === "ADMIN" ? "All Tasks" : "My Tasks",
             icon: "ClipboardList",
             path: `${prefix}/tasks`,
         },

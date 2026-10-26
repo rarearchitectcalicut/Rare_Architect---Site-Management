@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     ProjectTaskListCreateView,
+    TaskRegisterView,
     BulkTaskCreateView,
     TaskApprovalListView,
     TaskApproveView,
@@ -10,7 +11,9 @@ from .views import (
     TaskHistoryView,
     TaskDecisionListView,
     TaskCompleteView,
+    TaskStartView,
     TaskCancelView,
+    TaskReopenView,
     TaskChangeRequestCreateView,
     TaskChangeRequestListView,
     TaskChangeRequestDetailView,
@@ -27,6 +30,7 @@ from .views import (
 app_name = "tasks"
 
 urlpatterns = [
+    path("tasks/", TaskRegisterView.as_view(), name="task-register"),
     path("task-decisions/", TaskDecisionListView.as_view(), name="task-decision-list"),
     path(
         "projects/<uuid:project_id>/tasks/",
@@ -64,9 +68,19 @@ urlpatterns = [
         name="task-history",
     ),
     path(
+        "tasks/<uuid:id>/start/",
+        TaskStartView.as_view(),
+        name="task-start",
+    ),
+    path(
         "tasks/<uuid:id>/complete/",
         TaskCompleteView.as_view(),
         name="task-complete",
+    ),
+    path(
+        "tasks/<uuid:id>/reopen/",
+        TaskReopenView.as_view(),
+        name="task-reopen",
     ),
     path(
         "tasks/<uuid:id>/cancel/",

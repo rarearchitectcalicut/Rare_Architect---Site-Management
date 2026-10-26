@@ -10,8 +10,10 @@ from tasks.models import Task,TaskHistory
 from projects.models import Project, ProjectSupervisor
 from pathlib import Path
 from django.db.models import Sum
+from django.db.models.deletion import ProtectedError
 from decimal import Decimal, ROUND_HALF_UP
 from activity.services import create_activity_log
+from activity.models import ActivityLog
 from .models import (
     DailyReport,
     DailyTaskWork,
@@ -136,18 +138,47 @@ def accessible_delay_reports(user):
 
 @transaction.atomic
 def create_daily_report(*, project, supervisor, validated_data):
+    validated_data = dict(validated_data)
+    source = validated_data.pop("source_report", None)
+    client_id = validated_data.pop("client_id", None)
     project = Project.objects.select_for_update().get(pk=project.pk)
 
     validate_report_supervisor(project, supervisor)
     validate_report_project_status(project)
 
-    report = DailyReport.objects.create(
-        project=project,
-        reported_by=supervisor,
-        status=DailyReport.Status.DRAFT,
-        submitted_at=None,
-        **validated_data,
-    )
+    if source:
+        source = get_object_or_404(DailyReport.objects.select_for_update(), pk=source.pk)
+        if source.project_id != project.id or source.reported_by_id != supervisor.id:
+            raise PermissionDenied("Only the original reporting Supervisor can prefill corrections in this project.")
+        if source.status != DailyReport.Status.SUBMITTED:
+            raise ValidationError({"source_report": "Corrections require a submitted source report."})
+    if client_id:
+        existing = DailyReport.objects.select_for_update().filter(pk=client_id).first()
+        if existing:
+            # Bind a replay to the original creation audit, not a report revision.
+            source_id = str(source.id) if source else None
+            if existing.project_id != project.id or existing.reported_by_id != supervisor.id or not ActivityLog.objects.filter(action="DAILY_REPORT_CREATED", entity_id=existing.id, metadata__prefill_source=source_id).exists():
+                raise ValidationError({"client_id": "This retry identifier is already in use."})
+            if existing.status != DailyReport.Status.DRAFT:
+                raise ValidationError({"client_id": "This report has already been submitted."})
+            return existing
+        if ActivityLog.objects.filter(action="DAILY_REPORT_DELETED", entity_id=client_id).exists():
+            raise ValidationError({"client_id": "This draft was deleted. Open a fresh correction prefill to create another report."})
+    if source and not source.work_entries.filter(verification_status="REJECTED", correction__isnull=True, task__approval_status="APPROVED").exclude(task__work_status__in=["COMPLETED", "CANCELLED"]).exists():
+        raise ValidationError({"source_report": "This report has no rejected work eligible for correction."})
+
+    try:
+        with transaction.atomic():
+            report = DailyReport.objects.create(
+                **({"id": client_id} if client_id else {}),
+                project=project,
+                reported_by=supervisor,
+                status=DailyReport.Status.DRAFT,
+                submitted_at=None,
+                **validated_data,
+            )
+    except IntegrityError:
+        raise ValidationError({"client_id": "This retry identifier is already in use."})
 
     create_activity_log(
         actor=supervisor,
@@ -160,6 +191,7 @@ def create_daily_report(*, project, supervisor, validated_data):
             "project_id": str(report.project_id),
             "new_status": report.status,
             "report_date": report.report_date.isoformat(),
+            "prefill_source": str(source.id) if source else None,
         },
     )
 
@@ -228,6 +260,41 @@ def update_daily_report(*, report_id, supervisor, data):
 
 
 # =====================================================
+# DELETE DAILY REPORT DRAFT
+# =====================================================
+
+
+@transaction.atomic
+def delete_daily_report(*, report_id, supervisor):
+    # Match submit and child mutations: lock the parent report first.
+    report = get_object_or_404(DailyReport.objects.select_for_update(), pk=report_id)
+    validate_daily_report_draft(report, supervisor)
+    attachments = list(report.attachments.all())
+    report_id, project_id = report.id, report.project_id
+    try:
+        # All these relations are PROTECT. Only remove children of this draft,
+        # never the original rejected work referenced by a correction.
+        report.attachments.all().delete()
+        report.work_entries.all().delete()
+        report.manpower_entries.all().delete()
+        report.material_entries.all().delete()
+        report.delete()
+    except ProtectedError:
+        raise ValidationError({"detail": "This report has protected records and cannot be deleted."})
+    create_activity_log(
+        actor=supervisor, action="DAILY_REPORT_DELETED", entity_type="DAILY_REPORT",
+        entity_id=report_id, description="Daily report draft deleted.",
+        metadata={"daily_report_id": str(report_id), "project_id": str(project_id), "old_status": "DRAFT"},
+    )
+    for attachment in attachments:
+        storage, name = attachment.file.storage, attachment.file.name
+        if name:
+            # A rollback must leave evidence intact. Match attachment deletion;
+            # robust callbacks log storage failures without failing a committed API.
+            transaction.on_commit(lambda storage=storage, name=name: storage.delete(name), robust=True)
+
+
+# =====================================================
 # SUBMIT DAILY REPORT
 # =====================================================
 
@@ -255,6 +322,10 @@ def submit_daily_report(*, report_id, supervisor):
                 )
             }
         )
+
+    tasks = Task.objects.filter(daily_work_entries__daily_report=report).order_by("id").select_for_update()
+    if any(task.work_status == Task.WorkStatus.CANCELLED for task in tasks):
+        raise ValidationError({"task": "Remove cancelled tasks from this draft before submitting it."})
 
     report.status = DailyReport.Status.SUBMITTED
     report.submitted_at = timezone.now()
@@ -562,6 +633,19 @@ MANPOWER_EDITABLE_FIELDS = {
 }
 
 
+def prepare_draft_row(model, report, validated_data):
+    """Use existing UUID primary keys for retry-safe creates; caller locks report."""
+    values = dict(validated_data)
+    client_id = values.pop("client_id", None)
+    if client_id:
+        existing = model.objects.filter(pk=client_id).first()
+        if existing:
+            if existing.daily_report_id != report.id or any(getattr(existing, key) != value for key, value in values.items()):
+                raise ValidationError({"client_id": "This retry identifier belongs to a different record or payload."})
+            return existing, False
+    return model(daily_report=report, **({"id": client_id} if client_id else {}), **values), True
+
+
 @transaction.atomic
 def add_daily_manpower(*, report_id, supervisor, data):
     report = get_object_or_404(
@@ -571,7 +655,7 @@ def add_daily_manpower(*, report_id, supervisor, data):
 
     validate_daily_report_draft(report, supervisor)
 
-    unknown_fields = set(data) - MANPOWER_EDITABLE_FIELDS
+    unknown_fields = set(data) - (MANPOWER_EDITABLE_FIELDS | {"client_id"})
     if unknown_fields:
         raise ValidationError(
             {"detail": ("Unsupported fields: " + ", ".join(sorted(unknown_fields)))}
@@ -580,12 +664,16 @@ def add_daily_manpower(*, report_id, supervisor, data):
     serializer = DailyManpowerCreateSerializer(data=data)
     serializer.is_valid(raise_exception=True)
 
-    entry = DailyManpower(
-        daily_report=report,
-        **serializer.validated_data,
-    )
-    entry.full_clean()
-    entry.save()
+    entry, created = prepare_draft_row(DailyManpower, report, serializer.validated_data)
+    if not created:
+        return entry
+    try:
+        entry.full_clean()
+        entry.save()
+    except DjangoValidationError as exc:
+        raise ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
+    except IntegrityError:
+        raise ValidationError({"client_id": "This retry identifier is already in use."})
 
     create_activity_log(
         actor=supervisor,
@@ -735,7 +823,10 @@ def save_validated_material(entry, *, update_fields=None):
         raise ValidationError(exc.messages)
 
     if update_fields is None:
-        entry.save()
+        try:
+            entry.save()
+        except IntegrityError:
+            raise ValidationError({"client_id": "This retry identifier is already in use."})
     elif update_fields:
         entry.save(update_fields=update_fields)
 
@@ -755,15 +846,14 @@ def add_daily_material(*, report_id, supervisor, data):
     )
 
     validate_daily_report_draft(report, supervisor)
-    validate_material_fields(data)
+    validate_material_fields({key: value for key, value in data.items() if key != "client_id"})
 
     serializer = DailyMaterialEntryCreateSerializer(data=data)
     serializer.is_valid(raise_exception=True)
 
-    entry = DailyMaterialEntry(
-        daily_report=report,
-        **serializer.validated_data,
-    )
+    entry, created = prepare_draft_row(DailyMaterialEntry, report, serializer.validated_data)
+    if not created:
+        return entry
 
     save_validated_material(entry)
 
@@ -931,8 +1021,21 @@ def upload_daily_report_attachment(
     uploaded_file = serializer.validated_data["file"]
 
     original_filename = Path(uploaded_file.name).name[:255]
+    client_id = serializer.validated_data.get("client_id")
+    if client_id:
+        existing = DailyReportAttachment.objects.filter(pk=client_id).first()
+        if existing:
+            if existing.daily_report_id != report.id or existing.file_size != uploaded_file.size or existing.original_filename != original_filename or existing.caption != serializer.validated_data.get("caption", "") or existing.task_work_id != getattr(serializer.validated_data.get("task_work"), "id", None):
+                raise ValidationError({"client_id": "This retry identifier belongs to different evidence."})
+            with existing.file.storage.open(existing.file.name, "rb") as saved:
+                matches = saved.read(uploaded_file.size + 1) == uploaded_file.read()
+            uploaded_file.seek(0)
+            if not matches:
+                raise ValidationError({"client_id": "This retry identifier belongs to a different file."})
+            return existing
 
     attachment = DailyReportAttachment(
+        **({"id": client_id} if client_id else {}),
         daily_report=report,
         task_work=serializer.validated_data.get("task_work"),
         original_filename=original_filename,
@@ -968,6 +1071,10 @@ def upload_daily_report_attachment(
             },
         )
 
+    except IntegrityError:
+        if attachment.file.name:
+            attachment.file.delete(save=False)
+        raise ValidationError({"client_id": "This retry identifier is already in use."})
     except Exception:
         if attachment.file.name:
             attachment.file.delete(save=False)
@@ -1180,6 +1287,9 @@ def verify_daily_task_work(
     entry, task = get_locked_pending_work(
         entry_id=entry_id,
     )
+
+    if task.work_status == Task.WorkStatus.CANCELLED:
+        raise ValidationError({"task": "Cancelled tasks cannot receive verified work."})
 
     if task.measurement_method == Task.MeasurementMethod.QUANTITY:
 
@@ -1422,9 +1532,10 @@ def correct_rejected_daily_task_work(
         )
 
     # One immediate correction per rejected entry.
-    if DailyTaskWork.objects.filter(
+    existing_correction = DailyTaskWork.objects.filter(
         correction_of=original_entry,
-    ).exists():
+    ).first()
+    if existing_correction and existing_correction.daily_report_id != new_report.id:
         raise ValidationError(
             {"detail": ("This rejected entry already " "has a correction.")}
         )
@@ -1434,7 +1545,7 @@ def correct_rejected_daily_task_work(
     if DailyTaskWork.objects.filter(
         daily_report=new_report,
         task=task,
-    ).exists():
+    ).exclude(pk=existing_correction.pk if existing_correction else None).exists():
         raise ValidationError(
             {"task": ("This task is already included " "in the correction report.")}
         )
@@ -1446,6 +1557,7 @@ def correct_rejected_daily_task_work(
 
     # Reuse existing task measurement validation.
     serializer = DailyTaskWorkCreateSerializer(
+        instance=existing_correction,
         data={
             **corrected_data,
             "task": str(task.id),
@@ -1457,6 +1569,11 @@ def correct_rejected_daily_task_work(
 
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
+    if existing_correction:
+        values = {"work_description": data["work_description"], "location_detail": data.get("location_detail", ""), "quantity_completed_today": data.get("quantity_completed_today"), "completion_claimed": data.get("completion_claimed", False)}
+        if all(getattr(existing_correction, key) == value for key, value in values.items()):
+            return existing_correction
+        raise ValidationError({"detail": "This rejected entry already has a correction. Edit its existing draft entry instead."})
 
     # Use a nested savepoint so database uniqueness
     # errors can become an API validation response.
