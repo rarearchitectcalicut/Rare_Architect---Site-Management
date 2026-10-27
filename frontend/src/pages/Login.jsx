@@ -271,7 +271,7 @@ export default function Login() {
         {/* ============================================= */}
         {/* RIGHT: AUTHENTICATION PANEL                    */}
         {/* ============================================= */}
-        <section className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#f1eadf] px-4 py-10 sm:px-8 lg:px-10">
+        <section className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#f1eadf] px-4 py-6 sm:px-8 lg:px-10">
           {/* Soft decorative background */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0">
             <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#e8dfd3] blur-3xl" />
@@ -299,14 +299,14 @@ export default function Login() {
               <img
                 src={rareLogo}
                 alt="RARE - Rifath Associates LLP"
-                className="mb-3 h-auto w-44 object-contain sm:w-48"
+                className="mb-3 h-auto w-32 object-contain sm:w-36"
               />
 
-              <h1 className="text-[28px] font-bold tracking-tight text-[#211e1a] sm:text-[30px]">
+              <h1 className="text-2xl font-bold tracking-tight text-[#211e1a] sm:text-3xl">
                 Welcome Back
               </h1>
 
-              <p className="mt-1 text-sm leading-6 text-[#8a8175]">
+              <p className="mt-1 text-sm leading-6 text-[#716658]">
                 Sign in to your RARE account
               </p>
             </div>
@@ -316,7 +316,7 @@ export default function Login() {
               className="
                 rare-rise rounded-[28px] border border-[#e8dfd3]
                 bg-[#fffdfa] p-5
-                shadow-[0_20px_60px_rgba(33,30,26,0.10)]
+                shadow-sm
                 sm:p-8
               "
               style={{ "--d": "160ms" }}
@@ -338,7 +338,7 @@ export default function Login() {
                   <div className="group relative">
                     <Phone
                       size={17}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#938778] transition-colors duration-200 group-focus-within:text-[#211e1a]"
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#716658] transition-colors duration-200 group-focus-within:text-[#211e1a]"
                     />
 
                     <input
@@ -375,7 +375,7 @@ export default function Login() {
                   <div className="group relative">
                     <LockKeyhole
                       size={17}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#938778] transition-colors duration-200 group-focus-within:text-[#211e1a]"
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#716658] transition-colors duration-200 group-focus-within:text-[#211e1a]"
                     />
 
                     <input
@@ -401,7 +401,7 @@ export default function Login() {
                       aria-pressed={showPassword}
                       className="
                         absolute right-2.5 top-1/2 -translate-y-1/2
-                        rounded-lg p-1.5 text-[#8a8175]
+                        rounded-lg p-1.5 text-[#716658]
                         transition-all duration-200
                         hover:bg-[#f1eadf] hover:text-[#292620]
                         active:scale-90
@@ -492,7 +492,7 @@ export default function Login() {
               className="rare-fade mt-6 flex flex-col items-center gap-2 text-center"
               style={{ "--d": "500ms" }}
             >
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E6F4EA] px-3 py-1 text-[11px] font-semibold text-[#246b3b]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E6F4EA] px-3 py-1 text-xs font-semibold text-[#246b3b]">
                 <ShieldCheck size={13} />
                 Secure access for authorised staff
               </span>

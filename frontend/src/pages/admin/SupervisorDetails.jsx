@@ -296,7 +296,7 @@ function ConfirmModal({
 
                 <p
                     id="confirm-description"
-                    className="mt-3 text-sm leading-6 text-[#817669]"
+                    className="mt-3 text-sm leading-6 text-[#716658]"
                 >
                     {description}
                 </p>
@@ -514,7 +514,7 @@ function ChangePasswordModal({
                                     Change Password
                                 </h2>
 
-                                <p className="mt-1 text-xs leading-5 text-[#817669]">
+                                <p className="mt-1 text-xs leading-5 text-[#716658]">
                                     Set a new password for {name}.
                                 </p>
                             </div>
@@ -536,7 +536,7 @@ function ChangePasswordModal({
                             <div className="flex items-start gap-3 rounded-xl bg-[#F5EFE7] p-4">
                                 <LockKeyhole
                                     size={19}
-                                    className="mt-0.5 shrink-0 text-[#817669]"
+                                    className="mt-0.5 shrink-0 text-[#716658]"
                                 />
                                 <p className="text-xs leading-6 text-[#665E53]">
                                     As an Admin, you can set a new Supervisor
@@ -578,7 +578,7 @@ function ChangePasswordModal({
                                             showNew ? "Hide new password" : "Show new password"
                                         }
                                         onClick={() => setShowNew((value) => !value)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#817669] hover:bg-[#F1EADF]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#716658] hover:bg-[#F1EADF]"
                                     >
                                         {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
@@ -627,7 +627,7 @@ function ChangePasswordModal({
                                                 : "Show confirmation password"
                                         }
                                         onClick={() => setShowConfirm((value) => !value)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#817669] hover:bg-[#F1EADF]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#716658] hover:bg-[#F1EADF]"
                                     >
                                         {showConfirm
                                             ? <EyeOff size={18} />
@@ -718,7 +718,7 @@ function AssignedProjectCard({ project }) {
 
             <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 p-4 sm:p-5">
                 <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#938778]">
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#716658]">
                         {project.category_name || "Project"}
                     </p>
 
@@ -726,14 +726,14 @@ function AssignedProjectCard({ project }) {
                         {project.name}
                     </h3>
 
-                    <p className="mt-2 flex items-start gap-1.5 text-xs text-[#817669]">
+                    <p className="mt-2 flex items-start gap-1.5 text-xs text-[#716658]">
                         <MapPin size={15} className="shrink-0" />
                         {project.location || "Location not provided"}
                     </p>
                 </div>
 
                 <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-semibold uppercase text-[#817669]">
+                    <span className="text-xs font-semibold uppercase text-[#716658]">
                         {statusLabel(project.status)}
                     </span>
 
@@ -992,7 +992,7 @@ export default function SupervisorDetails() {
             )}
 
             {/* BREADCRUMB */}
-            <nav className="flex flex-wrap items-center gap-2 text-xs text-[#817669]">
+            <nav className="flex flex-wrap items-center gap-2 text-xs text-[#716658]">
                 <Link to="/admin/dashboard">Dashboard</Link>
                 <span>/</span>
                 <Link to="/admin/supervisors">Supervisors</Link>
@@ -1044,7 +1044,7 @@ export default function SupervisorDetails() {
                         <div className="p-5 sm:p-7">
                             <Link
                                 to="/admin/supervisors"
-                                className="inline-flex items-center gap-2 text-xs font-semibold text-[#817669] transition-colors hover:text-[#211E1A]"
+                                className="inline-flex items-center gap-2 text-xs font-semibold text-[#716658] transition-colors hover:text-[#211E1A]"
                             >
                                 <ArrowLeft size={16} />
                                 Back to Supervisors
@@ -1056,7 +1056,7 @@ export default function SupervisorDetails() {
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#948778]">
+                                    <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
                                         RARE / Site Supervisor
                                     </p>
 
@@ -1064,11 +1064,11 @@ export default function SupervisorDetails() {
                                         {name}
                                     </h1>
 
-                                    <p className="mt-1 text-sm text-[#817669]">
+                                    <p className="mt-1 text-sm text-[#716658]">
                                         @{supervisor.username || "Not provided"}
                                     </p>
 
-                                    <span className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold ${supervisor.is_active
+                                    <span className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${supervisor.is_active
                                             ? "bg-[#E7F2E8] text-[#296F40]"
                                             : "bg-[#F0E9E1] text-[#756B60]"
                                         }`}>
@@ -1115,7 +1115,7 @@ export default function SupervisorDetails() {
                                 <h2 className="text-lg font-bold text-[#211E1A]">
                                     Account Details
                                 </h2>
-                                <p className="mt-1 text-xs text-[#817669]">
+                                <p className="mt-1 text-xs text-[#716658]">
                                     Personal information and account identity
                                 </p>
                             </div>
@@ -1141,7 +1141,7 @@ export default function SupervisorDetails() {
                                     <div key={field.key} className="min-w-0">
                                         <label
                                             htmlFor={`supervisor-${field.key}`}
-                                            className="text-[11px] font-bold uppercase tracking-[0.09em] text-[#938778]"
+                                            className="text-xs font-bold uppercase tracking-[0.09em] text-[#716658]"
                                         >
                                             {field.label}
                                         </label>
@@ -1187,7 +1187,7 @@ export default function SupervisorDetails() {
                                     <div className="group flex items-start gap-3">
                                         <IconTile icon={CalendarDays} tone="blue" />
                                         <div>
-                                            <p className="text-[11px] font-bold uppercase text-[#938778]">
+                                            <p className="text-xs font-bold uppercase text-[#716658]">
                                                 Account Created
                                             </p>
                                             <p className="mt-1 text-sm font-semibold text-[#211E1A]">
@@ -1201,7 +1201,7 @@ export default function SupervisorDetails() {
                                     <div className="group flex items-start gap-3">
                                         <IconTile icon={UserRound} tone="violet" />
                                         <div>
-                                            <p className="text-[11px] font-bold uppercase text-[#938778]">
+                                            <p className="text-xs font-bold uppercase text-[#716658]">
                                                 Last Login
                                             </p>
                                             <p className="mt-1 text-sm font-semibold text-[#211E1A]">
@@ -1249,7 +1249,7 @@ export default function SupervisorDetails() {
                             Security & Access
                         </h2>
 
-                        <p className="mt-1 text-xs text-[#817669]">
+                        <p className="mt-1 text-xs text-[#716658]">
                             Manage the Supervisor's login password and account status.
                         </p>
 
@@ -1264,7 +1264,7 @@ export default function SupervisorDetails() {
                                             Change Password
                                         </h3>
 
-                                        <p className="mt-2 text-xs leading-6 text-[#817669]">
+                                        <p className="mt-2 text-xs leading-6 text-[#716658]">
                                             Set a new password without needing
                                             the Supervisor's current password.
                                         </p>
@@ -1298,7 +1298,7 @@ export default function SupervisorDetails() {
                                             Account Status
                                         </h3>
 
-                                        <p className="mt-2 text-xs leading-6 text-[#817669]">
+                                        <p className="mt-2 text-xs leading-6 text-[#716658]">
                                             {supervisor.is_active
                                                 ? "The account is active. Deactivate it to restrict login access."
                                                 : "The account is inactive. Activate it to restore access."}
@@ -1343,7 +1343,7 @@ export default function SupervisorDetails() {
                                 <h2 className="text-lg font-bold text-[#211E1A]">
                                     Assigned Projects
                                 </h2>
-                                <p className="mt-1 text-xs text-[#817669]">
+                                <p className="mt-1 text-xs text-[#716658]">
                                     Open and manage projects assigned to this Supervisor.
                                 </p>
                             </div>
@@ -1377,7 +1377,7 @@ export default function SupervisorDetails() {
                             !projectsError &&
                             projects.length === 0 && (
                                 <div className="mt-6 rounded-[18px] bg-[#F8F4EE] px-5 py-12 text-center">
-                                    <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EEE3D5] text-[#817669]">
+                                    <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EEE3D5] text-[#716658]">
                                         <FolderKanban size={27} />
                                     </span>
 
@@ -1385,7 +1385,7 @@ export default function SupervisorDetails() {
                                         No assigned projects
                                     </h3>
 
-                                    <p className="mt-2 text-xs text-[#817669]">
+                                    <p className="mt-2 text-xs text-[#716658]">
                                         Assign this Supervisor from a project's Admin Overview.
                                     </p>
                                 </div>

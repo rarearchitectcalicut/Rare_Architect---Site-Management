@@ -159,7 +159,7 @@ function InfoItem({ icon: Icon, label, value, tone = "neutral" }) {
       </span>
 
       <div className="min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#938778]">
+        <p className="text-xs font-bold uppercase tracking-widest text-[#716658]">
           {label}
         </p>
         <p className="mt-1 wrap-anywhere text-sm font-semibold text-[#211E1A]">
@@ -285,7 +285,7 @@ function AddSupervisorDialog({
             >
               Assign Supervisors
             </h2>
-            <p className="mt-1 text-sm text-[#817669]">
+            <p className="mt-1 text-sm text-[#716658]">
               Select existing RARE Supervisor accounts.
             </p>
           </div>
@@ -319,7 +319,7 @@ function AddSupervisorDialog({
           <div className="relative mb-4">
             <Search
               size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#817669]"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#716658]"
             />
             <input
               autoFocus
@@ -376,7 +376,7 @@ function AddSupervisorDialog({
                     <span className="block truncate text-sm font-semibold text-[#211E1A]">
                       {getName(person)}
                     </span>
-                    <span className="block truncate text-xs text-[#817669]">
+                    <span className="block truncate text-xs text-[#716658]">
                       {person.phone || person.email || ""}
                     </span>
                   </span>
@@ -399,7 +399,7 @@ function AddSupervisorDialog({
             })}
 
             {!filtered.length && (
-              <p className="py-8 text-center text-sm text-[#817669]">
+              <p className="py-8 text-center text-sm text-[#716658]">
                 No available supervisors found.
               </p>
             )}
@@ -564,7 +564,7 @@ export default function ProjectOverview() {
       {!project ? null : (
         <>
           {/* BREADCRUMB */}
-          <nav className="rare-fade flex flex-wrap items-center gap-x-2 gap-y-1 text-xs wrap-anywhere text-[#817669]">
+          <nav className="rare-fade flex flex-wrap items-center gap-x-2 gap-y-1 text-xs wrap-anywhere text-[#716658]">
             <Link
               to="/admin/dashboard"
               className="rounded transition-colors duration-200 hover:text-[#211E1A] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A]/30"
@@ -589,7 +589,7 @@ export default function ProjectOverview() {
           >
             <div
               className={`relative overflow-hidden bg-[#E9E0D4] ${
-                coverUrl ? "h-52 sm:h-88 lg:h-107.5" : "h-40 sm:h-48"
+                coverUrl ? "h-28 sm:h-44 lg:h-52" : "h-24 sm:h-32"
               }`}
             >
               {coverUrl ? (
@@ -605,7 +605,7 @@ export default function ProjectOverview() {
                                     "
                 />
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-[#817669]">
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-[#716658]">
                   <ImageOff size={36} />
                   No project cover image
                 </div>
@@ -615,13 +615,13 @@ export default function ProjectOverview() {
             <div className="p-4 sm:p-8">
               <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#928577]">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
                     {project.category_name}
                   </p>
-                  <h2 className="mt-2 wrap-anywhere text-xl font-bold text-[#211E1A] sm:text-3xl">
+                  <h1 className="mt-2 wrap-anywhere text-2xl font-bold text-[#211E1A] sm:text-3xl">
                     {project.name}
-                  </h2>
-                  <p className="mt-3 flex items-start gap-2 text-sm text-[#817669]">
+                  </h1>
+                  <p className="mt-3 flex items-start gap-2 text-sm text-[#716658]">
                     <MapPin size={17} className="mt-0.5 shrink-0" />
                     <span className="min-w-0 wrap-anywhere">
                       {project.location || "Location not specified"}
@@ -844,7 +844,7 @@ export default function ProjectOverview() {
                 <h2 className="text-lg font-bold text-[#211E1A] sm:text-xl">
                   Assigned Supervisors
                 </h2>
-                <p className="mt-1 text-sm text-[#817669]">
+                <p className="mt-1 text-sm text-[#716658]">
                   {supervisors.length} assigned to this project
                 </p>
               </div>
@@ -883,7 +883,7 @@ export default function ProjectOverview() {
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#E8F0FE] text-[#2563EB]">
                   <UsersRound size={28} strokeWidth={1.7} />
                 </div>
-                <p className="mt-3 text-sm text-[#817669]">
+                <p className="mt-3 text-sm text-[#716658]">
                   No supervisors assigned yet.
                 </p>
               </div>
@@ -925,7 +925,7 @@ export default function ProjectOverview() {
                           <p className="wrap-anywhere font-bold text-[#211E1A]">
                             {name}
                           </p>
-                          <p className="mt-1 text-xs text-[#817669]">
+                          <p className="mt-1 text-xs text-[#716658]">
                             Site Supervisor
                           </p>
                           <p className="mt-2 text-sm text-[#665E53]">
@@ -934,7 +934,7 @@ export default function ProjectOverview() {
                           {item.supervisor_email && (
                             <a
                               href={`mailto:${item.supervisor_email}`}
-                              className="mt-1 block break-all text-xs text-[#817669] transition-colors duration-200 hover:text-[#2563EB] hover:underline"
+                              className="mt-1 block break-all text-xs text-[#716658] transition-colors duration-200 hover:text-[#2563EB] hover:underline"
                             >
                               <Mail size={13} className="mr-1 inline" />
                               {item.supervisor_email}
@@ -971,7 +971,7 @@ export default function ProjectOverview() {
                             Call
                           </a>
                         ) : (
-                          <span className="flex-1 text-center text-xs text-[#817669]">
+                          <span className="flex-1 text-center text-xs text-[#716658]">
                             No number
                           </span>
                         )}
@@ -1041,7 +1041,7 @@ export default function ProjectOverview() {
                   Remove Supervisor?
                 </h2>
 
-                <p className="mt-2 text-sm leading-6 text-[#817669]">
+                <p className="mt-2 text-sm leading-6 text-[#716658]">
                   Remove {getName(removeTarget)} from this project? They will
                   lose access to this project's records.
                 </p>

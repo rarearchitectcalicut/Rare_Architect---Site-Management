@@ -83,9 +83,9 @@ function ProjectDocumentUpload({ projectId, documentRecord, rules, onClose, onSa
                     <label className="block text-sm font-semibold">Document type *<select {...field("document_type")} required value={form.document_type} onChange={(event) => setForm({ ...form, document_type: event.target.value })} className={documentControl}>{rules?.document_types?.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><DocumentFieldError errors={errors} name="document_type" /></label>
                 </>}
                 <label className="block text-sm font-semibold">File *<input {...field("file")} ref={fileRef} type="file" required accept={rules?.allowed_extensions?.join(",")} onChange={(event) => { setFile(event.target.files?.[0] || null); setErrors({}); }} className={documentControl} /><DocumentFieldError errors={errors} name="file" /></label>
-                {file && <p className="break-all text-sm text-[#817669]">{file.name} / {documentSize(file.size)}</p>}
-                <p className="break-words text-xs text-[#817669]">Allowed formats: {rules?.allowed_extensions?.join(", ") || "Unavailable"}. Maximum: {documentSize(rules?.max_file_size)}.</p>
-                {version && <p className="text-xs text-[#817669]">The server assigns the next version number. Previous versions remain available.</p>}
+                {file && <p className="break-all text-sm text-[#716658]">{file.name} / {documentSize(file.size)}</p>}
+                <p className="break-words text-xs text-[#716658]">Allowed formats: {rules?.allowed_extensions?.join(", ") || "Unavailable"}. Maximum: {documentSize(rules?.max_file_size)}.</p>
+                {version && <p className="text-xs text-[#716658]">The server assigns the next version number. Previous versions remain available.</p>}
                 <div className="flex flex-wrap justify-end gap-3"><button type="button" onClick={close} className={documentButton}>Cancel</button><button type="submit" disabled={!rules || !file} className="rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-[#FFFDFA] hover:bg-[#817669] disabled:opacity-40">{version ? "Upload version" : "Upload document"}</button></div>
             </fieldset>
         </form>
@@ -109,7 +109,7 @@ function ProjectDocumentHistory({ documentRecord, onClose, revision }) {
     return <ApprovalModal label="Project document version history" onClose={onClose} error={loading ? "" : state.error}>
         <div className="space-y-5 p-5 sm:p-7"><div className="flex flex-wrap justify-between gap-3"><h2 className="break-words text-xl font-bold">Version history / {documentRecord.title}</h2><button type="button" onClick={onClose} className={documentButton}>Close</button></div>
             {loading ? <p role="status">Loading versions...</p> : state.error ? <button type="button" onClick={() => setRetry((value) => value + 1)} className={documentButton}>Retry</button> : <>
-                {state.versions.map((version) => <article key={version.id} className="space-y-3 rounded-2xl border border-[#E7DED2] p-4"><h3 className="font-bold">Version {version.version_number} / {version.is_current ? "Current" : "Previous"}</h3><p className="break-words text-xs text-[#817669]">{documentSize(version.file_size)} / {version.uploaded_by_name || "Uploader unavailable"} / {formatDateTime(version.created_at)}</p><ReportEvidence title="Stored file" files={[version]} fileApi={projectDocumentFiles} /></article>)}
+                {state.versions.map((version) => <article key={version.id} className="space-y-3 rounded-2xl border border-[#E7DED2] p-4"><h3 className="font-bold">Version {version.version_number} / {version.is_current ? "Current" : "Previous"}</h3><p className="break-words text-xs text-[#716658]">{documentSize(version.file_size)} / {version.uploaded_by_name || "Uploader unavailable"} / {formatDateTime(version.created_at)}</p><ReportEvidence title="Stored file" files={[version]} fileApi={projectDocumentFiles} /></article>)}
                 {!state.count && <p>No stored versions available.</p>}
                 {state.count > 8 && <div className="flex flex-wrap items-center justify-between gap-3"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className={documentButton}>Previous versions</button><span className="text-xs">{page} / {Math.ceil(state.count / 8)}</span><button type="button" disabled={page * 8 >= state.count} onClick={() => setPage(page + 1)} className={documentButton}>Next versions</button></div>}
             </>}
@@ -156,21 +156,24 @@ function ProjectDocumentLibrary({ role = "SUPERVISOR", projectId }) {
     function saved() { setUpload(null); setPage(1); setNotice("Document uploaded successfully. Previous versions are retained."); refresh(); }
     return <div className="space-y-6 pb-8 text-[#211E1A]">
         {!state.key && <LoadingScreen message="Loading project documents..." />}
-        <header className="space-y-4 rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7"><Link to={`/${admin ? "admin" : "supervisor"}/projects/${projectId}`} className="text-sm text-[#817669]">Back to project</Link><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs text-[#817669]">{projectState.id === projectId ? projectState.project?.name : "Project"}</p><h1 className="mt-2 flex items-center gap-2 text-2xl font-bold"><FileText size={24} />Project Documents</h1><p className="mt-2 text-sm text-[#817669]">Versioned drawings and project records. {admin ? "Manage files and retain their history." : "Read-only access to your assigned project."}</p></div><div className="flex flex-wrap gap-2"><button type="button" disabled={loading} onClick={refresh} className={documentButton}><RefreshCw size={16} className="mr-2 inline" />Refresh</button>{admin && <button type="button" disabled={loading || !rules || Boolean(error)} onClick={() => setUpload({})} className={documentButton}>Upload document</button>}</div></div></header>
+        <header className="rare-page-header space-y-4 rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7"><Link to={`/${admin ? "admin" : "supervisor"}/projects/${projectId}`} className="text-sm text-[#716658]">Back to project</Link><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs text-[#716658]">{projectState.id === projectId ? projectState.project?.name : "Project"}</p><h1 className="mt-2 flex items-center gap-2 text-2xl font-bold"><FileText size={24} />Project Documents</h1><p className="mt-2 text-sm text-[#716658]">Versioned drawings and project records. {admin ? "Manage files and retain their history." : "Read-only access to your assigned project."}</p></div><div className="flex flex-wrap gap-2"><button type="button" disabled={loading} onClick={refresh} className={documentButton}><RefreshCw size={16} className="mr-2 inline" />Refresh</button>{admin && <button type="button" disabled={loading || !rules || Boolean(error)} onClick={() => setUpload({})} className={documentButton}>Upload document</button>}</div></div></header>
         {notice && <p role="status" className="rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
         {error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
         <section aria-label="Document filters" className="grid gap-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="text-xs font-semibold text-[#817669]">Search documents<input type="search" maxLength={200} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} className={documentControl} placeholder="Title, description, type or filename" /></label>
-            <label className="text-xs font-semibold text-[#817669]">Document type<select value={type} onChange={(event) => { setType(event.target.value); setPage(1); }} className={documentControl}><option value="">All types</option>{(state.rules?.document_types || []).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-            <label className="text-xs font-semibold text-[#817669]">Sort documents<select value={sort} onChange={(event) => { setSort(event.target.value); setPage(1); }} className={documentControl}><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="title">Title A-Z</option><option value="updated">Recently updated</option></select></label>
+            <label className="text-xs font-semibold text-[#716658]">Search documents<input type="search" maxLength={200} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} className={documentControl} placeholder="Title, description, type or filename" /></label>
+            <details className="rare-filter-disclosure sm:col-span-2 lg:col-span-3">
+                <summary>Filters and sorting</summary><div className="grid gap-4 pt-3 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-[#716658]">Document type<select value={type} onChange={(event) => { setType(event.target.value); setPage(1); }} className={documentControl}><option value="">All types</option>{(state.rules?.document_types || []).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+            <label className="text-xs font-semibold text-[#716658]">Sort documents<select value={sort} onChange={(event) => { setSort(event.target.value); setPage(1); }} className={documentControl}><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="title">Title A-Z</option><option value="updated">Recently updated</option></select></label>
             <button type="button" onClick={() => { setSearch(""); setType(""); setSort("newest"); setPage(1); }} className={`${documentButton} self-end`}>Clear filters</button>
+            </div></details>
         </section>
-        {loading ? <p role="status" className="text-sm text-[#817669]">Loading documents...</p> : !error && <><p className="text-xs text-[#817669]">{state.count} matching documents</p><div className="grid items-start gap-4 lg:grid-cols-2">{documents.map((documentRecord) => <article key={documentRecord.id} className="min-w-0 space-y-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5">
-            <div><p className="text-xs font-semibold text-[#817669]">{formatText(documentRecord.document_type)}</p><h2 className="mt-2 break-words text-lg font-bold">{documentRecord.title}</h2><p className="mt-2 whitespace-pre-wrap break-words text-sm text-[#817669]">{documentRecord.description || "No description provided."}</p></div>
-            <p className="break-words text-xs leading-5 text-[#817669]">Current version: {documentRecord.current_version?.version_number ?? "Unavailable"} / {documentSize(documentRecord.current_version?.file_size)}<br />Uploaded by {documentRecord.current_version?.uploaded_by_name || documentRecord.uploaded_by_name || "Unavailable"}<br />Updated {formatDateTime(documentRecord.updated_at)}</p>
-            {documentRecord.current_version ? <ReportEvidence title="Current file" files={[documentRecord.current_version]} fileApi={projectDocumentFiles} /> : <p className="text-sm text-[#817669]">No current file is available.</p>}
+        {loading ? <p role="status" className="text-sm text-[#716658]">Loading documents...</p> : !error && <><p className="text-xs text-[#716658]">{state.count} matching documents</p><div className="grid items-start gap-4 lg:grid-cols-2">{documents.map((documentRecord) => <article key={documentRecord.id} className="min-w-0 space-y-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5">
+            <div><p className="text-xs font-semibold text-[#716658]">{formatText(documentRecord.document_type)}</p><h2 className="mt-2 break-words text-lg font-bold">{documentRecord.title}</h2><p className="mt-2 whitespace-pre-wrap break-words text-sm text-[#716658]">{documentRecord.description || "No description provided."}</p></div>
+            <p className="break-words text-xs leading-5 text-[#716658]">Current version: {documentRecord.current_version?.version_number ?? "Unavailable"} / {documentSize(documentRecord.current_version?.file_size)}<br />Uploaded by {documentRecord.current_version?.uploaded_by_name || documentRecord.uploaded_by_name || "Unavailable"}<br />Updated {formatDateTime(documentRecord.updated_at)}</p>
+            {documentRecord.current_version ? <ReportEvidence title="Current file" files={[documentRecord.current_version]} fileApi={projectDocumentFiles} /> : <p className="text-sm text-[#716658]">No current file is available.</p>}
             <div className="flex flex-wrap gap-2"><button type="button" onClick={() => setHistory(documentRecord)} className={documentButton}>Version history</button>{admin && <button type="button" disabled={!rules} onClick={() => setUpload(documentRecord)} className={documentButton}>New version</button>}</div>
-        </article>)}</div>{!state.count && <p className="rounded-2xl border border-dashed border-[#E7DED2] bg-[#FFFDFA] p-8 text-center text-sm text-[#817669]">No project documents match these filters.</p>}
+        </article>)}</div>{!state.count && <p className="rounded-2xl border border-dashed border-[#E7DED2] bg-[#FFFDFA] p-8 text-center text-sm text-[#716658]">No project documents match these filters.</p>}
         {state.count > 8 && <nav aria-label="Document pages" className="flex flex-wrap items-center justify-between gap-3"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className={documentButton}>Previous</button><span className="text-xs">{page} / {Math.ceil(state.count / 8)}</span><button type="button" disabled={page * 8 >= state.count} onClick={() => setPage(page + 1)} className={documentButton}>Next</button></nav>}</>}
         {history && <ProjectDocumentHistory key={`${history.id}:${revision}`} documentRecord={history} revision={revision} onClose={() => setHistory(null)} />}
         {upload && admin && <ProjectDocumentUpload key={`${projectId}:${upload.id || "new"}`} projectId={projectId} documentRecord={upload.id ? upload : null} rules={state.rules} onClose={() => setUpload(null)} onSaved={saved} />}
@@ -388,7 +391,7 @@ export default function SupervisorProjectWorkspace() {
     if (!config) {
         return (
             <div className="rounded-2xl bg-[#FFFDFA] p-8">
-                <p className="text-sm text-[#817669]">
+                <p className="text-sm text-[#716658]">
                     Unknown project section.
                 </p>
 
@@ -412,14 +415,14 @@ export default function SupervisorProjectWorkspace() {
 
             <Link
                 to={`/supervisor/projects/${projectId}`}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[#817669] transition-colors hover:text-[#211E1A]"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[#716658] transition-colors hover:text-[#211E1A]"
             >
                 <ArrowLeft size={17} />
                 Back to Project Overview
             </Link>
 
             <section className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
-                <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#948778]">
+                <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
                     Supervisor / {project?.name || "Project Workspace"}
                 </p>
 
@@ -433,7 +436,7 @@ export default function SupervisorProjectWorkspace() {
                             {config.title}
                         </h1>
 
-                        <p className="mt-2 text-sm text-[#817669]">
+                        <p className="mt-2 text-sm text-[#716658]">
                             {config.description}
                         </p>
                     </div>
@@ -471,7 +474,7 @@ export default function SupervisorProjectWorkspace() {
                         <div className="relative">
                             <Search
                                 size={18}
-                                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#948778]"
+                                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
                             />
 
                             <input
@@ -485,7 +488,7 @@ export default function SupervisorProjectWorkspace() {
                         </div>
                     </section>
 
-                    <p className="text-xs text-[#817669]">
+                    <p className="text-xs text-[#716658]">
                         {visibleItems.length}{" "}
                         {visibleItems.length === 1 ? "record" : "records"}
                     </p>
@@ -506,7 +509,7 @@ export default function SupervisorProjectWorkspace() {
                                             {itemTitle(item, section)}
                                         </p>
 
-                                        <p className="mt-1 break-words text-xs text-[#817669]">
+                                        <p className="mt-1 break-words text-xs text-[#716658]">
                                             {itemSubtitle(item, section) || "Project record"}
                                         </p>
                                     </div>
@@ -520,14 +523,14 @@ export default function SupervisorProjectWorkspace() {
                         <section className="rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] px-5 py-12 text-center">
                             <FolderKanban
                                 size={32}
-                                className="mx-auto text-[#948778]"
+                                className="mx-auto text-[#716658]"
                             />
 
                             <h2 className="mt-4 text-base font-bold text-[#211E1A]">
                                 No records found
                             </h2>
 
-                            <p className="mt-2 text-sm text-[#817669]">
+                            <p className="mt-2 text-sm text-[#716658]">
                                 {search
                                     ? "Try a different search term."
                                     : `There are no ${config.title.toLowerCase()} to display yet.`}

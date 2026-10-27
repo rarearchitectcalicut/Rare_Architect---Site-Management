@@ -292,7 +292,7 @@ export default function Supervisors() {
             {/* HEADING */}
             <div className="rare-fade flex flex-wrap items-end justify-between gap-4">
                 <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#948778]">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#716658]">
                         Admin / Team Management
                     </p>
 
@@ -300,7 +300,7 @@ export default function Supervisors() {
                         Supervisors
                     </h1>
 
-                    <p className="mt-2 text-sm text-[#817669]">
+                    <p className="mt-2 text-sm text-[#716658]">
                         Manage accounts and project assignments.
                     </p>
                 </div>
@@ -362,7 +362,7 @@ export default function Supervisors() {
                             "
                         >
                             <div className="flex items-start justify-between gap-2">
-                                <p className="min-w-0 text-xs font-medium text-[#817669] sm:text-sm">
+                                <p className="min-w-0 text-xs font-medium text-[#716658] sm:text-sm">
                                     {label}
                                 </p>
 
@@ -408,7 +408,7 @@ export default function Supervisors() {
                             size={18}
                             className="
                                 pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2
-                                text-[#938778] transition-colors duration-200
+                                text-[#716658] transition-colors duration-200
                                 group-focus-within:text-[#211E1A]
                             "
                         />
@@ -444,7 +444,7 @@ export default function Supervisors() {
                         </select>
                         <ChevronDown
                             size={16}
-                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#938778]"
+                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
                         />
                     </div>
 
@@ -463,7 +463,7 @@ export default function Supervisors() {
                         </select>
                         <ChevronDown
                             size={16}
-                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#938778]"
+                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
                         />
                     </div>
 
@@ -511,7 +511,7 @@ export default function Supervisors() {
             {/* DIRECTORY */}
             {!loading && !error && (
                 <section className="space-y-3 sm:space-y-4">
-                    <p className="rare-fade flex items-center gap-2 text-sm text-[#817669]">
+                    <p className="rare-fade flex items-center gap-2 text-sm text-[#716658]">
                         <span className="rounded-full bg-[#F1EADF] px-2.5 py-0.5 text-xs font-bold tabular-nums text-[#211E1A]">
                             {visibleSupervisors.length}
                         </span>
@@ -573,7 +573,7 @@ export default function Supervisors() {
                                             </Link>
 
                                             <span
-                                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${isActive
+                                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${isActive
                                                     ? "bg-[#E7F2E8] text-[#296F40]"
                                                     : "bg-[#EEE8E0] text-[#74695D]"
                                                     }`}
@@ -583,7 +583,7 @@ export default function Supervisors() {
                                             </span>
                                         </div>
 
-                                        <p className="mt-1 break-all text-xs text-[#817669]">
+                                        <p className="mt-1 break-all text-xs text-[#716658]">
                                             @{person.username || "No username"}
                                         </p>
 
@@ -672,7 +672,7 @@ export default function Supervisors() {
                             <h3 className="mt-4 font-bold text-[#211E1A]">
                                 No supervisors found
                             </h3>
-                            <p className="mt-2 text-sm text-[#817669]">
+                            <p className="mt-2 text-sm text-[#716658]">
                                 Try a different search or status filter.
                             </p>
                         </div>

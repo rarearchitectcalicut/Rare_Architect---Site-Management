@@ -106,7 +106,7 @@ function UnauthorizedPage() {
           Access Denied
         </h1>
 
-        <p className="mt-2 text-sm text-[#8a8175]">
+        <p className="mt-2 text-sm text-[#716658]">
           You do not have permission to access this page.
         </p>
       </div>

@@ -34,12 +34,12 @@ export default function TimelineSequence({
                     <h2 className="flex items-center gap-2 text-lg font-bold text-[#211E1A]">
                         <ListOrdered
                             size={20}
-                            className="text-[#817669]"
+                            className="text-[#716658]"
                         />
                         Task Sequence
                     </h2>
 
-                    <p className="mt-2 text-xs leading-5 text-[#817669]">
+                    <p className="mt-2 text-xs leading-5 text-[#716658]">
                         Tasks arranged in their current timeline order.
                     </p>
                 </div>
@@ -53,7 +53,7 @@ export default function TimelineSequence({
             {/* EMPTY STATE */}
             {orderedTasks.length === 0 ? (
                 <div className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] px-6 py-14 text-center">
-                    <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#F1EADF] text-[#817669]">
+                    <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#F1EADF] text-[#716658]">
                         <ClipboardList size={30} />
                     </span>
 
@@ -61,7 +61,7 @@ export default function TimelineSequence({
                         No timeline tasks found
                     </h3>
 
-                    <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#817669]">
+                    <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#716658]">
                         Once tasks are created for this project, they will
                         appear in the timeline.
                     </p>

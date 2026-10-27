@@ -54,10 +54,10 @@ const sheetCss = `
 
 // Icon tile tones, cycled per item (literal class strings for Tailwind)
 const itemTones = [
-    "bg-[#E8F0FE] text-[#2563EB]",
-    "bg-[#E6F4EA] text-[#16A34A]",
-    "bg-[#FFF3E0] text-[#EA8A12]",
-    "bg-[#F1ECFE] text-[#7C3AED]",
+    "bg-[#F1EADF] text-[#716658]",
+    "bg-[#E7F2E8] text-[#296F40]",
+    "bg-[#FFF2D8] text-[#94651D]",
+    "bg-[#EDF3FC] text-[#3565A5]",
 ];
 
 const slateTone = "bg-[#ece8e2] text-[#72675b]";
@@ -107,6 +107,7 @@ export default function MobileMoreSheet({
     loading,
 }) {
     const closeButtonRef = useRef(null);
+    const dialogRef = useRef(null);
 
     const allItems = getNavigation(user.role);
 
@@ -124,20 +125,20 @@ export default function MobileMoreSheet({
         if (!open) return;
 
         const previousOverflow = document.body.style.overflow;
+        const previousFocus = document.activeElement;
+        const dialog = dialogRef.current;
         document.body.style.overflow = "hidden";
+        dialog?.showModal();
+        const desktop = window.matchMedia("(min-width: 1024px)");
+        const closeOnDesktop = () => { if (desktop.matches) onClose(); };
+        desktop.addEventListener("change", closeOnDesktop);
+        closeOnDesktop();
         closeButtonRef.current?.focus();
-
-        const handleKeyDown = (event) => {
-            if (event.key === "Escape") {
-                onClose();
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-
         return () => {
+            desktop.removeEventListener("change", closeOnDesktop);
+            dialog?.close();
             document.body.style.overflow = previousOverflow;
-            window.removeEventListener("keydown", handleKeyDown);
+            previousFocus?.focus?.();
         };
     }, [open, onClose]);
 
@@ -159,31 +160,24 @@ export default function MobileMoreSheet({
         <div className="fixed inset-0 z-50 lg:hidden">
             <style>{sheetCss}</style>
 
-            {/* Backdrop */}
-            <button
-                type="button"
-                tabIndex={-1}
-                aria-label="Close navigation menu"
-                onClick={onClose}
-                className="
-                    rare-sheet-backdrop absolute inset-0
-                    h-full w-full
-                    bg-[#211e1a]/40
-                    backdrop-blur-[3px]
-                "
-            />
-
             {/* Bottom sheet */}
-            <section
+            <dialog
+                ref={dialogRef}
+                onCancel={(event) => { event.preventDefault(); onClose(); }}
+                onClick={(event) => {
+                    if (event.target !== event.currentTarget) return;
+                    const bounds = event.currentTarget.getBoundingClientRect();
+                    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
+                }}
                 id="rare-mobile-more-sheet"
                 role="dialog"
                 aria-modal="true"
                 aria-label="More navigation options"
                 className="
-                    rare-sheet absolute right-3 bottom-3 left-3
+                    rare-sheet fixed inset-x-2 bottom-2 top-auto m-0 w-[calc(100%-1rem)] max-w-none p-0 backdrop:bg-[#211E1A]/45
                     flex max-h-[85dvh] flex-col
-                    overflow-hidden rounded-[30px]
-                    md:right-5 md:bottom-5 md:left-5 md:rounded-[34px]
+                    overflow-hidden rounded-2xl
+                    md:inset-x-5 md:bottom-5 md:w-[calc(100%-2.5rem)] md:rounded-2xl
                     border border-[#ece4d8] bg-[#fffdfa]
                     shadow-[0_24px_70px_rgba(33,30,26,0.28)]
                 "
@@ -199,7 +193,7 @@ export default function MobileMoreSheet({
                 {/* Header */}
                 <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-4 md:px-8 md:pt-5">
                     <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#948778]">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#716658]">
                             RARE Management
                         </p>
 
@@ -252,7 +246,7 @@ export default function MobileMoreSheet({
                                 {displayName}
                             </p>
 
-                            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[#E6F4EA] px-2.5 py-0.5 text-[10px] font-bold text-[#246b3b]">
+                            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[#E6F4EA] px-2.5 py-0.5 text-xs font-bold text-[#246b3b]">
                                 <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
                                 {roleLabel}
                             </span>
@@ -262,7 +256,7 @@ export default function MobileMoreSheet({
                     {/* Navigation links */}
                     {secondaryItems.length > 0 && (
                         <div>
-                            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#948778]">
+                            <p className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
                                 Navigation
                             </p>
 
@@ -309,7 +303,7 @@ export default function MobileMoreSheet({
 
                     {/* Account */}
                     <div>
-                        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#948778]">
+                        <p className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
                             Account
                         </p>
 
@@ -381,7 +375,7 @@ export default function MobileMoreSheet({
                         Sign Out
                     </button>
                 </div>
-            </section>
+            </dialog>
         </div>,
         document.body
     );

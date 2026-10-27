@@ -530,7 +530,7 @@ export default function SupervisorProjectTimeline() {
             {/* BREADCRUMB */}
             <nav
                 aria-label="Breadcrumb"
-                className="flex flex-wrap items-center gap-2 text-xs text-[#817669]"
+                className="flex flex-wrap items-center gap-2 text-xs text-[#716658]"
             >
                 <Link
                     to="/supervisor/projects"
@@ -556,9 +556,9 @@ export default function SupervisorProjectTimeline() {
             </nav>
 
             {/* PAGE HEADER */}
-            <header className="flex flex-wrap items-end justify-between gap-4">
+            <header className="rare-page-header flex flex-wrap items-end justify-between gap-4">
                 <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#948778]">
+                    <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
                         Supervisor / Project Workspace
                     </p>
 
@@ -566,7 +566,7 @@ export default function SupervisorProjectTimeline() {
                         Project Timeline
                     </h1>
 
-                    <p className="mt-2 text-sm leading-6 text-[#817669]">
+                    <p className="mt-2 text-sm leading-6 text-[#716658]">
                         {project?.name || "Assigned Project"}
                         {" · "}
                         Track task sequence, planned dates and
@@ -688,7 +688,7 @@ export default function SupervisorProjectTimeline() {
                     {!pendingOrderRequest &&
                         !historyLoading &&
                         (historyError || unmatchedHistory) && (
-                            <div className="rounded-2xl border border-[#E4DCCD] bg-[#F8F4EE] p-4 text-xs leading-6 text-[#817669]">
+                            <div className="rounded-2xl border border-[#E4DCCD] bg-[#F8F4EE] p-4 text-xs leading-6 text-[#716658]">
                                 Reordering is temporarily disabled because
                                 the existing change-request state could
                                 not be verified. Refresh request history
@@ -717,7 +717,7 @@ export default function SupervisorProjectTimeline() {
 
                             {/* RESULTS COUNTER */}
                             <div className="flex flex-wrap items-center justify-between gap-3">
-                                <p className="text-xs text-[#817669]">
+                                <p className="text-xs text-[#716658]">
                                     Showing{" "}
                                     <strong className="text-[#211E1A]">
                                         {filteredTasks.length}

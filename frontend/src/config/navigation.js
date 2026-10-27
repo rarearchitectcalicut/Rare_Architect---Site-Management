@@ -89,9 +89,9 @@ export function getMobilePrimaryNavigation(role) {
             path: `${prefix}/tasks`,
         },
         {
-            label: "Alerts",
-            icon: "Bell",
-            path: `${prefix}/notifications`,
+            label: role === "ADMIN" ? "Review" : "Alerts",
+            icon: role === "ADMIN" ? "ShieldCheck" : "Bell",
+            path: role === "ADMIN" ? `${prefix}/approvals` : `${prefix}/notifications`,
         },
     ];
 }

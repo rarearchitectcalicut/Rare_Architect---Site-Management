@@ -148,19 +148,19 @@ function TaskDetailsPage({ projectId, taskId }) {
     return <div className="rare-tasks mx-auto min-w-0 max-w-[1600px] space-y-6 pb-8 text-[#211E1A] sm:space-y-7">
         <TaskPageStyles />
         {loading && <LoadingScreen message="Loading task details..." />}
-        <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-sm text-[#817669]"><Link to="/admin/projects">Projects</Link><span aria-hidden="true">/</span><Link to={`/admin/projects/${projectId}`}>Project Overview</Link><span aria-hidden="true">/</span><Link to={`/admin/projects/${projectId}/tasks`}>Tasks</Link><span aria-hidden="true">/</span><span aria-current="page">Details</span></nav>
+        <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-sm text-[#716658]"><Link to="/admin/projects">Projects</Link><span aria-hidden="true">/</span><Link to={`/admin/projects/${projectId}`}>Project Overview</Link><span aria-hidden="true">/</span><Link to={`/admin/projects/${projectId}/tasks`}>Tasks</Link><span aria-hidden="true">/</span><span aria-current="page">Details</span></nav>
         <div className="flex flex-wrap items-center justify-between gap-3"><Link to={`/admin/projects/${projectId}/tasks`} className="task-secondary inline-flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#665C50]"><ArrowLeft size={15} aria-hidden="true" />Back to Tasks</Link><button type="button" disabled={loading} onClick={() => setRevision((value) => value + 1)} className="task-secondary flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#665C50] disabled:opacity-50"><RefreshCw size={15} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />Refresh</button></div>
         {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{error} Use Refresh to retry.</p>}
         {notice && <p role="status" className="rounded-2xl border border-[#D6E5D8] bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
         {task && <>
-            <header className="task-enter overflow-hidden rounded-[28px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_8px_32px_#422F1608]">
-                <div className="task-hero p-6 text-[#FFFDFA] sm:p-9">
+            <header className="rare-page-header task-enter overflow-hidden rounded-[28px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_8px_32px_#422F1608]">
+                <div className="task-hero rounded-xl p-4 text-[#211E1A] sm:p-5">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="flex min-w-0 items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#D2BEA2]"><Layers3 size={14} className="shrink-0" aria-hidden="true" /><span className="break-words">{task.project_name}</span></p>
-                        <span className="rounded-full border border-[#887258]/50 bg-white/5 px-3 py-1.5 text-[11px] text-[#E6D6BF]">Task order {task.display_order ?? "Not assigned"}</span>
+                        <p className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#716658]"><Layers3 size={14} className="shrink-0" aria-hidden="true" /><span className="break-words">{task.project_name}</span></p>
+                        <span className="rounded-full border border-[#887258]/50 bg-[#F1EADF] px-3 py-1.5 text-xs text-[#716658]">Task order {task.display_order ?? "Not assigned"}</span>
                     </div>
-                    <h1 className="mt-5 max-w-4xl break-words text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{task.title}</h1>
-                    <p className="mt-3 text-sm text-[#D5C9B9]">Task details, verified work and the complete decision trail.</p>
+                    <h1 className="mt-5 max-w-4xl break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{task.title}</h1>
+                    <p className="mt-3 text-sm text-[#716658]">Task details, verified work and the complete decision trail.</p>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#EEE6DC] px-5 py-5 sm:px-8">
                     <TaskBadges task={task} />
@@ -174,7 +174,7 @@ function TaskDetailsPage({ projectId, taskId }) {
                         ["Measurement", formatText(task.measurement_method), Ruler],
                     ].map(([label, value, Icon]) => <div key={label} className="flex min-w-0 gap-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F5F0E8] text-[#A38D72]"><Icon size={17} aria-hidden="true" /></span>
-                        <div className="min-w-0"><dt className="text-[11px] text-[#817669]">{label}</dt><dd className="mt-1 break-words text-sm font-medium text-[#3E352B]">{value}</dd></div>
+                        <div className="min-w-0"><dt className="text-xs text-[#716658]">{label}</dt><dd className="mt-1 break-words text-sm font-medium text-[#3E352B]">{value}</dd></div>
                     </div>)}
                 </dl>
             </header>

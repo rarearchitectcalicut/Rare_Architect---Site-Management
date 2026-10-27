@@ -45,3 +45,77 @@
 }
 
 
+
+/* Shared, mobile-first refinements for the existing RARE screens. */
+@layer base {
+    :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #211E1A;
+        background: #F1EADF;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-text-size-adjust: 100%;
+        --rare-muted-readable: #716658;
+    }
+    html { scroll-padding-block: 5rem 7rem; }
+    body { margin: 0; min-width: 0; line-height: 1.55; }
+    button, input, select, textarea, summary { font: inherit; }
+    button, summary, a { -webkit-tap-highlight-color: transparent; }
+    button:not(:disabled), summary { cursor: pointer; }
+    button:disabled { cursor: not-allowed; }
+    input, select, textarea { max-width: 100%; min-width: 0; }
+    textarea { resize: vertical; }
+    img, video, iframe { max-width: 100%; }
+    h1, h2, h3, p, dt, dd { overflow-wrap: anywhere; }
+    h1, h2, h3 { text-wrap: balance; }
+    :focus-visible { outline: 2px solid #3565A5; outline-offset: 3px; }
+    :target, input, select, textarea, button, a { scroll-margin-block: 5rem 7rem; }
+    ::selection { background: #E7DED2; color: #211E1A; }
+}
+
+.rare-main { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px)); }
+.rare-skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 100; transform: translateY(-180%); border-radius: .75rem; background: #211E1A; color: #FFFDFA; padding: .75rem 1rem; }
+.rare-skip-link:focus { transform: none; }
+.rare-page-header { min-width: 0; padding: 1rem; border-radius: 1.25rem; box-shadow: none; }
+.rare-page-header h1 { margin-top: .5rem; font-size: 1.375rem; line-height: 1.3; }
+.rare-page-header p { margin-top: .5rem; }
+.rare-page-header > div { min-width: 0; }
+.rare-compact-stats > * { min-width: 0; padding: 1rem; }
+.rare-filter-disclosure > summary { display: flex; align-items: center; gap: .5rem; min-height: 3rem; cursor: pointer; border-radius: .75rem; font-size: .875rem; font-weight: 600; color: #211E1A; }
+.rare-filter-disclosure > summary::before { content: "+"; font-size: 1.125rem; }
+.rare-filter-disclosure[open] > summary::before { content: "\2212"; }
+.rare-table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+
+@media (min-width: 640px) {
+    .rare-page-header { padding: 1.25rem 1.5rem; }
+    .rare-page-header h1 { font-size: 1.75rem; }
+}
+@media (min-width: 1024px) {
+    .rare-main { padding-bottom: 2rem; }
+}
+@media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]), select, textarea { font-size: 1rem; }
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]), select { min-height: 3rem; }
+    input[type="checkbox"], input[type="radio"] { min-width: 1.25rem; min-height: 1.25rem; accent-color: #211E1A; }
+    button:not([role="switch"]), a[class*="inline-flex"], a[class*="task-primary"] { min-height: 2.75rem; }
+    button[aria-label], button[title] { min-width: 2.75rem; }
+    label:has(input[type="checkbox"]), label:has(input[type="radio"]) { min-height: 2.75rem; align-content: center; }
+    dialog.rare-form-dialog { width: 100%; max-width: none; max-height: 100dvh; margin: 0; inset: 0; border-radius: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .rare-compact-stats { gap: .75rem; }
+    .rare-compact-stats > * { padding: .875rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Data and actions stay immediately visible; decorative page entry is optional. */
+.rare-rise, .rare-fade, .task-enter, .rare-sheet-row { animation: none; }
+
+.rare-app :where(section, article, form, fieldset, main), .rare-app .grid > * { min-width: 0; }
+
+@media (max-width: 767px) {
+    .rare-mobile-sheet { max-height: 100dvh; border-radius: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .rare-page-header h1 + p { line-height: 1.5; }
+    .rare-page-header :where(button, a[class*="inline-flex"]) { flex-shrink: 0; }
+}

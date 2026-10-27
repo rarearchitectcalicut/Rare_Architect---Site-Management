@@ -184,7 +184,7 @@ export default function CategoryProjectList() {
       {/* BREADCRUMB */}
       <nav
         aria-label="Breadcrumb"
-        className="flex flex-wrap items-center gap-2 text-xs text-[#8A8175]"
+        className="flex flex-wrap items-center gap-2 text-xs text-[#716658]"
       >
         <Link to="/admin/dashboard" className="hover:text-[#211E1A]">
           Dashboard
@@ -234,17 +234,17 @@ export default function CategoryProjectList() {
               <div className="min-w-0 flex-1 p-5 sm:p-8">
                 <Link
                   to="/admin/dashboard"
-                  className="inline-flex items-center gap-2 text-xs font-medium text-[#817669] hover:text-[#211E1A]"
+                  className="inline-flex items-center gap-2 text-xs font-medium text-[#716658] hover:text-[#211E1A]"
                 >
                   <ArrowLeft size={15} />
                   Back to Dashboard
                 </Link>
 
-                <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.18em] text-[#918576]">
+                <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-[#716658]">
                   RARE Project Categories
                 </p>
 
-                <h2
+                <h1
                   className="
                     mt-2 wrap-break-word text-2xl
                     font-bold tracking-tight
@@ -253,9 +253,9 @@ export default function CategoryProjectList() {
                   "
                 >
                   {category?.name || "Projects"}
-                </h2>
+                </h1>
 
-                <p className="mt-3 max-w-xl text-xs leading-6 text-[#817669] sm:text-sm">
+                <p className="mt-3 max-w-xl text-xs leading-6 text-[#716658] sm:text-sm">
                   {category?.description ||
                     "Explore and manage projects in this category."}
                 </p>
@@ -271,7 +271,7 @@ export default function CategoryProjectList() {
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center">
-                    <ImageOff size={32} className="text-[#918576]" />
+                    <ImageOff size={32} className="text-[#716658]" />
                   </div>
                 )}
               </div>
@@ -288,7 +288,7 @@ export default function CategoryProjectList() {
                 Projects
               </h2>
 
-              <p className="mt-1 text-sm text-[#817669]">
+              <p className="mt-1 text-sm text-[#716658]">
                 {totalCount === null
                   ? "Browse matching projects"
                   : `${totalCount} matching ${
@@ -345,7 +345,7 @@ export default function CategoryProjectList() {
               <div className="relative">
                 <Search
                   size={18}
-                  className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[#928577]"
+                  className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[#716658]"
                 />
 
                 <input
@@ -424,14 +424,14 @@ export default function CategoryProjectList() {
                   <FolderOpen
                     size={37}
                     strokeWidth={1.5}
-                    className="mx-auto text-[#918576]"
+                    className="mx-auto text-[#716658]"
                   />
 
                   <h3 className="mt-4 text-lg font-bold text-[#211E1A]">
                     No projects found
                   </h3>
 
-                  <p className="mx-auto mt-2 max-w-md text-sm text-[#817669]">
+                  <p className="mx-auto mt-2 max-w-md text-sm text-[#716658]">
                     No projects match the selected category and filters.
                   </p>
                 </section>
@@ -469,7 +469,7 @@ export default function CategoryProjectList() {
                     Previous
                   </button>
 
-                  <span className="text-xs font-semibold text-[#817669]">
+                  <span className="text-xs font-semibold text-[#716658]">
                     Page {page}
                   </span>
 

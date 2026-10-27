@@ -154,24 +154,24 @@ function RequestCard({ request }) {
                         {taskTitle}
                     </span>
 
-                    <span className="mt-1 block text-xs text-[#817669]">
+                    <span className="mt-1 block text-xs text-[#716658]">
                         Requested {formatDate(request.created_at)}
                     </span>
 
                     <span className="mt-3 flex flex-wrap items-center gap-2">
                         <span
-                            className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${configuration.style}`}
+                            className={`rounded-full px-3 py-1.5 text-xs font-bold ${configuration.style}`}
                         >
                             {configuration.label}
                         </span>
 
-                        <span className="rounded-full bg-[#F1EADF] px-3 py-1.5 text-[10px] font-bold text-[#74614D]">
+                        <span className="rounded-full bg-[#F1EADF] px-3 py-1.5 text-xs font-bold text-[#74614D]">
                             Order Change
                         </span>
                     </span>
 
                     {request.reason && (
-                        <span className="mt-3 line-clamp-2 block text-xs leading-5 text-[#817669]">
+                        <span className="mt-3 line-clamp-2 block text-xs leading-5 text-[#716658]">
                             {request.reason}
                         </span>
                     )}
@@ -179,7 +179,7 @@ function RequestCard({ request }) {
 
                 <ChevronDown
                     size={19}
-                    className={`mt-2 shrink-0 text-[#817669] transition-transform duration-200 ${expanded ? "rotate-180" : ""
+                    className={`mt-2 shrink-0 text-[#716658] transition-transform duration-200 ${expanded ? "rotate-180" : ""
                         }`}
                 />
             </button>
@@ -192,7 +192,7 @@ function RequestCard({ request }) {
                     {/* REQUEST DETAILS */}
                     <div className="grid gap-4 rounded-2xl bg-[#F8F4EE] p-4 sm:grid-cols-2">
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wide text-[#948778]">
+                            <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
                                 Request Type
                             </p>
                             <p className="mt-2 text-sm font-semibold text-[#211E1A]">
@@ -201,7 +201,7 @@ function RequestCard({ request }) {
                         </div>
 
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wide text-[#948778]">
+                            <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
                                 Status
                             </p>
                             <p className="mt-2 text-sm font-semibold text-[#211E1A]">
@@ -210,7 +210,7 @@ function RequestCard({ request }) {
                         </div>
 
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wide text-[#948778]">
+                            <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
                                 Requested On
                             </p>
                             <p className="mt-2 text-sm font-semibold text-[#211E1A]">
@@ -219,7 +219,7 @@ function RequestCard({ request }) {
                         </div>
 
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wide text-[#948778]">
+                            <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
                                 Reviewed On
                             </p>
                             <p className="mt-2 text-sm font-semibold text-[#211E1A]">
@@ -233,7 +233,7 @@ function RequestCard({ request }) {
                         <h4 className="flex items-center gap-2 text-sm font-bold text-[#211E1A]">
                             <MessageSquareText
                                 size={17}
-                                className="text-[#817669]"
+                                className="text-[#716658]"
                             />
                             Reason for Reordering
                         </h4>
@@ -263,7 +263,7 @@ function RequestCard({ request }) {
 
                                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
                                             <div className="min-w-0 rounded-xl bg-[#FCE9E6] p-3">
-                                                <p className="text-[10px] font-bold uppercase text-[#B5473E]">
+                                                <p className="text-xs font-bold uppercase text-[#B5473E]">
                                                     Original
                                                 </p>
 
@@ -274,11 +274,11 @@ function RequestCard({ request }) {
 
                                             <ArrowRight
                                                 size={17}
-                                                className="mx-auto rotate-90 text-[#948778] sm:rotate-0"
+                                                className="mx-auto rotate-90 text-[#716658] sm:rotate-0"
                                             />
 
                                             <div className="min-w-0 rounded-xl bg-[#E7F2E8] p-3">
-                                                <p className="text-[10px] font-bold uppercase text-[#296F40]">
+                                                <p className="text-xs font-bold uppercase text-[#296F40]">
                                                     Proposed
                                                 </p>
 
@@ -294,10 +294,10 @@ function RequestCard({ request }) {
                             <div className="mt-3 flex items-start gap-2 rounded-xl bg-[#F8F4EE] p-4">
                                 <AlertCircle
                                     size={17}
-                                    className="mt-0.5 shrink-0 text-[#817669]"
+                                    className="mt-0.5 shrink-0 text-[#716658]"
                                 />
 
-                                <p className="text-xs leading-5 text-[#817669]">
+                                <p className="text-xs leading-5 text-[#716658]">
                                     The API response does not contain a
                                     comparable before/after snapshot.
                                     The request status and reason are
@@ -396,11 +396,11 @@ export default function TimelineRequestHistory({
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <h2 className="flex items-center gap-2 text-lg font-bold text-[#211E1A]">
-                        <History size={20} className="text-[#817669]" />
+                        <History size={20} className="text-[#716658]" />
                         Timeline Change Requests
                     </h2>
 
-                    <p className="mt-2 text-xs leading-5 text-[#817669]">
+                    <p className="mt-2 text-xs leading-5 text-[#716658]">
                         Review submitted order changes and Admin decisions.
                     </p>
                 </div>
@@ -428,7 +428,7 @@ export default function TimelineRequestHistory({
             {/* FILTERS */}
             <div className="flex flex-wrap gap-3 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4">
                 <label className="min-w-[140px] flex-1">
-                    <span className="mb-2 block text-[11px] font-bold text-[#817669]">
+                    <span className="mb-2 block text-xs font-bold text-[#716658]">
                         Status
                     </span>
 
@@ -445,7 +445,7 @@ export default function TimelineRequestHistory({
                 </label>
 
                 <label className="min-w-[140px] flex-1">
-                    <span className="mb-2 block text-[11px] font-bold text-[#817669]">
+                    <span className="mb-2 block text-xs font-bold text-[#716658]">
                         Sort By
                     </span>
 
@@ -472,7 +472,7 @@ export default function TimelineRequestHistory({
 
             {/* LOADING */}
             {loading && (
-                <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-6 text-sm text-[#817669]">
+                <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-6 text-sm text-[#716658]">
                     Loading timeline change requests...
                 </div>
             )}
@@ -491,7 +491,7 @@ export default function TimelineRequestHistory({
                         </div>
                     ) : (
                         <div className="rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] px-6 py-12 text-center">
-                            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1EADF] text-[#817669]">
+                            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1EADF] text-[#716658]">
                                 <ClipboardList size={26} />
                             </span>
 
@@ -499,7 +499,7 @@ export default function TimelineRequestHistory({
                                 No timeline requests found
                             </h3>
 
-                            <p className="mt-2 text-sm text-[#817669]">
+                            <p className="mt-2 text-sm text-[#716658]">
                                 {status === "ALL"
                                     ? "Submitted timeline order changes will appear here."
                                     : `No ${status.toLowerCase()} order-change requests found.`}

@@ -265,13 +265,13 @@ function DocumentUploadForm({
                     htmlFor={`document-upload-${taskId}-${documentId || "new"}`}
                     className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#D9CBBB] bg-[#F8F4EE] px-4 py-5 text-center transition-colors hover:bg-[#F1EADF]"
                 >
-                    <UploadCloud size={27} className="text-[#817669]" />
+                    <UploadCloud size={27} className="text-[#716658]" />
 
                     <span className="break-all text-sm font-semibold text-[#211E1A]">
                         {file ? file.name : "Choose a file"}
                     </span>
 
-                    <span className="text-xs text-[#817669]">
+                    <span className="text-xs text-[#716658]">
                         {file
                             ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
                             : "Supported file types and size are enforced by Django"}
@@ -374,12 +374,12 @@ function DocumentRow({
                         {record.title || "Task Document"}
                     </p>
 
-                    <p className="mt-1 text-xs text-[#817669]">
+                    <p className="mt-1 text-xs text-[#716658]">
                         {(record.document_type || "OTHER").replaceAll("_", " ")}
                     </p>
 
                     {record.description && (
-                        <p className="mt-1 text-xs leading-5 text-[#817669]">
+                        <p className="mt-1 text-xs leading-5 text-[#716658]">
                             {record.description}
                         </p>
                     )}
@@ -440,7 +440,7 @@ function DocumentRow({
                     </p>
 
                     {versionsLoading ? (
-                        <p className="text-xs text-[#817669]">
+                        <p className="text-xs text-[#716658]">
                             Loading versions...
                         </p>
                     ) : versions.length ? (
@@ -455,13 +455,13 @@ function DocumentRow({
                                         {version.is_current ? " · Current" : ""}
                                     </p>
 
-                                    <p className="mt-1 break-all text-[11px] text-[#817669]">
+                                    <p className="mt-1 break-all text-xs text-[#716658]">
                                         {version.original_filename ||
                                             "Filename unavailable"}
                                     </p>
                                 </div>
 
-                                <p className="text-[11px] text-[#817669]">
+                                <p className="text-xs text-[#716658]">
                                     {version.created_at
                                         ? String(version.created_at).slice(0, 10)
                                         : ""}
@@ -469,7 +469,7 @@ function DocumentRow({
                             </div>
                         ))
                     ) : (
-                        <p className="text-xs text-[#817669]">
+                        <p className="text-xs text-[#716658]">
                             No version records returned.
                         </p>
                     )}
@@ -585,7 +585,7 @@ export default function TaskDocuments({ taskId }) {
                         Task Documents
                     </h3>
 
-                    <p className="mt-1 text-xs text-[#817669]">
+                    <p className="mt-1 text-xs text-[#716658]">
                         Drawings, instructions and supporting files
                     </p>
                 </div>
@@ -650,14 +650,14 @@ export default function TaskDocuments({ taskId }) {
                         <div className="rounded-xl bg-[#FFFDFA] px-5 py-10 text-center">
                             <FileText
                                 size={27}
-                                className="mx-auto text-[#938778]"
+                                className="mx-auto text-[#716658]"
                             />
 
                             <p className="mt-3 text-sm font-semibold text-[#211E1A]">
                                 No documents uploaded yet
                             </p>
 
-                            <p className="mt-2 text-xs text-[#817669]">
+                            <p className="mt-2 text-xs text-[#716658]">
                                 Upload drawings, instructions or supporting files
                                 related to this task.
                             </p>

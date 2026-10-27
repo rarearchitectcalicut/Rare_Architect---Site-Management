@@ -118,7 +118,7 @@ function serializeRow(row) {
 function FormField({ label, error, children }) {
     return (
         <div className="min-w-0">
-            <label className="mb-2 block text-[11px] font-bold uppercase tracking-wide text-[#817669]">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#716658]">
                 {label}
             </label>
 
@@ -141,6 +141,7 @@ export default function BulkAddTasks({
 }) {
     const nextKey = useRef(1);
     const savingRef = useRef(false);
+    const [dialog, setDialog] = useState(null);
     const { confirm, cancelConfirmation, confirmationModal } = useConfirmation();
 
     const [rows, setRows] = useState([makeRow(0)]);
@@ -165,23 +166,12 @@ export default function BulkAddTasks({
         };
     }, [open, cancelConfirmation]);
 
+
     useEffect(() => {
-        if (!open) return;
-
-        function handleEscape(event) {
-            if (
-                event.key === "Escape" &&
-                !savingRef.current
-            ) {
-                onClose();
-            }
-        }
-
-        document.addEventListener("keydown", handleEscape);
-
-        return () =>
-            document.removeEventListener("keydown", handleEscape);
-    }, [open, onClose]);
+        if (!open || !dialog) return;
+        dialog.showModal();
+        return () => dialog.close();
+    }, [open, dialog]);
 
     if (!open) return null;
 
@@ -298,11 +288,19 @@ export default function BulkAddTasks({
         <>
             {confirmationModal}
             {saving && (
-                <LoadingScreen message="Submitting task batch..." />
+                <LoadingScreen message="Submitting task batch..." portalTarget={dialog || undefined} />
             )}
 
-            <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/55 p-3 backdrop-blur-sm sm:p-6"
+            <dialog
+                ref={setDialog}
+                aria-labelledby="bulk-task-title"
+                aria-modal="true"
+                onCancel={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (!savingRef.current) onClose();
+                }}
+                className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-[#211E1A]/55 p-0 text-[#211E1A] backdrop-blur-sm backdrop:bg-transparent sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -313,20 +311,17 @@ export default function BulkAddTasks({
                 }}
             >
                 <section
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="bulk-task-title"
-                    className="flex max-h-[94dvh] w-full max-w-[900px] flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-2xl"
+                    className="rare-mobile-sheet flex max-h-[94dvh] w-full max-w-[900px] flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-2xl"
                 >
                     {/* HEADER */}
-                    <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[#EEE6DC] p-5 sm:p-7">
+                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-3 border-b border-[#EEE6DC] p-5 sm:p-7">
                         <div className="flex items-start gap-3">
                             <span className="rounded-2xl bg-[#E9F0FC] p-3 text-[#3565A5]">
                                 <ClipboardList size={24} />
                             </span>
 
                             <div>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#948778]">
+                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
                                     Supervisor / Task Management
                                 </p>
 
@@ -337,7 +332,7 @@ export default function BulkAddTasks({
                                     Bulk Add Tasks
                                 </h2>
 
-                                <p className="mt-2 text-xs leading-5 text-[#817669]">
+                                <p className="mt-2 text-xs leading-5 text-[#716658]">
                                     Prepare multiple tasks and submit them together
                                     for Admin review.
                                 </p>
@@ -522,7 +517,7 @@ export default function BulkAddTasks({
                                             </div>
 
                                             <div className="sm:col-span-2 rounded-2xl bg-[#F8F4EE] p-4">
-                                                <p className="mb-4 text-xs font-bold uppercase tracking-wider text-[#817669]">
+                                                <p className="mb-4 text-xs font-bold uppercase tracking-wider text-[#716658]">
                                                     Measurement & Completion
                                                 </p>
 
@@ -648,7 +643,7 @@ export default function BulkAddTasks({
 
                         {/* FOOTER */}
                         <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#EEE6DC] bg-[#FFFDFA] p-5 sm:px-7">
-                            <p className="text-xs text-[#817669]">
+                            <p className="text-xs text-[#716658]">
                                 {rows.length} tasks · One atomic submission
                             </p>
 
@@ -674,7 +669,7 @@ export default function BulkAddTasks({
                         </footer>
                     </form>
                 </section>
-            </div>
+            </dialog>
         </>
     );
 }

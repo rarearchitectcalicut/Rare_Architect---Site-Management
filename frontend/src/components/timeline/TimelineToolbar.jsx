@@ -54,7 +54,7 @@ export default function TimelineToolbar({
                 <div className="flex items-center gap-2">
                     <SlidersHorizontal
                         size={18}
-                        className="text-[#817669]"
+                        className="text-[#716658]"
                     />
 
                     <h2 className="text-sm font-bold text-[#211E1A]">
@@ -75,7 +75,7 @@ export default function TimelineToolbar({
               transition-all duration-200
               ${view === "sequence"
                                 ? "bg-[#211E1A] text-white shadow-sm"
-                                : "text-[#817669] hover:text-[#211E1A]"
+                                : "text-[#716658] hover:text-[#211E1A]"
                             }
             `}
                     >
@@ -94,7 +94,7 @@ export default function TimelineToolbar({
               transition-all duration-200
               ${view === "schedule"
                                 ? "bg-[#211E1A] text-white shadow-sm"
-                                : "text-[#817669] hover:text-[#211E1A]"
+                                : "text-[#716658] hover:text-[#211E1A]"
                             }
             `}
                     >
@@ -105,12 +105,12 @@ export default function TimelineToolbar({
             </div>
 
             {/* FILTERS */}
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_160px_170px_145px_160px]">
+            <div className="space-y-3">
                 {/* SEARCH */}
                 <div className="relative">
                     <Search
                         size={17}
-                        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#948778]"
+                        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
                     />
 
                     <input
@@ -125,6 +125,9 @@ export default function TimelineToolbar({
                     />
                 </div>
 
+                <details className="rare-filter-disclosure">
+                    <summary>Filters and sorting</summary>
+                    <div className="grid gap-3 pt-3 sm:grid-cols-2 xl:grid-cols-4">
                 {/* APPROVAL STATUS */}
                 <select
                     value={approval}
@@ -190,13 +193,16 @@ export default function TimelineToolbar({
                 </select>
             </div>
 
+                </details>
+            </div>
+
             {/* CLEAR */}
             {hasFilters && (
                 <div className="mt-4 flex justify-end">
                     <button
                         type="button"
                         onClick={onClearFilters}
-                        className="inline-flex items-center gap-2 text-xs font-semibold text-[#817669] transition-colors hover:text-[#211E1A]"
+                        className="inline-flex items-center gap-2 text-xs font-semibold text-[#716658] transition-colors hover:text-[#211E1A]"
                     >
                         <X size={15} />
                         Clear Filters

@@ -16,7 +16,7 @@ export default function DailyWorkReview({ record }) {
         : `${record.progress.verified_quantity} ${record.measurement_unit}`;
     return <div className="space-y-5">
         <TaskProgress progress={record.progress} />
-        {record.reviewed_baseline && <p className="text-xs text-[#817669]">Submitted measurements below use the approved baseline at the decision time.</p>}
+        {record.reviewed_baseline && <p className="text-xs text-[#716658]">Submitted measurements below use the approved baseline at the decision time.</p>}
         <div className="grid gap-4 rounded-2xl bg-[#F8F4EE] p-4 sm:grid-cols-2">
             <Meta label="Daily report reference" value={record.daily_report} />
             <Meta label="Report date" value={formatDate(record.report_date)} />

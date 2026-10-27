@@ -11,9 +11,9 @@ export function TaskPageStyles() {
             from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .rare-tasks .task-enter { animation: rare-task-enter 500ms cubic-bezier(.22,1,.36,1) both; animation-delay: var(--task-delay, 0ms); }
+        .rare-tasks .task-enter { animation: none; }
         .rare-tasks .task-panel { border: 1px solid #E7DED2; background: #FFFDFA; border-radius: 24px; box-shadow: 0 4px 24px #422F1605; }
-        .rare-tasks .task-hero { background: #000000; box-shadow: 0 16px 36px #211E1A12; }
+        .rare-tasks .task-hero { background: #FFFDFA; color: #211E1A; box-shadow: none; border-color: #E7DED2; }
         .rare-tasks :is(button,a,input,select) { transition: color 200ms, background-color 200ms, border-color 200ms, box-shadow 200ms, transform 200ms; }
         .rare-tasks :is(button,a,input,select):focus-visible { outline: 2px solid #A58A67; outline-offset: 4px; }
         .rare-tasks button:disabled { cursor: not-allowed; }
@@ -49,21 +49,21 @@ export function TaskBadges({ task }) {
 
 export default function AdminTaskCard({ task, to, showProject = false, actionLabel = "Open Details", approvalTo }) {
     const overdue = typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task);
-    return <article className="task-panel task-lift group relative flex min-w-0 flex-col overflow-hidden p-5 transition-all duration-300 sm:p-6">
+    return <article className="task-panel task-lift group relative flex min-w-0 flex-col overflow-hidden p-4 transition-colors duration-150 sm:p-5">
         <div aria-hidden="true" className={`absolute inset-x-6 top-0 h-0.5 rounded-b-full ${overdue ? "bg-[#C78576]" : "bg-[#B8A181]/50"}`} />
         {showProject && <p className="mb-3 break-words text-xs font-semibold text-[#8B6944]">{task.project_name}</p>}
         <div className="mb-3 flex items-start justify-between gap-3">
-            <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#817669]">Timeline order {task.display_order ?? "Not assigned"}</p>
+            <div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#716658]">Timeline order {task.display_order ?? "Not assigned"}</p>
                 <h2 className="mt-2 break-words text-lg font-semibold leading-7 tracking-tight"><Link to={to} className="hover:text-[#8B6944]">{task.title}</Link></h2></div>
-            <span className="rounded-xl border border-[#E7DED2] bg-[#F8F4EE] p-2 text-[#817669] transition-colors group-hover:bg-[#EDE2D2]"><ArrowUpRight size={17} aria-hidden="true" /></span>
+            <span className="rounded-xl border border-[#E7DED2] bg-[#F8F4EE] p-2 text-[#716658] transition-colors group-hover:bg-[#EDE2D2]"><ArrowUpRight size={17} aria-hidden="true" /></span>
         </div>
         <TaskBadges task={task} />
         <TaskProgress progress={task.progress} />
-        {showProject && Array.isArray(task.supervisors) && <p className="mt-3 break-words text-xs leading-5 text-[#817669]">Assigned Supervisor: {task.supervisors.map((supervisor) => supervisor.name).join(", ") || "Not assigned"}</p>}
-        {task.description && <p className="mt-4 line-clamp-2 break-words text-sm leading-6 text-[#817669]">{task.description}</p>}
-        <div className="mb-5 mt-5 space-y-3 rounded-2xl bg-[#F8F5F0] p-4">
+        {showProject && Array.isArray(task.supervisors) && <p className="mt-3 break-words text-xs leading-5 text-[#716658]">Assigned Supervisor: {task.supervisors.map((supervisor) => supervisor.name).join(", ") || "Not assigned"}</p>}
+        {task.description && <p className="mt-4 line-clamp-2 break-words text-sm leading-6 text-[#716658]">{task.description}</p>}
+        <div className="mb-4 mt-4 space-y-2 rounded-xl bg-[#F8F5F0] p-4">
             <p className="flex items-center gap-2.5 break-words text-sm text-[#665C50]"><UserRound size={16} className="shrink-0 text-[#A38D72]" aria-hidden="true" />{task.worker_name || "Worker/team not assigned"}</p>
-            <p className="flex items-start gap-2.5 text-xs leading-5 text-[#817669]"><CalendarDays size={16} className="mt-0.5 shrink-0 text-[#A38D72]" aria-hidden="true" />{formatDate(task.start_date)} – {formatDate(task.end_date)}</p>
+            <p className="flex items-start gap-2.5 text-xs leading-5 text-[#716658]"><CalendarDays size={16} className="mt-0.5 shrink-0 text-[#A38D72]" aria-hidden="true" />{formatDate(task.start_date)} – {formatDate(task.end_date)}</p>
         </div>
         <Link to={to} className="task-primary mt-auto inline-flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-semibold">{actionLabel}<span className="sr-only">: {task.title}</span><ArrowUpRight size={16} aria-hidden="true" /></Link>
         {approvalTo && <Link to={approvalTo} className="mt-3 rounded-lg py-1 text-center text-xs font-semibold text-[#8B6944] hover:underline">Open in Approval Center</Link>}

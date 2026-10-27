@@ -151,7 +151,7 @@ function CategoryImage({ category }) {
                     <Layers3
                         size={32}
                         strokeWidth={1.4}
-                        className="text-[#948778]"
+                        className="text-[#716658]"
                     />
                 </div>
             )}
@@ -479,9 +479,9 @@ function CategoryModal({
           "
                 >
                     {/* MODAL HEADER */}
-                    <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[#EEE6DC] p-5 sm:p-6">
+                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-3 border-b border-[#EEE6DC] p-5 sm:p-6">
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#948778]">
+                            <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
                                 Admin / Project Categories
                             </p>
 
@@ -494,7 +494,7 @@ function CategoryModal({
                                     : "Create Project Category"}
                             </h2>
 
-                            <p className="mt-2 text-xs text-[#817669]">
+                            <p className="mt-2 text-xs text-[#716658]">
                                 Manage category details,
                                 imagery and visibility.
                             </p>
@@ -566,7 +566,7 @@ function CategoryModal({
                                     ) : (
                                         <label
                                             htmlFor="settings-category-image"
-                                            className="flex h-44 cursor-pointer flex-col items-center justify-center gap-3 text-[#817669] sm:h-52"
+                                            className="flex h-44 cursor-pointer flex-col items-center justify-center gap-3 text-[#716658] sm:h-52"
                                         >
                                             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E8DFD3]">
                                                 <ImagePlus size={26} />
@@ -666,7 +666,7 @@ function CategoryModal({
                                         Active Category
                                     </span>
 
-                                    <span className="mt-1 block text-xs leading-5 text-[#817669]">
+                                    <span className="mt-1 block text-xs leading-5 text-[#716658]">
                                         Control category availability
                                         without deleting existing records.
                                     </span>
@@ -880,7 +880,7 @@ export default function AdminSettings() {
           ===================================== */}
 
             <header>
-                <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#948778]">
+                <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
                     Admin / Account & Configuration
                 </p>
 
@@ -894,7 +894,7 @@ export default function AdminSettings() {
                             Settings
                         </h1>
 
-                        <p className="mt-2 text-sm text-[#817669]">
+                        <p className="mt-2 text-sm text-[#716658]">
                             Manage your profile, account security,
                             and project categories.
                         </p>
@@ -940,7 +940,7 @@ export default function AdminSettings() {
                                 Project Categories
                             </h2>
 
-                            <p className="mt-1 max-w-xl text-xs leading-6 text-[#817669]">
+                            <p className="mt-1 max-w-xl text-xs leading-6 text-[#716658]">
                                 Organize projects by category.
                                 Manage names, descriptions,
                                 images and availability.
@@ -963,7 +963,7 @@ export default function AdminSettings() {
                     <div className="relative">
                         <Search
                             size={18}
-                            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#938778]"
+                            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
                         />
 
                         <input
@@ -1019,7 +1019,7 @@ export default function AdminSettings() {
 
                 {/* COUNTS */}
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm text-[#817669]">
+                    <p className="text-sm text-[#716658]">
                         {visibleCategories.length}{" "}
                         {visibleCategories.length === 1
                             ? "category"
@@ -1028,7 +1028,7 @@ export default function AdminSettings() {
                     </p>
 
                     {!hasStatusData && (
-                        <p className="text-xs text-[#948778]">
+                        <p className="text-xs text-[#716658]">
                             Status filters require
                             is_active in the category list response.
                         </p>
@@ -1088,7 +1088,7 @@ export default function AdminSettings() {
                                                 <span
                                                     className={`
                             inline-flex rounded-full px-2.5 py-1
-                            text-[10px] font-bold
+                            text-xs font-bold
                             ${category.is_active
                                                             ? "bg-[#E7F2E8] text-[#296F40]"
                                                             : "bg-[#EEE8E0] text-[#75695C]"
@@ -1105,7 +1105,7 @@ export default function AdminSettings() {
                                                 {category.name}
                                             </h3>
 
-                                            <p className="mt-2 line-clamp-3 text-xs leading-5 text-[#817669]">
+                                            <p className="mt-2 line-clamp-3 text-xs leading-5 text-[#716658]">
                                                 {category.description ||
                                                     "No description provided."}
                                             </p>
@@ -1136,14 +1136,14 @@ export default function AdminSettings() {
                             <div className="rounded-[20px] bg-[#F8F4EE] px-6 py-12 text-center xl:col-span-2">
                                 <FolderOpen
                                     size={34}
-                                    className="mx-auto text-[#948778]"
+                                    className="mx-auto text-[#716658]"
                                 />
 
                                 <h3 className="mt-4 font-bold text-[#211E1A]">
                                     No categories found
                                 </h3>
 
-                                <p className="mt-2 text-sm text-[#817669]">
+                                <p className="mt-2 text-sm text-[#716658]">
                                     Try a different search,
                                     or create a new category.
                                 </p>

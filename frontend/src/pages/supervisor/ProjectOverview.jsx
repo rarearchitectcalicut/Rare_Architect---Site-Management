@@ -72,7 +72,7 @@ function DetailCard({ icon: Icon, label, value, tone }) {
             </span>
 
             <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#948778]">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#716658]">
                     {label}
                 </p>
                 <p className="mt-2 break-words text-sm font-semibold text-[#211E1A]">
@@ -151,7 +151,7 @@ function WorkspaceCard({ item, projectId }) {
                     {item.title}
                 </h3>
 
-                <p className="mt-1.5 text-xs leading-5 text-[#817669]">
+                <p className="mt-1.5 text-xs leading-5 text-[#716658]">
                     {item.description}
                 </p>
             </div>
@@ -247,7 +247,7 @@ export default function SupervisorProjectOverview() {
             )}
 
             {/* BREADCRUMB */}
-            <nav className="flex flex-wrap items-center gap-2 text-xs text-[#817669]">
+            <nav className="flex flex-wrap items-center gap-2 text-xs text-[#716658]">
                 <Link
                     to="/supervisor/dashboard"
                     className="hover:text-[#211E1A]"
@@ -271,10 +271,10 @@ export default function SupervisorProjectOverview() {
                 <section className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-8 text-center">
                     <FolderKanban
                         size={38}
-                        className="mx-auto text-[#938778]"
+                        className="mx-auto text-[#716658]"
                     />
 
-                    <p role="alert" className="mt-4 text-sm text-[#817669]">
+                    <p role="alert" className="mt-4 text-sm text-[#716658]">
                         {error}
                     </p>
 
@@ -305,7 +305,7 @@ export default function SupervisorProjectOverview() {
               ===================================== */}
 
                     <section className="overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
-                        <div className="relative h-60 overflow-hidden bg-gradient-to-br from-[#D9C8B1] to-[#F1EADF] sm:h-80 lg:h-[390px]">
+                        <div className="relative h-28 overflow-hidden bg-gradient-to-br from-[#D9C8B1] to-[#F1EADF] sm:h-44 lg:h-52">
                             {coverUrl && !imageFailed ? (
                                 <img
                                     src={coverUrl}
@@ -331,7 +331,7 @@ export default function SupervisorProjectOverview() {
                         <div className="p-5 sm:p-7">
                             <Link
                                 to="/supervisor/projects"
-                                className="inline-flex items-center gap-2 text-xs font-semibold text-[#817669] transition-colors hover:text-[#211E1A]"
+                                className="inline-flex items-center gap-2 text-xs font-semibold text-[#716658] transition-colors hover:text-[#211E1A]"
                             >
                                 <ArrowLeft size={16} />
                                 Back to My Projects
@@ -339,7 +339,7 @@ export default function SupervisorProjectOverview() {
 
                             <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#938778]">
+                                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
                                         RARE / Project Overview
                                     </p>
 
@@ -347,7 +347,7 @@ export default function SupervisorProjectOverview() {
                                         {project.name}
                                     </h1>
 
-                                    <p className="mt-3 flex items-start gap-2 text-sm text-[#817669]">
+                                    <p className="mt-3 flex items-start gap-2 text-sm text-[#716658]">
                                         <MapPin
                                             size={18}
                                             className="mt-0.5 shrink-0"
@@ -374,7 +374,7 @@ export default function SupervisorProjectOverview() {
                             <h2 className="text-lg font-bold text-[#211E1A]">
                                 Project Information
                             </h2>
-                            <p className="mt-1 text-xs text-[#817669]">
+                            <p className="mt-1 text-xs text-[#716658]">
                                 Client, location and project schedule
                             </p>
                         </div>
@@ -450,7 +450,7 @@ export default function SupervisorProjectOverview() {
                                     Project Workspace
                                 </h2>
 
-                                <p className="mt-1 text-xs leading-6 text-[#817669]">
+                                <p className="mt-1 text-xs leading-6 text-[#716658]">
                                     Open project tasks, site reports, timelines,
                                     delays and documents.
                                 </p>
@@ -471,7 +471,7 @@ export default function SupervisorProjectOverview() {
                             ))}
                         </div>
 
-                        <p className="mt-5 text-xs leading-6 text-[#938778]">
+                        <p className="mt-5 text-xs leading-6 text-[#716658]">
                             Manpower, material observations and site work
                             entries are recorded within Daily Reports.
                         </p>
@@ -492,7 +492,7 @@ export default function SupervisorProjectOverview() {
                                     Supervision Team
                                 </h2>
 
-                                <p className="mt-1 text-xs text-[#817669]">
+                                <p className="mt-1 text-xs text-[#716658]">
                                     Supervisors assigned to this project
                                 </p>
                             </div>
@@ -517,7 +517,7 @@ export default function SupervisorProjectOverview() {
                                                 {name}
                                             </p>
 
-                                            <p className="mt-1 text-xs text-[#817669]">
+                                            <p className="mt-1 text-xs text-[#716658]">
                                                 {phone || "Site Supervisor"}
                                             </p>
                                         </div>
@@ -536,7 +536,7 @@ export default function SupervisorProjectOverview() {
                             })}
 
                             {supervisors.length === 0 && (
-                                <p className="rounded-xl bg-[#F8F4EE] p-5 text-sm text-[#817669] md:col-span-2">
+                                <p className="rounded-xl bg-[#F8F4EE] p-5 text-sm text-[#716658] md:col-span-2">
                                     No supervision team details are available.
                                 </p>
                             )}

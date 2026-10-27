@@ -169,7 +169,7 @@ function ProfileInfo({ icon: Icon, label, value, tone }) {
             </span>
 
             <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#948778]">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#716658]">
                     {label}
                 </p>
                 <p className="mt-1 wrap-break-word text-sm font-semibold text-[#211E1A]">
@@ -381,7 +381,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#948778]">
+                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#716658]">
                                         RARE / {roleLabel}
                                     </p>
 
@@ -389,7 +389,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                         {name}
                                     </h2>
 
-                                    <p className="mt-1 break-all text-sm text-[#817669]">
+                                    <p className="mt-1 break-all text-sm text-[#716658]">
                                         @{profile.username || "Not specified"}
                                     </p>
 
@@ -453,7 +453,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                         Personal Information
                                     </h2>
 
-                                    <p className="mt-1 text-xs leading-5 text-[#817669]">
+                                    <p className="mt-1 text-xs leading-5 text-[#716658]">
                                         Manage your contact and account details.
                                     </p>
                                 </div>
@@ -483,7 +483,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                         <div key={field.key} className="min-w-0">
                                             <label
                                                 htmlFor={`profile-${field.key}`}
-                                                className="text-[11px] font-bold uppercase tracking-widest text-[#938778]"
+                                                className="text-xs font-bold uppercase tracking-widest text-[#716658]"
                                             >
                                                 {field.label}
                                             </label>
@@ -493,7 +493,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                                     <div className="relative mt-2">
                                                         <Icon
                                                             size={17}
-                                                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#938778]"
+                                                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
                                                         />
 
                                                         <input

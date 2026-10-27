@@ -16,7 +16,6 @@ import MobileBottomNav from "../components/layout/MobileBottomNav";
 import MobileMoreSheet from "../components/layout/MobileMoreSheet";
 
 import {
-    getDashboardPath,
     getNavigation,
 } from "../config/navigation";
 
@@ -125,7 +124,10 @@ export default function AppLayout() {
         (item) => item.path === location.pathname
     );
 
-    const pageTitle = currentPage?.label || "Dashboard";
+    const pathParts = location.pathname.split("/").filter(Boolean);
+    const contextTitles = { tasks: "Tasks", documents: "Documents", "daily-reports": "Daily Reports", timeline: "Timeline", delays: "Delay Reports", settings: "Settings" };
+    const projectSection = pathParts[1] === "projects" && pathParts.length > 2;
+    const pageTitle = currentPage?.label || (projectSection ? (pathParts[3] === "tasks" && pathParts[4] ? "Task details" : contextTitles[pathParts[3]]) || "Project workspace" : contextTitles[pathParts[1]] || (pathParts[1] === "supervisors" ? "Supervisor details" : "Workspace"));
 
     const displayName =
         [user.first_name, user.last_name]
@@ -158,7 +160,8 @@ export default function AppLayout() {
     // ---------------------------------------------
 
     return (
-        <div className="min-h-dvh bg-[#f1eadf]">
+        <div className="rare-app min-h-dvh min-w-0 bg-[#F1EADF]">
+            <a href="#rare-main-content" className="rare-skip-link">Skip to content</a>
             <style>{TOPBAR_CSS}</style>
 
             {/* GLOBAL LOADER */}
@@ -193,32 +196,33 @@ export default function AppLayout() {
                     <div
                         className="
               mx-auto flex
-              min-h-19
+              min-h-16
               max-w-[1600px]
               items-center justify-between
-              gap-4 px-5
-              sm:px-8
-              lg:px-10
+              gap-3 px-4
+              sm:px-6
+              lg:px-8
             "
                     >
                         {/* TITLE */}
                         <div className="min-w-0">
-                            <p className="text-xs font-medium text-[#8a8175]">
+                            <p className="hidden text-xs font-medium text-[#716658] sm:block">
                                 RARE Project &amp; Site Management
                             </p>
 
-                            <h1
+                            <p
+                                aria-label="Current workspace"
                                 key={pageTitle}
                                 className="
                   rare-title-in
                   mt-0.5 truncate
-                  text-xl font-bold
+                  text-sm font-semibold
                   tracking-tight text-[#211e1a]
-                  sm:text-2xl
+                  sm:text-base
                 "
                             >
                                 {pageTitle}
-                            </h1>
+                            </p>
                         </div>
 
                         <div className="flex items-center gap-2.5 sm:gap-3">
@@ -293,7 +297,7 @@ export default function AppLayout() {
                                         {displayName}
                                     </p>
 
-                                    <p className="text-xs text-[#8a8175]">
+                                    <p className="text-xs text-[#716658]">
                                         {isAdmin
                                             ? "Administrator"
                                             : "Site Supervisor"}
@@ -327,14 +331,12 @@ export default function AppLayout() {
                 <main
                     className="
             mx-auto w-full max-w-[1600px]
-            px-5 pt-6
-            sm:px-8 sm:pt-8
-            lg:px-10 lg:pt-10
+            rare-main min-w-0 px-3 pt-4
+            sm:px-6 sm:pt-5
+            lg:px-8 lg:pt-6
           "
-                    style={{
-                        paddingBottom:
-                            "calc(120px + env(safe-area-inset-bottom, 0px))",
-                    }}
+                    id="rare-main-content"
+                    tabIndex={-1}
                 >
                     <Outlet />
                 </main>
