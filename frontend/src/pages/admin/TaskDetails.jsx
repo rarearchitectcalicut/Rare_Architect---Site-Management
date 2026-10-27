@@ -7,7 +7,7 @@ import { approvalApi } from "../../api/approvalApi";
 import { dailyReportApi } from "../../api/dailyReportApi";
 import { delayApi } from "../../api/delayApi";
 import LoadingScreen from "../../components/LoadingScreen";
-import TaskExecutionActions from "../../components/tasks/TaskExecutionActions";
+import TaskExecutionActions, { TaskProgress } from "../../components/tasks/TaskExecutionActions";
 import AdminTaskSections from "../../components/admin/tasks/AdminTaskSections";
 import { TaskBadges, TaskPageStyles } from "../../components/admin/tasks/AdminTaskCard";
 import { formatDate, formatText, getError } from "../../components/approvals/approvalUtils";
@@ -178,6 +178,7 @@ function TaskDetailsPage({ projectId, taskId }) {
                     </div>)}
                 </dl>
             </header>
+            <TaskProgress progress={task.progress} />
             <TaskExecutionActions key={task.id} role="ADMIN" task={task} onSuccess={() => { setNotice("Task reopened successfully."); setRevision((value) => value + 1); }} />
             <TaskWorkspace key={`${task.id}:${revision}`} task={task} />
         </>}

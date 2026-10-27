@@ -339,6 +339,40 @@ class DailyTaskWorkCreateSerializer(serializers.ModelSerializer):
 # DAILY TASK WORK DETAIL SERIALIZER
 # =====================================================
 class DailyTaskWorkDetailSerializer(serializers.ModelSerializer):
+    reviewed_baseline = serializers.SerializerMethodField()
+
+    def get_reviewed_baseline(self, obj):
+        if not obj.verified_at:
+            return None
+        from tasks.models import TaskHistory
+        fields = ("measurement_method", "planned_quantity", "measurement_unit", "completion_criteria")
+        baseline = {field: getattr(obj.task, field) for field in fields}
+        if "baseline_changes" not in self.context:
+            entries = list(self.parent.instance) if isinstance(self.parent, serializers.ListSerializer) else [obj]
+            originals = [entry.correction_of for entry in entries if entry.correction_of_id]
+            reviewed = [entry for entry in [*entries, *originals] if entry.verified_at]
+            self.context["baseline_changes"] = list(TaskHistory.objects.filter(
+                task_id__in=[entry.task_id for entry in reviewed], action="EDIT_APPROVED",
+                created_at__gt=min(entry.verified_at for entry in reviewed),
+            ).order_by("-created_at", "-id").values("task_id", "created_at", "details"))
+        # Approved changes already retain old_values. Roll them back to the decision time.
+        for change in self.context["baseline_changes"]:
+            if change["task_id"] == obj.task_id and change["created_at"] > obj.verified_at:
+                old = change["details"].get("old_values", {})
+                baseline.update({field: old[field] for field in fields if field in old})
+        if baseline["planned_quantity"] is not None:
+            baseline["planned_quantity"] = str(baseline["planned_quantity"])
+        return baseline
+
+    progress = serializers.SerializerMethodField()
+
+    def get_progress(self, obj):
+        from .progress import calculate_task_progress, verified_work_totals
+        if "work_progress_totals" not in self.context:
+            entries = self.parent.instance if isinstance(self.parent, serializers.ListSerializer) else [obj]
+            self.context["work_progress_totals"] = verified_work_totals([entry.task_id for entry in entries])
+        return calculate_task_progress(obj.task, self.context["work_progress_totals"])
+
     completion_criteria = serializers.CharField(source="task.completion_criteria", read_only=True)
     task_work_status = serializers.CharField(source="task.work_status", read_only=True)
     correction_id = serializers.SerializerMethodField()
@@ -363,10 +397,15 @@ class DailyTaskWorkDetailSerializer(serializers.ModelSerializer):
         if not obj.correction_of_id:
             return None
         original = obj.correction_of
+        if original.daily_report.status != "SUBMITTED":
+            return None
+        if original.task_id == obj.task_id:
+            original.task = obj.task
         return {"id": str(original.id), "daily_report": str(original.daily_report_id), "verification_status": original.verification_status,
                 "work_description": original.work_description, "location_detail": original.location_detail,
                 "quantity_completed_today": str(original.quantity_completed_today) if original.quantity_completed_today is not None else None,
-                "completion_claimed": original.completion_claimed, "verification_note": original.verification_note}
+                "completion_claimed": original.completion_claimed, "verification_note": original.verification_note,
+                "baseline": self.get_reviewed_baseline(original)}
 
     def get_correction_id(self, obj):
         try:
@@ -420,6 +459,8 @@ class DailyTaskWorkDetailSerializer(serializers.ModelSerializer):
 
         fields = (
             "id",
+            "progress",
+            "reviewed_baseline",
             "daily_report",
             "project_id",
             "project_name",
@@ -1083,7 +1124,50 @@ class DelayReportCreateSerializer(serializers.ModelSerializer):
 # =====================================================
 
 
+class DelayReportQuerySerializer(serializers.Serializer):
+    project = serializers.UUIDField(required=False)
+    task = serializers.UUIDField(required=False)
+    status = serializers.ChoiceField(choices=DelayReport.Status.choices, required=False)
+    delay_type = serializers.ChoiceField(choices=DelayReport.DelayType.choices, required=False)
+    extension_status = serializers.ChoiceField(choices=DelayReport.Status.choices, required=False)
+    extension_requested = serializers.BooleanField(required=False)
+    pending_only = serializers.BooleanField(required=False, default=False)
+    search = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    project_search = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    date_from = serializers.DateField(required=False)
+    date_to = serializers.DateField(required=False)
+    sort = serializers.ChoiceField(choices=["newest", "oldest"], default="newest")
+
+    def validate(self, attrs):
+        if attrs.get("date_from") and attrs.get("date_to") and attrs["date_from"] > attrs["date_to"]:
+            raise serializers.ValidationError({"date_to": "End date must be on or after start date."})
+        return attrs
+
+
 class DelayReportDetailSerializer(serializers.ModelSerializer):
+    deadline_history = serializers.SerializerMethodField()
+
+    def get_deadline_history(self, obj):
+        from activity.models import ActivityLog
+        if "delay_audits" not in self.context:
+            reports = list(self.parent.instance) if isinstance(self.parent, serializers.ListSerializer) else [obj]
+            audits = ActivityLog.objects.filter(
+                entity_type="DELAY_REPORT", entity_id__in=[report.pk for report in reports],
+                action__in=["DELAY_REPORT_SUBMITTED", "EXTENSION_APPROVED", "EXTENSION_REJECTED"],
+            ).order_by("created_at", "id").values("entity_id", "action", "metadata")
+            self.context["delay_audits"] = {(audit["entity_id"], audit["action"]): audit["metadata"] for audit in audits}
+        audits = self.context["delay_audits"]
+        submission = audits.get((obj.pk, "DELAY_REPORT_SUBMITTED"), {})
+        approved = audits.get((obj.pk, "EXTENSION_APPROVED"), {})
+        rejected = audits.get((obj.pk, "EXTENSION_REJECTED"), {})
+        return {
+            "submission_deadline_recorded": "deadline_at_submission" in submission,
+            "deadline_at_submission": submission.get("deadline_at_submission"),
+            "previous_approved_deadline": approved.get("old_end_date"),
+            "new_approved_deadline": approved.get("new_end_date"),
+            "deadline_at_rejection": rejected.get("current_end_date"),
+        }
+
     project_name = serializers.CharField(source="task.project.name", read_only=True)
     current_end_date = serializers.DateField(source="task.end_date", read_only=True, allow_null=True)
     reviewed_by_name = serializers.CharField(source="reviewed_by.username", read_only=True, allow_null=True)
@@ -1115,6 +1199,7 @@ class DelayReportDetailSerializer(serializers.ModelSerializer):
             "project_id",
             "project_name",
             "current_end_date",
+            "deadline_history",
             "reported_by",
             "reported_by_name",
             "delay_type",

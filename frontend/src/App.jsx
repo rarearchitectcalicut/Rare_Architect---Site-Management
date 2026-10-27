@@ -27,7 +27,7 @@ import AdminProjectTasks, { GlobalTaskRegister } from "./pages/admin/ProjectTask
 import AdminTaskDetails from "./pages/admin/TaskDetails";
 import Supervisors from "./pages/admin/Supervisors";
 import SupervisorDetails from "./pages/admin/SupervisorDetails";
-import AdminProjects from "./pages/admin/Projects";
+import AdminProjects, { ProjectDirectory } from "./pages/admin/Projects";
 import AdminSettings from "./pages/admin/Settings";
 import AdminApprovals from "./pages/admin/Approvals";
 import AdminDelays from "./pages/admin/Delays";
@@ -44,7 +44,7 @@ import AdminActivity from "./pages/admin/Activity";
 import SupervisorSettings from "./pages/supervisor/Settings"; 
 import SupervisorProjects from "./pages/supervisor/Projects";
 import SupervisorProjectOverview from "./pages/supervisor/ProjectOverview";
-import SupervisorProjectWorkspace from "./pages/supervisor/ProjectWorkspace";
+import SupervisorProjectWorkspace, { ProjectDocuments } from "./pages/supervisor/ProjectWorkspace";
 import SupervisorProjectTasks from "./pages/supervisor/ProjectTasks";
 import SupervisorNotifications from "./pages/supervisor/Notifications";
 import SupervisorProjectTimeline from "./pages/supervisor/ProjectTimeline";
@@ -244,12 +244,14 @@ export default function App() {
           <Route path="/admin/daily-reports" element={<AdminDailyReports />} />
           <Route path="/admin/projects/:projectId/daily-reports" element={<ProjectDailyReports role="ADMIN" />} />
 
+          <Route path="/admin/projects/:projectId/documents" element={<ProjectDocuments role="ADMIN" />} />
           {/* DOCUMENTS */}
           <Route
             path="/admin/documents"
-            element={<SectionPlaceholder />}
+            element={<ProjectDirectory role="ADMIN" section="documents" />}
           />
 
+          <Route path="/admin/projects/:projectId/delays" element={<AdminDelays />} />
           {/* DELAYS */}
           <Route
             path="/admin/delays"
@@ -317,6 +319,7 @@ export default function App() {
             element={<SupervisorProjectTimeline />}
           />
           <Route path="/supervisor/projects/:projectId/delays" element={<SupervisorProjectDelays />} />
+          <Route path="/supervisor/projects/:projectId/documents" element={<ProjectDocuments role="SUPERVISOR" />} />
           <Route path="/supervisor/projects/:projectId/daily-reports" element={<ProjectDailyReports role="SUPERVISOR" />} />
 
 
@@ -340,7 +343,7 @@ export default function App() {
           {/* DOCUMENTS */}
           <Route
             path="/supervisor/documents"
-            element={<SectionPlaceholder />}
+            element={<ProjectDirectory role="SUPERVISOR" section="documents" />}
           />
 
           {/* DELAYS */}

@@ -1,4 +1,5 @@
-from django.db.models import Prefetch
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q
+from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, status
@@ -6,7 +7,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from django.http import FileResponse, Http404
-from users.permissions import MustChangePasswordPermission
+from users.permissions import IsAdminRole, MustChangePasswordPermission
+from tasks.permissions import IsSupervisorRole
+from rest_framework.exceptions import ValidationError
+from .validators import ALLOWED_EXTENSIONS, MAX_DOCUMENT_SIZE, validate_document_file
 from projects.models import Project
 from projects.pagination import ProjectPagination
 from reports.services import accessible_projects
@@ -19,6 +23,7 @@ from .models import (
     TaskDocument,
 )
 from .serializers import (
+    ProjectDocumentQuerySerializer,
     ProjectDocumentCreateSerializer,
     ProjectDocumentListSerializer,
     ProjectDocumentDetailSerializer,
@@ -56,10 +61,11 @@ def accessible_project_documents(user):
             "project",
             "uploaded_by",
         )
+        .annotate(total_versions=Count("versions"))
         .prefetch_related(
             Prefetch(
                 "versions",
-                queryset=ProjectDocumentVersion.objects.order_by("-version_number"),
+                queryset=ProjectDocumentVersion.objects.select_related("uploaded_by").filter(is_current=True).order_by("-version_number"),
                 to_attr="prefetched_versions",
             )
         )
@@ -76,7 +82,14 @@ class ProjectDocumentListCreateView(generics.ListCreateAPIView):
     permission_classes = [
         IsAuthenticated,
         MustChangePasswordPermission,
+        IsAdminRole | IsSupervisorRole,
     ]
+
+    def get_permissions(self):
+        permissions = super().get_permissions()
+        if self.request.method == "POST":
+            permissions.append(IsAdminRole())
+        return permissions
 
     parser_classes = [
         MultiPartParser,
@@ -106,34 +119,25 @@ class ProjectDocumentListCreateView(generics.ListCreateAPIView):
 
         project = self.get_project(project_id)
 
-        queryset = (
-            accessible_project_documents(request.user)
-            .filter(
-                project=project,
+        validator = ProjectDocumentQuerySerializer(data=request.query_params)
+        validator.is_valid(raise_exception=True)
+        filters = validator.validated_data
+        queryset = accessible_project_documents(request.user).filter(project=project)
+        if filters.get("document_type"):
+            queryset = queryset.filter(document_type=filters["document_type"])
+        for term in filters.get("search", "").split():
+            matching_versions = ProjectDocumentVersion.objects.filter(document_id=OuterRef("pk"), original_filename__icontains=term)
+            queryset = queryset.annotate(filename_match=Exists(matching_versions)).filter(
+                Q(title__icontains=term) | Q(description__icontains=term) | Q(document_type__icontains=term) | Q(filename_match=True)
             )
-            .order_by(
-                "-created_at",
-                "-id",
-            )
-        )
-
-        page = self.paginate_queryset(queryset)
-
-        if page is not None:
-            serializer = ProjectDocumentListSerializer(
-                page,
-                many=True,
-                context={"request": request},
-            )
-            return self.get_paginated_response(serializer.data)
-
-        serializer = ProjectDocumentListSerializer(
-            queryset,
-            many=True,
-            context={"request": request},
-        )
-
-        return Response(serializer.data)
+        ordering = {"newest": ["-created_at", "-id"], "oldest": ["created_at", "id"], "title": [Lower("title"), "id"], "updated": ["-updated_at", "-id"]}
+        page = self.paginate_queryset(queryset.order_by(*ordering[filters["sort"]]))
+        response = self.get_paginated_response(ProjectDocumentListSerializer(page, many=True).data)
+        response.data["upload_rules"] = {
+            "max_file_size": MAX_DOCUMENT_SIZE, "allowed_extensions": sorted(ALLOWED_EXTENSIONS),
+            "document_types": [{"value": value, "label": label} for value, label in ProjectDocument.DocumentType.choices],
+        }
+        return response
 
     # -----------------------------------------
     # POST /projects/{id}/documents/
@@ -180,6 +184,7 @@ class ProjectDocumentDetailView(generics.RetrieveAPIView):
     permission_classes = [
         IsAuthenticated,
         MustChangePasswordPermission,
+        IsAdminRole | IsSupervisorRole,
     ]
 
     serializer_class = ProjectDocumentDetailSerializer
@@ -199,7 +204,14 @@ class ProjectDocumentVersionListCreateView(generics.GenericAPIView):
     permission_classes = [
         IsAuthenticated,
         MustChangePasswordPermission,
+        IsAdminRole | IsSupervisorRole,
     ]
+
+    def get_permissions(self):
+        permissions = super().get_permissions()
+        if self.request.method == "POST":
+            permissions.append(IsAdminRole())
+        return permissions
 
     parser_classes = [
         MultiPartParser,
@@ -228,7 +240,7 @@ class ProjectDocumentVersionListCreateView(generics.GenericAPIView):
             id,
         )
 
-        queryset = ProjectDocumentVersion.objects.filter(
+        queryset = ProjectDocumentVersion.objects.select_related("uploaded_by").filter(
             document=document,
         ).order_by("-version_number")
 
@@ -281,6 +293,7 @@ class ProjectDocumentVersionDownloadView(generics.GenericAPIView):
     permission_classes = [
         IsAuthenticated,
         MustChangePasswordPermission,
+        IsAdminRole | IsSupervisorRole,
     ]
 
     def get(self, request, id):
@@ -320,13 +333,15 @@ class ProjectDocumentVersionDownloadView(generics.GenericAPIView):
         # randomized and private.
         download_name = Path(version.original_filename.replace("\\", "/")).name
 
-        response = FileResponse(
-            file_handle,
-            as_attachment=True,
-            filename=download_name,
-            content_type="application/octet-stream",
-        )
-
+        inline = request.query_params.get("inline") == "true"
+        content_type = "application/octet-stream"
+        if inline:
+            try:
+                content_type = validate_document_file(file_handle)["content_type"]
+            except ValidationError:
+                inline = False
+        file_handle.seek(0)
+        response = FileResponse(file_handle, as_attachment=not inline, filename=download_name, content_type=content_type)
         response["X-Content-Type-Options"] = "nosniff"
         response["Cache-Control"] = "private, no-store"
 

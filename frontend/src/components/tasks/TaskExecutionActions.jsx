@@ -110,3 +110,25 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
         </dialog>, document.body)}
     </section>;
 }
+
+
+export function TaskProgress({ progress }) {
+    const raw = progress?.progress_percentage;
+    const percent = typeof raw === "number" || (typeof raw === "string" && raw.trim()) ? Number(raw) : NaN;
+    const quantity = progress?.measurement_method === "QUANTITY";
+    const validQuantity = (value) => (typeof value === "number" || typeof value === "string" && value.trim()) && Number.isFinite(Number(value));
+    const valid = Number.isFinite(percent) && ["QUANTITY", "COMPLETION_ONLY"].includes(progress?.measurement_method)
+        && (quantity || percent === 0 || percent === 100)
+        && (!quantity || validQuantity(progress.verified_quantity) && validQuantity(progress.planned_quantity) && Number(progress.planned_quantity) > 0 && typeof progress.measurement_unit === "string" && progress.measurement_unit.trim());
+    if (!valid) return <span className="my-3 block text-xs text-[#817669]">Progress unavailable / Awaiting approval/baseline</span>;
+    const width = Math.min(100, Math.max(0, percent));
+    return <span className="my-3 block min-w-0 space-y-2 text-xs text-[#211E1A]">
+        <span className="flex flex-wrap justify-between gap-2"><span>Admin-verified progress</span><strong>{percent}%</strong></span>
+        <span role="progressbar" aria-label="Admin-verified task progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={width} className="block h-2 overflow-hidden rounded-full bg-[#E7DED2]">
+            <span className="block h-full rounded-full bg-[#817669]" style={{ width: `${width}%` }} />
+        </span>
+        <span className="block break-words leading-5 text-[#817669]">{quantity
+            ? `${progress.verified_quantity} / ${progress.planned_quantity} ${progress.measurement_unit} verified`
+            : percent === 100 ? "Completion verified" : "Completion not yet verified"}</span>
+    </span>;
+}

@@ -1,4 +1,5 @@
 import uuid
+import logging
 
 from django.core.exceptions import (
     ValidationError as DjangoValidationError,
@@ -6,6 +7,7 @@ from django.core.exceptions import (
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import (
+    APIException,
     PermissionDenied,
     ValidationError,
 )
@@ -22,6 +24,20 @@ from .models import (
     TaskDocumentVersion,
 )
 from .validators import validate_document_file
+
+logger = logging.getLogger(__name__)
+
+
+class DocumentStorageUnavailable(APIException):
+    status_code = 503
+    default_detail = "Document storage is temporarily unavailable. Please retry."
+
+
+def validate_project_document_management(*, user, project):
+    validate_document_access(user=user, project=project)
+    if user.role != "ADMIN" or not user.is_staff:
+        raise PermissionDenied("Only Admins can upload project documents or new versions.")
+
 
 # =====================================================
 # PERMISSION VALIDATION
@@ -95,7 +111,10 @@ def cleanup_private_file(*, version, stored_name):
     """
 
     if stored_name:
-        version.file.storage.delete(stored_name)
+        try:
+            version.file.storage.delete(stored_name)
+        except OSError:
+            logger.exception("Unable to clean up an uncommitted document file.")
 
 
 # =====================================================
@@ -120,7 +139,7 @@ def create_project_document(
         pk=project_id,
     )
 
-    validate_document_access(
+    validate_project_document_management(
         user=user,
         project=project,
     )
@@ -174,11 +193,13 @@ def create_project_document(
             },
         )
 
-    except Exception:
+    except Exception as exc:
         cleanup_private_file(
             version=version,
             stored_name=stored_name,
         )
+        if isinstance(exc, OSError):
+            raise DocumentStorageUnavailable() from exc
         raise
 
     return document, version
@@ -203,7 +224,7 @@ def upload_project_document_version(
         pk=document_id,
     )
 
-    validate_document_access(
+    validate_project_document_management(
         user=user,
         project=document.project,
     )
@@ -261,11 +282,13 @@ def upload_project_document_version(
             },
         )
 
-    except Exception:
+    except Exception as exc:
         cleanup_private_file(
             version=version,
             stored_name=stored_name,
         )
+        if isinstance(exc, OSError):
+            raise DocumentStorageUnavailable() from exc
         raise
 
     return version

@@ -14,6 +14,7 @@ from .validators import validate_document_file
 
 
 class ProjectDocumentVersionSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.CharField(source="uploaded_by.username", read_only=True)
 
     class Meta:
         model = ProjectDocumentVersion
@@ -24,6 +25,7 @@ class ProjectDocumentVersionSerializer(serializers.ModelSerializer):
             "original_filename",
             "file_size",
             "uploaded_by",
+            "uploaded_by_name",
             "is_current",
             "created_at",
         )
@@ -37,6 +39,7 @@ class ProjectDocumentVersionSerializer(serializers.ModelSerializer):
 
 
 class ProjectDocumentListSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.CharField(source="uploaded_by.username", read_only=True)
 
     current_version = serializers.SerializerMethodField()
 
@@ -50,6 +53,7 @@ class ProjectDocumentListSerializer(serializers.ModelSerializer):
             "description",
             "document_type",
             "uploaded_by",
+            "uploaded_by_name",
             "created_at",
             "updated_at",
             "current_version",
@@ -70,7 +74,7 @@ class ProjectDocumentListSerializer(serializers.ModelSerializer):
                 None,
             )
         else:
-            current = obj.versions.filter(is_current=True).first()
+            current = obj.versions.select_related("uploaded_by").filter(is_current=True).first()
 
         if current is None:
             return None
@@ -97,6 +101,8 @@ class ProjectDocumentDetailSerializer(ProjectDocumentListSerializer):
         read_only_fields = fields
 
     def get_version_count(self, obj):
+        if hasattr(obj, "total_versions"):
+            return obj.total_versions
         versions = getattr(
             obj,
             "prefetched_versions",
@@ -112,6 +118,12 @@ class ProjectDocumentDetailSerializer(ProjectDocumentListSerializer):
 # =====================================================
 # CREATE PROJECT DOCUMENT SERIALIZER
 # =====================================================
+
+
+class ProjectDocumentQuerySerializer(serializers.Serializer):
+    search = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    document_type = serializers.ChoiceField(choices=ProjectDocument.DocumentType.choices, required=False)
+    sort = serializers.ChoiceField(choices=["newest", "oldest", "title", "updated"], default="newest")
 
 
 class ProjectDocumentCreateSerializer(serializers.Serializer):

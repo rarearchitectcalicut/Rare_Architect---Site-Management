@@ -190,7 +190,23 @@ class BulkTaskCreateSerializer(serializers.Serializer):
 # =====================================================
 # TASK LIST SERIALIZER
 # =====================================================
-class TaskListSerializer(serializers.ModelSerializer):
+class TaskProgressListSerializer(serializers.ListSerializer):
+    def to_representation(self, data):
+        from reports.progress import verified_work_totals
+        tasks = list(data.all() if hasattr(data, "all") else data)
+        self.context["verified_work_totals"] = verified_work_totals([task.pk for task in tasks])
+        return super().to_representation(tasks)
+
+
+class TaskProgressSerializer(serializers.ModelSerializer):
+    progress = serializers.SerializerMethodField()
+
+    def get_progress(self, obj):
+        from reports.progress import calculate_task_progress
+        return calculate_task_progress(obj, self.context.get("verified_work_totals"))
+
+
+class TaskListSerializer(TaskProgressSerializer):
 
     created_by_name = serializers.CharField(
         source="created_by.username",
@@ -201,6 +217,7 @@ class TaskListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
+        list_serializer_class = TaskProgressListSerializer
 
         fields = (
             "id",
@@ -219,6 +236,7 @@ class TaskListSerializer(serializers.ModelSerializer):
             "measurement_unit",
             "completion_criteria",
             "is_overdue",
+            "progress",
             "created_by",
             "created_by_name",
             "created_at",
@@ -246,11 +264,12 @@ class TaskListSerializer(serializers.ModelSerializer):
 # TASK DETAIL SERIALIZER
 # =====================================================
 class TaskRegisterSerializer(TaskListSerializer):
+    has_pending_extension = serializers.BooleanField(read_only=True)
     project_name = serializers.CharField(source="project.name", read_only=True)
     supervisors = serializers.SerializerMethodField()
 
     class Meta(TaskListSerializer.Meta):
-        fields = (*TaskListSerializer.Meta.fields, "description", "project_name", "supervisors")
+        fields = (*TaskListSerializer.Meta.fields, "description", "project_name", "supervisors", "has_pending_extension")
         read_only_fields = fields
 
     def get_supervisors(self, obj):
@@ -261,6 +280,7 @@ class TaskRegisterSerializer(TaskListSerializer):
 
 
 class TaskRegisterQuerySerializer(serializers.Serializer):
+    delay_eligible = serializers.BooleanField(required=False, default=False)
     search = serializers.CharField(required=False, allow_blank=True, max_length=200, trim_whitespace=True)
     project = serializers.UUIDField(required=False)
     supervisor = serializers.UUIDField(required=False)
@@ -282,7 +302,7 @@ class TaskRegisterQuerySerializer(serializers.Serializer):
         return attrs
 
 
-class TaskDetailSerializer(serializers.ModelSerializer):
+class TaskDetailSerializer(TaskProgressSerializer):
 
     project_name = serializers.CharField(
         source="project.name",
@@ -304,6 +324,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
+        list_serializer_class = TaskProgressListSerializer
 
         fields = (
             "id",
@@ -324,6 +345,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             "measurement_unit",
             "completion_criteria",
             "is_overdue",
+            "progress",
             "created_by",
             "created_by_name",
             "approved_by",

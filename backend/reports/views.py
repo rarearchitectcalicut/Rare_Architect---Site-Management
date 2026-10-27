@@ -27,6 +27,7 @@ from .serializers import (
     DailyReportAttachmentDetailSerializer,
     DailyTaskWorkCorrectionSerializer,
     DelayReportDetailSerializer,
+    DelayReportQuerySerializer,
     DelayReportReviewSerializer,
     DelayExtensionReviewSerializer,
 )
@@ -60,6 +61,7 @@ from .services import (
     reject_delay_extension,
 )
 from .progress import calculate_task_progress
+from tasks.permissions import IsSupervisorRole
 from tasks.models import Task
 
 # =====================================================
@@ -991,40 +993,43 @@ class DelayReportListView(generics.ListAPIView):
     permission_classes = [
         IsAuthenticated,
         MustChangePasswordPermission,
+        IsAdminRole | IsSupervisorRole,
     ]
 
     serializer_class = DelayReportDetailSerializer
     pagination_class = ProjectPagination
 
-    def get_queryset(self):
-        queryset = accessible_delay_reports(self.request.user)
-
-        task_id = self.request.query_params.get("task")
-        report_status = self.request.query_params.get("status")
-
-        if task_id:
-            queryset = queryset.filter(task_id=serializers.UUIDField().run_validation(task_id))
-
-        if report_status:
-            if report_status not in DelayReport.Status.values:
-                raise ValidationError({"status": "Invalid delay report status."})
-            queryset = queryset.filter(status=report_status)
-
-        project = self.request.query_params.get("project")
-        if project:
-            queryset = queryset.filter(task__project_id=serializers.UUIDField().run_validation(project))
-        delay_type = self.request.query_params.get("delay_type")
-        if delay_type:
-            if delay_type not in DelayReport.DelayType.values:
-                raise ValidationError({"delay_type": "Invalid delay type."})
-            queryset = queryset.filter(delay_type=delay_type)
-        extension_status = self.request.query_params.get("extension_status")
-        if extension_status:
-            if extension_status not in DelayReport.Status.values:
-                raise ValidationError({"extension_status": "Invalid extension status."})
-            queryset = queryset.filter(extension_status=extension_status)
-
-        return queryset.order_by("-reported_at", "-id")
+    def list(self, request, *args, **kwargs):
+        validator = DelayReportQuerySerializer(data=dict(request.query_params.items()))
+        validator.is_valid(raise_exception=True)
+        filters = validator.validated_data
+        base = accessible_delay_reports(request.user)
+        if filters.get("project"):
+            base = base.filter(task__project_id=filters["project"])
+        summary = base.aggregate(
+            total=Count("pk"), pending=Count("pk", filter=Q(status="PENDING")),
+            approved=Count("pk", filter=Q(status="APPROVED")), rejected=Count("pk", filter=Q(status="REJECTED")),
+            pending_extensions=Count("pk", filter=Q(extension_requested=True, extension_status="PENDING")),
+            approved_extensions=Count("pk", filter=Q(extension_requested=True, extension_status="APPROVED")),
+        )
+        queryset = base
+        for field in ("task", "status", "delay_type", "extension_status", "extension_requested"):
+            if field in filters:
+                queryset = queryset.filter(**{field: filters[field]})
+        if filters["pending_only"]:
+            queryset = queryset.filter(Q(status="PENDING") | Q(extension_requested=True, extension_status="PENDING"))
+        for term in filters.get("search", "").split():
+            queryset = queryset.filter(Q(task__title__icontains=term) | Q(reason__icontains=term))
+        if filters.get("project_search"):
+            queryset = queryset.filter(task__project__name__icontains=filters["project_search"])
+        for key, lookup in [("date_from", "reported_at__date__gte"), ("date_to", "reported_at__date__lte")]:
+            if key in filters:
+                queryset = queryset.filter(**{lookup: filters[key]})
+        prefix = "-" if filters["sort"] == "newest" else ""
+        page = self.paginate_queryset(queryset.order_by(prefix + "reported_at", prefix + "id"))
+        response = self.get_paginated_response(self.get_serializer(page, many=True).data)
+        response.data["summary"] = summary
+        return response
 
 
 # =====================================================
@@ -1036,6 +1041,7 @@ class DelayReportDetailView(generics.RetrieveAPIView):
     permission_classes = [
         IsAuthenticated,
         MustChangePasswordPermission,
+        IsAdminRole | IsSupervisorRole,
     ]
 
     serializer_class = DelayReportDetailSerializer

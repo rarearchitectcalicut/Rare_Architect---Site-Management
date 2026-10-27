@@ -24,7 +24,7 @@ import { projectApi } from "../../api/projectApi";
 import { taskApi } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
 import TaskDocuments from "../../components/tasks/TaskDocuments";
-import TaskExecutionActions from "../../components/tasks/TaskExecutionActions";
+import TaskExecutionActions, { TaskProgress } from "../../components/tasks/TaskExecutionActions";
 import TaskForm from "../../modal/supervisor/TaskForm";
 import BulkAddTasks from "../../modal/supervisor/BulkAddTasks";
 
@@ -292,6 +292,8 @@ function ExpandedTask({
                 onSuccess={onStatusChanged}
             />
 
+            <TaskProgress progress={task.progress} />
+
             {/* DETAILS GRID */}
             <div className="mt-5 grid gap-5 rounded-[20px] bg-[#F8F4EE] p-5 sm:grid-cols-2 xl:grid-cols-3">
                 <DetailItem label="Task Name" value={task.title} />
@@ -435,6 +437,7 @@ function TaskCard({
                         <Badge value={task.work_status} />
                     </span>
 
+                    <TaskProgress progress={task.progress} />
                     <span className="mt-4 grid gap-2 text-xs text-[#817669] sm:grid-cols-2">
                         <span className="flex items-start gap-2">
                             <UserRound size={15} className="shrink-0" />
