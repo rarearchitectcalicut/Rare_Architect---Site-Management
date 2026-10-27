@@ -7,7 +7,7 @@ import ApprovalHistory from "./ApprovalHistory";
 import ApprovalDecisionModal from "../../modal/admin/ApprovalDecisionModal";
 import { useApprovalReview } from "../../hooks/useApprovalReview";
 import { requestLabels } from "./queueData";
-import { formatDate, formatText, getChanges } from "./approvalUtils";
+import { formatDateTime, formatText, getChanges } from "./approvalUtils";
 import TaskApprovalReview from "./review/TaskApprovalReview";
 import TaskChangeReview from "./review/TaskChangeReview";
 import TimelineOrderReview from "./review/TimelineOrderReview";
@@ -42,11 +42,11 @@ export default function RequestReview({ item, onClose, onSuccess, readOnly = fal
                 <span className={`mt-3 inline-block rounded-full px-3 py-1 text-xs font-semibold ${status === "REJECTED" ? "bg-[#FCE9E6] text-[#B5473E]" : "bg-[#EDF3FC] text-[#3565A5]"}`}>{formatText(status)}</span>
             </div>
             {loading ? <p role="status" className="flex items-center gap-2 text-sm"><RefreshCw size={17} className="animate-spin" />Loading request details…</p> : record ? <>
-                <div className="grid gap-4 rounded-2xl bg-[#F8F4EE] p-4 sm:grid-cols-2"><Meta label={item.historyId ? "Original task decision" : "Submitted by"} value={item.historyId ? "Historical approval cycle" : record.reported_by_name || record.requested_by_name || record.created_by_name || item.creator} /><Meta label="Submitted" value={formatDate(item.createdAt || record.created_at)} /></div>
+                <div className="grid gap-4 rounded-2xl bg-[#F8F4EE] p-4 sm:grid-cols-2"><Meta label={item.historyId ? "Original task decision" : "Submitted by"} value={item.historyId ? "Historical approval cycle" : record.reported_by_name || record.requested_by_name || record.created_by_name || item.creator} /><Meta label="Submitted" value={formatDateTime(item.createdAt || record.reported_at || record.created_at)} /></div>
                 {item.historyId && <p className="text-xs text-[#817669]">The decision below is preserved from task history. Task details reflect the current task record.</p>}
                 {Review && <Review record={record} item={item} role={role} />}
                 {status !== "PENDING" && <ApprovalHistory status={status} reviewer={item.historyId ? item.reviewedBy : decision.reviewer || item.reviewedBy} date={item.historyId ? item.reviewedAt : decision.date || item.reviewedAt} comment={item.historyId ? item.comment : decision.comment || item.comment} />}
-                {role === "ADMIN" && item.requestType === "delay" && record.extension_requested && <Link className="inline-block text-sm font-semibold text-[#3565A5]" to={`/admin/approvals?tab=delays&type=extension&request=${item.id}`}>Review deadline extension →</Link>}
+                {role === "ADMIN" && item.requestType === "delay" && record.extension_requested && record.extension_status === "PENDING" && <Link className="inline-block text-sm font-semibold text-[#3565A5]" to={`/admin/approvals?tab=delays&type=extension&request=${item.id}`}>Review deadline extension →</Link>}
                 {canDecide && <div className="grid grid-cols-2 gap-3 border-t border-[#E7DED2] pt-5">
                     <button type="button" disabled={Boolean(busy) || approveBlocked} onClick={() => setAction("approve")} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E7F2E8] px-4 py-3 text-sm font-bold text-[#296F40] disabled:opacity-40"><Check size={18} />{item.requestType === "work" ? "Verify" : "Approve"}</button>
                     <button type="button" disabled={Boolean(busy)} onClick={() => setAction("reject")} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FCE9E6] px-4 py-3 text-sm font-bold text-[#B5473E]"><XCircle size={18} />Reject</button>

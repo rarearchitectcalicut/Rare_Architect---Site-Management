@@ -21,6 +21,12 @@ export function formatDate(value) {
     });
 }
 
+export function formatDateTime(value) {
+    if (!value) return "Not recorded";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString("en-IN");
+}
+
 export function getItems(response) {
     if (Array.isArray(response)) return response;
     if (Array.isArray(response?.results)) return response.results;

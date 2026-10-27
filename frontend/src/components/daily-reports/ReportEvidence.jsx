@@ -20,7 +20,7 @@ function EvidencePreview({ file, preview, onClose, onDownload, loading, button }
     </dialog>, document.body);
 }
 
-function EvidenceFile({ file, onRemove, busy }) {
+function EvidenceFile({ file, onRemove, busy, fileApi = dailyReportApi }) {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [preview, setPreview] = useState(null);
@@ -44,7 +44,7 @@ function EvidenceFile({ file, onRemove, busy }) {
     async function loadPreview() {
         if (cache.current) return cache.current;
         const signal = request.current?.signal;
-        const blob = await dailyReportApi.previewAttachment(file.id, signal);
+        const blob = await fileApi.previewAttachment(file.id, signal);
         if (signal?.aborted) return null;
         if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(blob.type)) throw new Error("Preview is unavailable for this file. Use Download to open it with a compatible application.");
         const loaded = { blob, url: URL.createObjectURL(blob), type: blob.type };
@@ -75,7 +75,7 @@ function EvidenceFile({ file, onRemove, busy }) {
         if (inFlight.current) return;
         inFlight.current = true; setLoading(true); setError("");
         try {
-            const blob = cache.current?.blob || await dailyReportApi.downloadAttachment(file.id);
+            const blob = cache.current?.blob || await fileApi.downloadAttachment(file.id, request.current?.signal);
             if (request.current?.signal.aborted) return;
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement("a");
@@ -98,8 +98,8 @@ function EvidenceFile({ file, onRemove, busy }) {
         </li>;
 }
 
-export default function ReportEvidence({ files = [], onRemove, busy = false }) {
-    return <section><h3 className="text-lg font-bold text-[#352D24]">Evidence and attachments</h3>
-        {files.length ? <ul className="mt-4 grid items-start gap-4 xl:grid-cols-2">{files.map((file) => <EvidenceFile key={file.id} file={file} onRemove={onRemove} busy={busy} />)}</ul> : <p className="mt-4 rounded-2xl border border-dashed border-[#CCB99F] bg-[#FAF7F1] px-5 py-8 text-center text-base leading-7 text-[#716658]">No evidence attached to this entry or report.</p>}
+export default function ReportEvidence({ files = [], onRemove, busy = false, fileApi = dailyReportApi, title = "Evidence and attachments" }) {
+    return <section><h3 className="text-lg font-bold text-[#352D24]">{title}</h3>
+        {files.length ? <ul className="mt-4 grid items-start gap-4 xl:grid-cols-2">{files.map((file) => <EvidenceFile key={file.id} file={file} onRemove={onRemove} busy={busy} fileApi={fileApi} />)}</ul> : <p className="mt-4 rounded-2xl border border-dashed border-[#CCB99F] bg-[#FAF7F1] px-5 py-8 text-center text-base leading-7 text-[#716658]">No evidence attached to this entry or report.</p>}
     </section>;
 }

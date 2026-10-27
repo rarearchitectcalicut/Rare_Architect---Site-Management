@@ -30,12 +30,11 @@ export async function loadReview(item) {
     if (["delay", "extension"].includes(item.requestType)) return delayApi.get(item.id);
     if (item.requestType === "work") {
         const record = await dailyReportApi.work(item.id);
-        const [report, attachments, progress] = await Promise.all([
+        const [report, attachments] = await Promise.all([
             dailyReportApi.get(record.daily_report),
             getAllPages((params) => dailyReportApi.attachments(record.daily_report, params)),
-            dailyReportApi.progress(record.task),
         ]);
-        return { ...record, report, attachments: attachments.filter((file) => !file.task_work || String(file.task_work) === String(record.id)), progress };
+        return { ...record, report, attachments: attachments.filter((file) => !file.task_work || String(file.task_work) === String(record.id)) };
     }
     const record = await approvalApi.getChangeRequest(item.id);
     if (item.requestType !== "timeline" && record.change_type !== "ORDER_CHANGE") return record;

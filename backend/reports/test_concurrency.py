@@ -11,10 +11,10 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from projects.models import Project, ProjectCategory, ProjectSupervisor
-from tasks.models import Task
+from tasks.models import Task, TaskHistory
 from tasks.services import create_timeline_reorder_request, approve_timeline_reorder_request
 from .models import DailyReport, DailyTaskWork, DelayReport
-from .services import create_delay_report, verify_daily_task_work
+from .services import create_delay_report, verify_daily_task_work, approve_delay_report, approve_delay_extension, reject_delay_extension
 from .progress import calculate_task_progress
 
 
@@ -68,3 +68,32 @@ class ApprovalConcurrencyTests(TransactionTestCase):
         self.assertCountEqual(self.race([approve, approve]), ["accepted", "rejected"])
         self.task.refresh_from_db(); second.refresh_from_db()
         self.assertEqual([self.task.display_order, second.display_order], [2, 1])
+
+
+    def extension_request(self):
+        report = create_delay_report(task_id=self.task.pk, supervisor=self.supervisor, data={"delay_type": "WEATHER", "reason": "Heavy rain", "extension_requested": True, "requested_end_date": "2026-11-10"})
+        approve_delay_report(report_id=report.pk, admin_user=self.admin)
+        return report
+
+    def test_concurrent_extension_approvals_change_deadline_exactly_once(self):
+        report = self.extension_request()
+        def approve():
+            approve_delay_extension(report_id=report.pk, admin_user=self.admin)
+        self.assertCountEqual(self.race([approve, approve]), ["accepted", "rejected"])
+        self.task.refresh_from_db(); report.refresh_from_db()
+        self.assertEqual(self.task.end_date, date(2026, 11, 10))
+        self.assertEqual(report.extension_status, "APPROVED")
+        self.assertEqual(TaskHistory.objects.filter(task=self.task, action="EXTENSION_APPROVED").count(), 1)
+
+    def test_concurrent_extension_approval_and_rejection_preserve_one_decision(self):
+        report = self.extension_request()
+        results = self.race([
+            lambda: approve_delay_extension(report_id=report.pk, admin_user=self.admin),
+            lambda: reject_delay_extension(report_id=report.pk, admin_user=self.admin, admin_comment="Keep deadline"),
+        ])
+        self.assertCountEqual(results, ["accepted", "rejected"])
+        self.task.refresh_from_db(); report.refresh_from_db()
+        expected = date(2026, 11, 10) if report.extension_status == "APPROVED" else date(2026, 10, 30)
+        self.assertEqual(self.task.end_date, expected)
+        self.assertEqual(report.status, "APPROVED")
+        self.assertEqual(TaskHistory.objects.filter(task=self.task, action__in=["EXTENSION_APPROVED", "EXTENSION_REJECTED"]).count(), 1)

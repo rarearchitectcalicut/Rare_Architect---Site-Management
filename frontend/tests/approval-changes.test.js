@@ -292,7 +292,7 @@ test("draft delete and evidence preview reuse authenticated existing endpoints",
     assert.equal(calls[1][2].signal, "signal");
 });
 
-async function evidenceHarness(filename, mime) {
+async function evidenceHarness(filename, mime, fileApi) {
     const slots = []; let cursor = 0, effects = [], tree, fetches = 0;
     const hooks = {
         useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = initial; return [slots[i], (next) => { slots[i] = typeof next === "function" ? next(slots[i]) : next; }]; },
@@ -304,7 +304,7 @@ async function evidenceHarness(filename, mime) {
         "api/dailyReportApi.js": { dailyReportApi: { previewAttachment: async () => { fetches++; return { type: mime }; } } },
     }, append: '\nconst previewEvents = []; const URL = { createObjectURL() { previewEvents.push("create"); return "blob:private-evidence"; }, revokeObjectURL(url) { previewEvents.push(`revoke:${url}`); } }; const AbortController = class { signal = { aborted: false }; abort() { this.signal.aborted = true; } }; export { EvidenceFile, EvidencePreview, previewEvents };' });
     function walk(predicate, node) { if (Array.isArray(node)) return node.map((child) => walk(predicate, child)).find(Boolean); if (!node || typeof node !== "object") return; return predicate(node) ? node : walk(predicate, node.props?.children); }
-    function renderFile() { cursor = 0; effects = []; tree = exports.EvidenceFile({ file: { id: "evidence", original_filename: filename, caption: "Site evidence" } }); effects.forEach((effect) => effect()); }
+    function renderFile() { cursor = 0; effects = []; tree = exports.EvidenceFile({ file: { id: "evidence", original_filename: filename, caption: "Site evidence" }, fileApi }); effects.forEach((effect) => effect()); }
     const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
     renderFile(); await flush(); renderFile();
     return { render: renderFile, flush, exports, get fetches() { return fetches; }, find: (predicate) => walk(predicate, tree), cleanup() { slots.forEach((slot) => slot?.cleanup?.()); } };
@@ -450,4 +450,391 @@ test("correction action is shown only for eligible source reports and existing c
     assert(!complete.includes("Create Correction Report")); assert(complete.includes("Existing correction: Draft")); assert(complete.includes("Work Correction History"));
     const admin = render(exports.ReportRegisterCard, { report: { ...report, correction_summary: null }, onSelect() {} });
     assert(!admin.includes("Create Correction Report"));
+});
+
+
+test("verified progress distinguishes measured zero, completion and unavailable data accessibly", async () => {
+    const { exports } = await loadSource("components/tasks/TaskExecutionActions.jsx");
+    const progress = { measurement_method: "QUANTITY", progress_percentage: "65.50", verified_quantity: "65.500", planned_quantity: "100.000", measurement_unit: "SQM" };
+    const html = render(exports.TaskProgress, { progress });
+    for (const text of ["65.5%", "65.500 / 100.000 SQM", 'role="progressbar"', 'aria-valuenow="65.5"', "width:65.5%"]) assert.ok(html.includes(text));
+    assert.ok(render(exports.TaskProgress, { progress: { ...progress, progress_percentage: "0.00", verified_quantity: "0.000" } }).includes('aria-valuenow="0"'));
+    for (const percent of ["0.00", "100.00"]) {
+        const completion = render(exports.TaskProgress, { progress: { measurement_method: "COMPLETION_ONLY", progress_percentage: percent } });
+        assert.ok(completion.includes(percent === "0.00" ? "Completion not yet verified" : "Completion verified"));
+        assert.ok(!completion.includes("SQM"));
+    }
+    for (const value of [null, undefined, "", "oops", Infinity, NaN]) {
+        const unavailable = render(exports.TaskProgress, { progress: { ...progress, progress_percentage: value } });
+        assert.ok(unavailable.includes("Progress unavailable"));
+        assert.ok(!unavailable.includes('role="progressbar"'));
+        assert.ok(!/NaN|Infinity/.test(unavailable));
+    }
+    for (const quantity of [null, "", "oops", Infinity]) {
+        assert.ok(render(exports.TaskProgress, { progress: { ...progress, verified_quantity: quantity } }).includes("Progress unavailable"));
+    }
+});
+
+test("shared Admin and Supervisor task cards render server verified progress", async () => {
+    const task = { id: "task", project: "project", title: "Measured wall", approval_status: "APPROVED", work_status: "COMPLETED", priority: "MEDIUM", progress: { measurement_method: "QUANTITY", progress_percentage: "25.00", verified_quantity: "25.000", planned_quantity: "100.000", measurement_unit: "SQM" } };
+    const admin = await loadSource("components/admin/tasks/AdminTaskCard.jsx");
+    const supervisor = await loadSource("pages/supervisor/ProjectTasks.jsx", { append: "\nexport { TaskCard };" });
+    for (const html of [render(admin.exports.default, { task, to: "/admin/projects/project/tasks/task" }), render(supervisor.exports.TaskCard, { task, expanded: false })]) {
+        assert.ok(html.includes('aria-valuenow="25"'));
+        assert.ok(html.includes("25.000 / 100.000 SQM"));
+        assert.ok(!html.includes("100%"));
+    }
+});
+
+test("Daily Work historical details use the decision baseline and preserve original rejection", async () => {
+    const { exports } = await loadSource("components/approvals/review/DailyWorkReview.jsx");
+    const html = render(exports.default, { record: { daily_report: "report-ref", project_id: "project", measurement_method: "QUANTITY", measurement_unit: "METER", planned_quantity: "200", quantity_completed_today: "20", reviewed_baseline: { measurement_method: "QUANTITY", measurement_unit: "SQM", planned_quantity: "100" }, original_work: { id: "original", daily_report: "original-report", quantity_completed_today: "25", verification_note: "Remeasure walls", baseline: { measurement_method: "QUANTITY", measurement_unit: "SQM" } }, attachments: [] } });
+    for (const text of ["report-ref", "20 SQM", "100 SQM", "25 SQM", "Remeasure walls", "original-report"]) assert.ok(html.includes(text));
+    assert.ok(!html.includes("20 METER"));
+});
+
+test("decision history fetches a single server page, resets filters and ignores stale results", async () => {
+    const slots = []; const effects = []; let cursor = 0; const requests = [];
+    const hooks = {
+        useState(initial) { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], (next) => { slots[index] = typeof next === "function" ? next(slots[index]) : next; }]; },
+        useEffect(create, deps) { const index = cursor++; const previous = slots[index]; if (!previous || deps.some((value, i) => value !== previous.deps[i])) effects.push(() => { previous?.cleanup?.(); slots[index] = { deps, cleanup: create() }; }); },
+    };
+    const { exports } = await loadSource("hooks/useRequestList.js", { overrides: {
+        react: { ...React, ...hooks },
+        "api/approvalApi.js": { approvalApi: { taskDecisions: (params) => new Promise((resolve, reject) => requests.push({ params, resolve, reject })) } },
+    } });
+    let list; let revision = 0;
+    function draw() { cursor = 0; list = exports.useRequestList([], [], { server: true, revision }); while (effects.length) effects.shift()(); }
+    async function flush() { for (let i = 0; i < 8; i++) await Promise.resolve(); draw(); }
+    const row = (id) => ({ decision_id: id, decision_type: "work", task_ref: "task", task_title: "Wall", project_ref: "project", project_title: "Site", decision_status: "VERIFIED", decision_date: "2026-10-27T10:00:00Z", reviewer_name: "Admin" });
+    draw();
+    assert.equal(requests[0].params.scope, "all");
+    assert.equal(requests[0].params.page_size, 8);
+    list.updateFilter("type", "work"); draw();
+    requests[0].resolve({ results: [row("stale")], count: 1000, next: "ignored" }); await flush();
+    assert.equal(list.loading, true);
+    assert.equal(list.rows.length, 0);
+    requests[1].resolve({ results: [row("first")], count: 17, next: "ignored" }); await flush();
+    assert.equal(list.count, 17); assert.equal(list.pageCount, 3);
+    assert.equal(requests.length, 2);
+    list.setPage(2); draw();
+    assert.equal(requests[2].params.page, 2);
+    assert.equal(requests[2].params.type, "work");
+    requests[2].resolve({ results: [row("second")], count: 17 }); await flush();
+    assert.equal(list.pageRows[0].id, "second");
+    list.updateFilter("reviewer_search", "Admin"); draw();
+    assert.equal(requests[3].params.page, 1);
+    assert.equal(requests[3].params.reviewer_search, "Admin");
+    requests[3].reject(new Error("Offline")); await flush();
+    assert.ok(list.error.includes("Unable to load decision history"));
+    assert.equal(list.rows.length, 0);
+    revision++; draw();
+    assert.equal(requests.length, 5);
+    list.clear(); draw();
+    assert.equal(requests[5].params.type, undefined);
+    assert.equal(requests[5].params.reviewer_search, undefined);
+});
+
+
+test("Daily Work review reuses progress in the work response without a separate progress request", async () => {
+    const calls = [];
+    const progress = { measurement_method: "QUANTITY", progress_percentage: "25.00" };
+    const { exports } = await loadSource("hooks/useApprovalReview.js", { overrides: {
+        "api/dailyReportApi.js": { dailyReportApi: {
+            work: async () => ({ id: "entry", daily_report: "report", task: "task", progress }),
+            get: async (id) => { calls.push(id); return { id }; },
+            attachments: async () => ({ results: [], next: null }),
+            progress: () => { throw new Error("Progress must come from the work response"); },
+        } },
+    } });
+    const record = await exports.loadReview({ id: "entry", requestType: "work" });
+    assert.equal(record.progress, progress);
+    assert.deepEqual(calls, ["report"]);
+});
+
+
+function delayHooks() {
+    const slots = []; const effects = []; let cursor = 0;
+    return {
+        hooks: {
+            useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = initial; return [slots[i], (next) => { slots[i] = typeof next === "function" ? next(slots[i]) : next; }]; },
+            useRef(initial) { const i = cursor++; return slots[i] ??= { current: initial }; },
+            useCallback(callback) { cursor++; return callback; },
+            useEffect(create, deps) { const i = cursor++; const previous = slots[i]; if (!previous || deps.some((value, j) => value !== previous.deps[j])) effects.push(() => { previous?.cleanup?.(); slots[i] = { deps, cleanup: create() }; }); },
+        },
+        render(operation) { cursor = 0; const result = operation(); while (effects.length) effects.shift()(); return result; },
+        cleanup() { slots.forEach((slot) => slot?.cleanup?.()); },
+    };
+}
+const flushDelay = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
+const abortForDelay = '\nconst AbortController = class { signal = { aborted: false }; abort() { this.signal.aborted = true; } };';
+
+test("delay register uses bounded server pages and summaries, ignores stale requests and loads tasks lazily", async () => {
+    const state = delayHooks(); const requests = []; const taskRequests = []; let tasksEnabled = false;
+    const graph = await loadSource("hooks/useDelayReports.js", { overrides: {
+        react: { ...React, ...state.hooks },
+        "api/delayApi.js": { delayApi: { list: (params, signal) => new Promise((resolve, reject) => requests.push({ params, signal, resolve, reject })) } },
+        "api/projectApi.js": { projectApi: { getProject: async (id) => ({ id, name: "Site Alpha", status: "ACTIVE" }) } },
+        "api/taskApi.js": { taskApi: { register: (params, signal) => new Promise((resolve) => taskRequests.push({ params, signal, resolve })) } },
+    }, append: abortForDelay });
+    let data;
+    const draw = () => { data = state.render(() => graph.exports.useDelayReports("project", { tasksEnabled })); };
+    draw(); await flushDelay(); draw();
+    assert.equal(requests.length, 1); assert.equal(taskRequests.length, 0);
+    assert.equal(requests[0].params.project, "project"); assert.equal(requests[0].params.page_size, 8);
+    data.updateFilter("search", "rain"); draw();
+    assert.equal(requests[0].signal.aborted, true);
+    requests[0].resolve({ results: [{ id: "stale" }], count: 999, summary: { total: 999 } }); await flushDelay(); draw();
+    assert.equal(data.reports.length, 0); assert.equal(data.loading, true);
+    requests[1].resolve({ results: [{ id: "first" }], count: 17, summary: { total: 100, pending: 50 }, next: "ignored" }); await flushDelay(); draw();
+    assert.equal(requests.length, 2); assert.equal(data.summary.total, 100); assert.equal(data.count, 17); assert.equal(data.pageCount, 3);
+    data.setPage(2); draw(); assert.equal(requests[2].params.page, 2);
+    data.updateFilter("extension", "NONE"); draw(); assert.equal(requests[3].params.page, 1); assert.equal(requests[3].params.extension_requested, false);
+    requests[3].reject(new Error("Offline")); await flushDelay(); draw();
+    assert.equal(data.reports.length, 0); assert.equal(data.summary, null); assert.ok(data.error.includes("Unable to load delay reports"));
+    tasksEnabled = true; draw();
+    assert.equal(taskRequests[0].params.project, "project"); assert.equal(taskRequests[0].params.delay_eligible, true); assert.equal(taskRequests[0].params.page_size, 20);
+    taskRequests[0].resolve({ results: [{ id: "eligible" }], count: 25 }); await flushDelay(); draw();
+    data.taskOptions.onPage(2); draw(); assert.equal(taskRequests[1].params.page, 2);
+    data.taskOptions.onSearch("walls"); draw(); assert.equal(taskRequests[2].params.page, 1); assert.equal(taskRequests[2].params.search, "walls");
+    state.cleanup();
+});
+
+async function delayFormHarness() {
+    const state = delayHooks(); const requests = []; const confirmations = []; const saved = []; let tree;
+    const tasks = [{ id: "task", title: "Wall work", approval_status: "APPROVED", work_status: "IN_PROGRESS", start_date: "2026-10-01", end_date: "2026-10-30" }];
+    const { exports } = await loadSource("modal/supervisor/DelayReportForm.jsx", { overrides: {
+        react: { ...React, ...state.hooks },
+        "hooks/useConfirmation.jsx": { useConfirmation: () => ({ confirmationModal: null, confirm: () => new Promise((resolve) => confirmations.push(resolve)) }) },
+        "api/delayApi.js": { delayApi: { create: (id, payload) => new Promise((resolve, reject) => requests.push({ id, payload, resolve, reject })) } },
+    } });
+    function find(predicate, node) { if (Array.isArray(node)) return node.map((child) => find(predicate, child)).find(Boolean); if (!node || typeof node !== "object") return; return predicate(node) ? node : find(predicate, node.props?.children); }
+    const draw = () => { tree = state.render(() => exports.default({ tasks, onClose() {}, onSaved: (report) => saved.push(report) })); };
+    draw();
+    return { tasks, requests, confirmations, saved, draw, find: (predicate) => find(predicate, tree),
+        change(name, value) { find((node) => node.props?.id === `delay-${name}`, tree).props.onChange({ target: { value, checked: value } }); draw(); },
+        submit() { return find((node) => node.type === "form", tree).props.onSubmit({ preventDefault() {} }); },
+    };
+}
+
+test("delay form validates dates, clears disabled extension dates and prevents duplicate confirmations or submissions", async () => {
+    const ui = await delayFormHarness();
+    ui.change("task", "task"); ui.change("reason", " Rain delayed access "); ui.change("extension_requested", true); ui.change("requested_end_date", "2026-10-30");
+    await ui.submit(); ui.draw();
+    assert.equal(ui.confirmations.length, 0);
+    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props["aria-invalid"], true);
+    ui.change("requested_end_date", "2026-11-10"); ui.change("extension_requested", false); ui.change("extension_requested", true);
+    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "");
+    ui.change("requested_end_date", "2026-11-10");
+    const first = ui.submit(); await ui.submit(); ui.draw();
+    assert.equal(ui.confirmations.length, 1); assert.equal(ui.find((node) => node.type === "fieldset").props.disabled, true);
+    ui.confirmations[0](true); await flushDelay(); ui.draw(); await ui.submit();
+    assert.equal(ui.requests.length, 1);
+    assert.equal(ui.requests[0].payload.reason, "Rain delayed access"); assert.equal(ui.requests[0].payload.requested_end_date, "2026-11-10");
+    assert.equal(ui.requests[0].payload.end_date, undefined);
+    ui.requests[0].resolve({ id: "report", status: "PENDING", extension_status: "PENDING" }); await first;
+    assert.equal(ui.saved[0].status, "PENDING");
+});
+
+test("delay form preserves backend field errors and can retry after failure or cancelled confirmation", async () => {
+    const ui = await delayFormHarness(); ui.change("task", "task"); ui.change("reason", "Rain");
+    const cancelled = ui.submit(); ui.confirmations[0](false); await cancelled;
+    assert.equal(ui.requests.length, 0);
+    const first = ui.submit(); ui.confirmations[1](true); await flushDelay();
+    ui.requests[0].reject({ response: { data: { reason: ["Please explain the site issue."] } } }); await first; ui.draw();
+    assert.equal(ui.find((node) => node.props?.id === "delay-reason").props["aria-invalid"], true);
+    assert.ok(ui.find((node) => node.type?.name === "FieldError" && node.props.name === "reason").props.errors.reason.includes("Please explain the site issue."));
+    const retry = ui.submit(); ui.confirmations[2](true); await flushDelay();
+    assert.equal(ui.requests[1].payload.requested_end_date, null);
+    ui.requests[1].resolve({ id: "report", status: "PENDING" }); await retry;
+    assert.equal(ui.saved.length, 1);
+});
+
+test("delay summary never derives global totals from a report page", async () => {
+    const { exports } = await loadSource("components/delays/DelaySummary.jsx");
+    const html = render(exports.default, { summary: { total: 50, pending: 20, approved: 25, rejected: 5, pending_extensions: 4 }, loading: false });
+    for (const text of ["Delay reports", "Pending reports", "Approved reports", "Rejected reports", "Pending extensions", ">50<", ">25<"]) assert.ok(html.includes(text));
+    const unavailable = render(exports.default, { summary: null, loading: false });
+    assert.ok(unavailable.includes("Unavailable")); assert.ok(!unavailable.includes(">0<"));
+});
+
+test("delay details distinguish original, current and approved deadlines with separate decisions", async () => {
+    const { exports } = await loadSource("components/approvals/review/DelayReportReview.jsx");
+    const record = { id: "report", project_id: "project", task: "task", delay_type: "WEATHER", reason: "Heavy rain", description: "Flooded access", expected_completion_date: "2026-11-08", current_end_date: "2026-11-15", requested_end_date: "2026-11-10", extension_requested: true, status: "APPROVED", extension_status: "APPROVED", reviewed_by_name: "Report Admin", reviewed_at: "2026-10-27T08:00:00Z", extension_reviewed_by_name: "Extension Admin", extension_reviewed_at: "2026-10-27T09:00:00Z", extension_admin_comment: "Allow extra time", deadline_history: { submission_deadline_recorded: true, deadline_at_submission: "2026-10-30", previous_approved_deadline: "2026-10-30", new_approved_deadline: "2026-11-10" } };
+    const html = render(exports.default, { record });
+    for (const text of ["Report Admin", "Extension Admin", "Allow extra time", "Previous approved deadline", "New approved deadline", "30 Oct 2026", "10 Nov 2026", "15 Nov 2026", "/admin/projects/project/tasks/task"]) assert.ok(html.includes(text));
+    assert.ok(!html.includes("Extension rejection is available independently"));
+});
+
+test("Admin project delay register is read-only and links to the existing approval engine", async () => {
+    const { exports } = await loadSource("pages/supervisor/ProjectDelays.jsx", { overrides: {
+        "hooks/useDelayReports.js": { useDelayReports: () => ({ reports: [{ id: "report", status: "PENDING", project_id: "project", task_title: "Wall work" }], projects: [{ id: "project", name: "Site Alpha" }], project: { id: "project", name: "Site Alpha", status: "ACTIVE" }, summary: { total: 1, pending: 1, approved: 0, rejected: 0, pending_extensions: 0 }, count: 1, page: 1, pageCount: 1, filters: { search: "", status: "", sort: "newest", project: "", extension: "", delayType: "" }, loading: false, error: "", refresh() {}, setPage() {}, updateFilter() {}, clear() {} }) },
+        "hooks/useApprovalReview.js": { useApprovalReview: () => ({ record: { id: "report", project_id: "project", task: "task", status: "PENDING" }, loading: false, error: "", busy: "", decide() {}, retry() {} }), validationMessage: () => "Failed" },
+    } });
+    const html = render(exports.default, { role: "ADMIN" }, "/admin/delays?project=project&request=report");
+    assert.ok(html.includes("Site Alpha")); assert.ok(html.includes("/admin/approvals?tab=delays"));
+    assert.ok(!/>Approve<\/button>/.test(html)); assert.ok(!/>Reject<\/button>/.test(html));
+    assert.ok(!html.includes("Report delay</button>"));
+});
+
+
+test("Approval Center loads delay totals once and pages pending delay and extension requests", async () => {
+    const state = delayHooks(); const calls = []; let list; let resolve;
+    const { exports } = await loadSource("hooks/useRequestList.js", { overrides: {
+        react: { ...React, ...state.hooks },
+        "api/delayApi.js": { delayApi: { list: (params) => { calls.push(params); return new Promise((next) => { resolve = next; }); } } },
+    } });
+    const draw = () => { list = state.render(() => exports.useRequestList([], [], { server: true, serverKind: "delays" })); };
+    draw(); assert.equal(calls[0].pending_only, true); assert.equal(calls[0].page_size, 8);
+    resolve({ count: 20, results: [{ id: "delay", status: "PENDING", extension_status: "PENDING" }, { id: "extension", status: "REJECTED", extension_status: "PENDING" }], next: "ignored" }); await flushDelay(); draw();
+    assert.equal(list.count, 20); assert.equal(calls.length, 1);
+    assert.equal(list.pageRows[0].requestType, "delay"); assert.equal(list.pageRows[1].requestType, "extension");
+    list.setPage(2); draw(); assert.equal(calls[1].page, 2);
+    list.updateFilter("delayType", "WEATHER"); draw(); assert.equal(calls[2].page, 1); assert.equal(calls[2].delay_type, "WEATHER");
+    state.cleanup();
+});
+
+
+function documentWalk(predicate, node) {
+    if (Array.isArray(node)) return node.map((child) => documentWalk(predicate, child)).find(Boolean);
+    if (!node || typeof node !== "object") return;
+    return predicate(node) ? node : documentWalk(predicate, node.props?.children);
+}
+const documentRules = { max_file_size: 1000, allowed_extensions: [".pdf", ".png"], document_types: [{ value: "DRAWING", label: "Drawing" }, { value: "CONTRACT", label: "Contract" }] };
+
+test("project document API uses authenticated project and version endpoints with blob preview requests", async () => {
+    const calls = [];
+    const api = { get: async (...args) => { calls.push(["get", ...args]); return { data: {} }; }, post: async (...args) => { calls.push(["post", ...args]); return { data: {} }; } };
+    const { exports } = await loadSource("api/projectApi.js", { overrides: { "api/client.js": { api } } });
+    await exports.projectApi.documents("project", { search: "plan", page: 2 }, "signal");
+    await exports.projectApi.createDocument("project", "multipart");
+    await exports.projectApi.newDocumentVersion("document", "multipart");
+    await exports.projectApi.documentVersions("document", { page: 2 });
+    await exports.projectDocumentFiles.previewAttachment("old-version", "signal");
+    await exports.projectDocumentFiles.downloadAttachment("old-version", "signal");
+    assert.equal(calls[0][1], "projects/project/documents/"); assert.equal(calls[0][2].signal, "signal");
+    assert.equal(calls[1][1], "projects/project/documents/"); assert.equal(calls[1][2], "multipart");
+    assert.equal(calls[2][1], "project-documents/document/new-version/");
+    assert.equal(calls[3][1], "project-documents/document/versions/");
+    assert.equal(calls[4][1], "project-document-versions/old-version/download/");
+    assert.equal(calls[4][2].params.inline, "true"); assert.equal(calls[4][2].responseType, "blob");
+    assert.equal(calls[5][2].params, undefined); assert.equal(calls[5][2].signal, "signal");
+});
+
+test("project files reuse the protected viewer without requesting Daily Report attachments", async () => {
+    const calls = [];
+    const fileApi = { previewAttachment: async (id, signal) => { calls.push({ id, signal }); return { type: "image/png" }; } };
+    const ui = await evidenceHarness("drawing.png", "text/html", fileApi);
+    assert.equal(ui.fetches, 0); assert.equal(calls.length, 1); assert.equal(calls[0].id, "evidence");
+    await ui.find((node) => node.type === "button" && node.props.children === "Preview").props.onClick(); ui.render();
+    assert.equal(ui.find((node) => node.type === ui.exports.EvidencePreview).props.preview.type, "image/png");
+    ui.cleanup(); assert.equal(calls[0].signal.aborted, true);
+    assert.deepEqual(Array.from(ui.exports.previewEvents), ["create", "revoke:blob:private-evidence"]);
+});
+
+async function projectUploadHarness(version = false) {
+    const state = delayHooks(); const calls = []; let saved = 0; let tree;
+    const { exports } = await loadSource("pages/supervisor/ProjectWorkspace.jsx", { overrides: {
+        react: { ...React, ...state.hooks },
+        "api/projectApi.js": { projectApi: {
+            createDocument: (id, payload) => new Promise((resolve, reject) => calls.push({ id, payload, resolve, reject, type: "new" })),
+            newDocumentVersion: (id, payload) => new Promise((resolve, reject) => calls.push({ id, payload, resolve, reject, type: "version" })),
+        }, projectDocumentFiles: {} },
+    }, append: '\nconst FormData = class { values = new Map(); append(name, value) { this.values.set(name, value); } get(name) { return this.values.get(name); } }; export { ProjectDocumentUpload };' });
+    const draw = () => { tree = state.render(() => exports.ProjectDocumentUpload({ projectId: "route-project", documentRecord: version ? { id: "document", title: "Plan" } : null, rules: documentRules, onClose() {}, onSaved() { saved++; } })); };
+    draw();
+    const find = (predicate) => documentWalk(predicate, tree);
+    return { draw, calls, find, get saved() { return saved; }, submit: () => find((node) => node.type === "form").props.onSubmit({ preventDefault() {} }) };
+}
+
+test("project uploads validate backend rules, prevent duplicates and preserve backend field errors", async () => {
+    const ui = await projectUploadHarness();
+    await ui.submit(); ui.draw(); assert.equal(ui.calls.length, 0);
+    ui.find((node) => node.type === "input" && node.props.maxLength === 200).props.onChange({ target: { value: " Plan title " } }); ui.draw();
+    const input = ui.find((node) => node.type === "input" && node.props.type === "file");
+    assert.equal(input.props.accept, ".pdf,.png");
+    input.props.onChange({ target: { files: [{ name: "too-large.pdf", size: 1001 }] } }); ui.draw();
+    await ui.submit(); ui.draw(); assert.equal(ui.calls.length, 0);
+    ui.find((node) => node.type === "input" && node.props.type === "file").props.onChange({ target: { files: [{ name: "plan.pdf", size: 100 }] } }); ui.draw();
+    const pending = ui.submit(); await ui.submit(); ui.draw();
+    assert.equal(ui.calls.length, 1); assert.equal(ui.calls[0].id, "route-project"); assert.equal(ui.calls[0].payload.get("title"), "Plan title");
+    assert.equal(ui.calls[0].payload.get("uploaded_by"), undefined);
+    ui.calls[0].reject({ response: { data: { file: ["Malformed PDF"] } } }); await pending; ui.draw();
+    assert.equal(ui.find((node) => node.type === "input" && node.props.type === "file").props["aria-invalid"], true);
+    const retry = ui.submit(); ui.calls[1].resolve({}); await retry; ui.draw();
+    assert.equal(ui.saved, 1);
+});
+
+test("new project document versions send only the file and retain logical document identity", async () => {
+    const ui = await projectUploadHarness(true);
+    assert.equal(ui.find((node) => node.type === "input" && node.props.maxLength === 200), undefined);
+    ui.find((node) => node.type === "input" && node.props.type === "file").props.onChange({ target: { files: [{ name: "revision.pdf", size: 100 }] } }); ui.draw();
+    const pending = ui.submit();
+    assert.equal(ui.calls[0].id, "document"); assert.equal(ui.calls[0].type, "version");
+    assert.equal(ui.calls[0].payload.values.size, 1); assert.equal(ui.calls[0].payload.get("version_number"), undefined);
+    ui.calls[0].resolve({}); await pending; assert.equal(ui.saved, 1);
+});
+
+test("project library uses server filters and pages, discards stale data and hides Admin controls from Supervisors", async () => {
+    const state = delayHooks(); const calls = []; let role = "ADMIN"; let tree;
+    const Router = await import("react-router-dom");
+    const { exports } = await loadSource("pages/supervisor/ProjectWorkspace.jsx", { overrides: {
+        react: { ...React, ...state.hooks },
+        "react-router-dom": { ...Router, useParams: () => ({ projectId: "project" }) },
+        "api/projectApi.js": { projectApi: {
+            getProject: async () => ({ id: "project", name: "Site Alpha" }),
+            documents: (id, params, signal) => new Promise((resolve, reject) => calls.push({ id, params, signal, resolve, reject })),
+        }, projectDocumentFiles: {} },
+    }, append: abortForDelay + "\nexport { ProjectDocumentLibrary };" });
+    const draw = () => { tree = state.render(() => exports.ProjectDocumentLibrary({ role, projectId: "project" })); };
+    const find = (predicate) => documentWalk(predicate, tree);
+    draw(); await flushDelay(); draw();
+    assert.equal(calls[0].id, "project"); assert.equal(calls[0].params.page_size, 8);
+    find((node) => node.type === "input" && node.props.type === "search").props.onChange({ target: { value: "plan" } }); draw();
+    assert.equal(calls[0].signal.aborted, true);
+    calls[0].resolve({ results: [{ id: "stale" }], count: 1000, upload_rules: documentRules }); await flushDelay(); draw();
+    assert.ok(find((node) => node.props?.role === "status"));
+    calls[1].resolve({ results: [{ id: "document", title: "Site plan", document_type: "DRAWING", current_version: { id: "version", original_filename: "plan.pdf", file_size: 100, version_number: 2 } }], count: 17, upload_rules: documentRules, next: "ignored" }); await flushDelay(); draw();
+    assert.equal(calls.length, 2);
+    assert.ok(find((node) => node.type === "button" && node.props.children === "Upload document"));
+    assert.ok(find((node) => node.type === "button" && node.props.children === "New version"));
+    role = "SUPERVISOR"; draw();
+    assert.equal(find((node) => node.type === "button" && node.props.children === "Upload document"), undefined);
+    assert.equal(find((node) => node.type === "button" && node.props.children === "New version"), undefined);
+    assert.ok(find((node) => node.type === "button" && node.props.children === "Version history"));
+    find((node) => node.type === "button" && node.props.children === "Next").props.onClick(); draw();
+    assert.equal(calls[2].params.page, 2); assert.equal(calls[2].params.search, "plan");
+    calls[2].reject(new Error("Offline")); await flushDelay(); draw();
+    assert.ok(find((node) => node.props?.role === "alert"));
+    assert.equal(find((node) => node.type === "article"), undefined);
+    state.cleanup();
+});
+
+test("project document routes use distinct authorized workspaces and replace sidebar placeholders", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+    for (const route of ["/admin/projects/:projectId/documents", "/supervisor/projects/:projectId/documents"]) assert.equal(app.split(`path="${route}"`).length - 1, 1);
+    assert.match(app, /path="\/admin\/documents"\s+element=\{<ProjectDirectory role="ADMIN" section="documents"/);
+    assert.match(app, /path="\/supervisor\/documents"\s+element=\{<ProjectDirectory role="SUPERVISOR" section="documents"/);
+});
+
+
+test("project version history pages retained files with current labels and handles retry", async () => {
+    const state = delayHooks(); const calls = []; let tree;
+    const { exports } = await loadSource("pages/supervisor/ProjectWorkspace.jsx", { overrides: {
+        react: { ...React, ...state.hooks },
+        "api/projectApi.js": { projectApi: { documentVersions: (id, params, signal) => new Promise((resolve, reject) => calls.push({ id, params, signal, resolve, reject })) }, projectDocumentFiles: { protected: true } },
+    }, append: abortForDelay + "\nexport { ProjectDocumentHistory };" });
+    const draw = () => { tree = state.render(() => exports.ProjectDocumentHistory({ documentRecord: { id: "document", title: "Site plan" }, revision: 0, onClose() {} })); };
+    const find = (predicate) => documentWalk(predicate, tree);
+    draw(); assert.equal(calls[0].id, "document"); assert.equal(calls[0].params.page_size, 8);
+    calls[0].resolve({ results: [{ id: "old-version", version_number: 1, is_current: false, original_filename: "old.pdf", file_size: 100 }], count: 17 }); await flushDelay(); draw();
+    assert.ok(find((node) => node.type === "h3" && node.props.children.includes("Previous")));
+    const evidence = find((node) => node.type?.name === "ReportEvidence");
+    assert.equal(evidence.props.files[0].id, "old-version"); assert.equal(evidence.props.fileApi.protected, true);
+    find((node) => node.type === "button" && node.props.children === "Next versions").props.onClick(); draw();
+    assert.equal(calls[1].params.page, 2); assert.equal(calls[0].signal.aborted, true);
+    calls[1].reject(new Error("Offline")); await flushDelay(); draw();
+    assert.ok(find((node) => node.type === "button" && node.props.children === "Retry"));
+    state.cleanup();
 });

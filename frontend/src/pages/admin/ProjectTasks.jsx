@@ -1,3 +1,4 @@
+import { TaskProgress } from "../../components/tasks/TaskExecutionActions";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Layers3, ListOrdered, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
@@ -61,6 +62,7 @@ function ProjectTimeline({ tasks, projectId }) {
                         </span>
                         <span className="min-w-0 flex-1 space-y-2">
                             <span className="block break-words text-sm font-bold">{task.title}</span>
+                            <TaskProgress progress={task.progress} />
                             <span className="block text-xs text-[#817669]">Order {task.display_order} · {formatText(task.work_status)} · {formatText(task.priority)} priority</span>
                             <span className="block text-xs text-[#817669]">{formatDate(task.start_date)} – {formatDate(task.end_date)}</span>
                             <span className="block break-words text-xs text-[#817669]">{task.worker_name || "Worker/team not assigned"}</span>

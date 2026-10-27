@@ -25,6 +25,11 @@ urlpatterns = [
         name="project-document-detail",
     ),
     path(
+        "project-documents/<uuid:id>/new-version/",
+        ProjectDocumentVersionListCreateView.as_view(),
+        name="project-document-new-version",
+    ),
+    path(
         "project-documents/<uuid:id>/versions/",
         ProjectDocumentVersionListCreateView.as_view(),
         name="project-document-version-list-create",

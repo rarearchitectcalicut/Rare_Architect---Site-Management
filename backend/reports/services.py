@@ -1,3 +1,4 @@
+from .progress import eligible_verified_work
 from django.db import transaction,IntegrityError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -1288,6 +1289,11 @@ def verify_daily_task_work(
         entry_id=entry_id,
     )
 
+    if entry.correction_of_id:
+        original = entry.correction_of
+        if original.verification_status != "REJECTED" or original.task_id != task.id or original.daily_report.status != "SUBMITTED":
+            raise ValidationError({"correction_of": "Corrections must reference rejected submitted work for the same task."})
+
     if task.work_status == Task.WorkStatus.CANCELLED:
         raise ValidationError({"task": "Cancelled tasks cannot receive verified work."})
 
@@ -1300,12 +1306,9 @@ def verify_daily_task_work(
                 {"quantity_completed_today": ("A positive quantity is required.")}
             )
 
-        verified_total = DailyTaskWork.objects.filter(
-            task=task,
-            verification_status=(DailyTaskWork.VerificationStatus.VERIFIED),
-        ).aggregate(total=Sum("quantity_completed_today"))["total"] or Decimal("0.000")
+        verified_total = eligible_verified_work().filter(task=task).aggregate(total=Sum("quantity_completed_today"))["total"] or Decimal("0.000")
 
-        if task.planned_quantity is None:
+        if task.planned_quantity is None or task.planned_quantity <= 0 or task.measurement_unit not in Task.MeasurementUnit.values:
             raise ValidationError(
                 {"task": "The task has no approved quantity baseline."}
             )
@@ -1331,17 +1334,16 @@ def verify_daily_task_work(
 
     elif task.measurement_method == Task.MeasurementMethod.COMPLETION_ONLY:
 
+        if task.planned_quantity is not None or task.measurement_unit:
+            raise ValidationError({"task": "Invalid completion-only baseline."})
+
         if not entry.completion_claimed:
             raise ValidationError(
                 {"completion_claimed": ("The entry does not claim task completion.")}
             )
 
         already_verified = (
-            DailyTaskWork.objects.filter(
-                task=task,
-                verification_status=(DailyTaskWork.VerificationStatus.VERIFIED),
-                completion_claimed=True,
-            )
+            eligible_verified_work().filter(task=task, completion_claimed=True)
             .exclude(
                 pk=entry.id,
             )
@@ -1651,17 +1653,15 @@ def create_delay_report(
     if not is_supervisor(supervisor):
         raise PermissionDenied("Only active Supervisors can report delays.")
 
-    # Lock the Task so its current dates and status
-    # are stable while validating the request.
+    # Match project/task lifecycle mutations and keep assignment/status stable.
+    reference = get_object_or_404(Task.objects.only("project_id"), pk=task_id)
+    Project.objects.select_for_update().get(pk=reference.project_id)
     task = get_object_or_404(
-        Task.objects.select_for_update().select_related("project"),
-        pk=task_id,
+        Task.objects.select_related("project").select_for_update(of=("self",)), pk=task_id,
     )
-
-    validate_report_supervisor(
-        task.project,
-        supervisor,
-    )
+    validate_report_supervisor(task.project, supervisor)
+    if not ProjectSupervisor.objects.select_for_update().filter(project_id=task.project_id, supervisor=supervisor).first():
+        raise PermissionDenied("You are not assigned to this project.")
 
     validate_report_project_status(task.project)
 
@@ -1730,6 +1730,7 @@ def create_delay_report(
             "delay_report_id": str(report.id),
             "task_id": str(report.task_id),
             "project_id": str(report.task.project_id),
+            "deadline_at_submission": task.end_date.isoformat() if task.end_date else None,
             "extension_requested": report.extension_requested,
             "requested_end_date": report.requested_end_date.isoformat() if report.requested_end_date else None,
             "new_status": report.status,
@@ -2034,6 +2035,14 @@ def approve_delay_extension(
                 )
             }
         )
+
+    submission = ActivityLog.objects.filter(
+        action="DELAY_REPORT_SUBMITTED", entity_type="DELAY_REPORT", entity_id=report.pk,
+    ).order_by("created_at").values_list("metadata", flat=True).first() or {}
+    if "deadline_at_submission" in submission:
+        current = task.end_date.isoformat() if task.end_date else None
+        if submission["deadline_at_submission"] != current:
+            raise ValidationError({"requested_end_date": "The task deadline changed after this request. Reject this extension and request a new one against the current deadline."})
 
     # -----------------------------------------
     # VALIDATE REQUESTED DEADLINE

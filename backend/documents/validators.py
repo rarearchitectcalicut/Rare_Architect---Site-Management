@@ -1,4 +1,7 @@
 from pathlib import Path
+import warnings
+import re
+from PIL import Image, UnidentifiedImageError
 
 from rest_framework.exceptions import ValidationError
 
@@ -13,6 +16,7 @@ ALLOWED_EXTENSIONS = {
     ".jpg",
     ".jpeg",
     ".png",
+    ".webp",
 }
 
 
@@ -49,6 +53,9 @@ def validate_document_file(uploaded_file):
     if not original_filename or original_filename in {".", ".."}:
         raise ValidationError({"file": "Invalid document filename."})
 
+    if any(ord(char) < 32 or ord(char) == 127 for char in original_filename):
+        raise ValidationError({"file": "Invalid document filename."})
+
     if len(original_filename) > 255:
         raise ValidationError({"file": "Filename must be 255 characters or fewer."})
 
@@ -59,42 +66,42 @@ def validate_document_file(uploaded_file):
             {
                 "file": (
                     "Unsupported file format. "
-                    "Only PDF, JPG, JPEG and PNG are allowed."
+                    "Only PDF, JPG, JPEG, PNG and WebP are allowed."
                 )
             }
         )
 
-    # Do not trust the client-supplied Content-Type.
-    # Inspect the initial file bytes.
+    # Inspect bytes, never the browser-supplied Content-Type.
+    mime_types = {".pdf": "application/pdf", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
     try:
         uploaded_file.seek(0)
-        header = uploaded_file.read(16)
-    except (OSError, ValueError, AttributeError):
-        raise ValidationError({"file": "Unable to read the uploaded file."})
+        if extension == ".pdf":
+            header = uploaded_file.read(8)
+            uploaded_file.seek(max(0, file_size - 1024))
+            tail = uploaded_file.read()
+            if not re.match(rb"%PDF-[12]\.[0-9]", header) or b"%%EOF" not in tail:
+                raise ValidationError({"file": "The PDF is invalid or incomplete."})
+        else:
+            expected = {".jpg": "JPEG", ".jpeg": "JPEG", ".png": "PNG", ".webp": "WEBP"}[extension]
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", Image.DecompressionBombWarning)
+                with Image.open(uploaded_file) as image:
+                    if image.format != expected:
+                        raise ValidationError({"file": "File contents do not match the selected extension."})
+                    image.verify()
+                uploaded_file.seek(0)
+                with Image.open(uploaded_file) as image:
+                    image.load()
+    except (OSError, ValueError, AttributeError, UnidentifiedImageError, Image.DecompressionBombError, Image.DecompressionBombWarning):
+        raise ValidationError({"file": "The file is unreadable, malformed, or unsafe to process."})
     finally:
         try:
             uploaded_file.seek(0)
         except (OSError, ValueError, AttributeError):
             pass
 
-    if extension == ".pdf":
-        valid_signature = header.startswith(b"%PDF-")
-
-    elif extension in {".jpg", ".jpeg"}:
-        valid_signature = header.startswith(b"\xff\xd8\xff")
-
-    elif extension == ".png":
-        valid_signature = header.startswith(b"\x89PNG\r\n\x1a\n")
-
-    else:
-        valid_signature = False
-
-    if not valid_signature:
-        raise ValidationError(
-            {"file": ("File contents do not match " "the selected file extension.")}
-        )
-
     return {
         "original_filename": original_filename,
         "file_size": file_size,
+        "content_type": mime_types[extension],
     }

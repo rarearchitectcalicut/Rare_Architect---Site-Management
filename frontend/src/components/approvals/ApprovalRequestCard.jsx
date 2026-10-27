@@ -11,6 +11,14 @@ export default function ApprovalRequestCard({ item, onOpen }) {
         <span className="mt-3 line-clamp-2 text-xs leading-5 text-[#817669]">{final ? item.comment || item.preview || "Open to view this recorded decision." : item.preview || "Open this request to review its full details."}</span>
         {item.priority && item.requestType === "tasks" && <span className="mt-4 self-start rounded-md bg-[#F1EADF] px-2 py-1 text-[10px] font-semibold text-[#74695D]">{formatText(item.priority)} priority{item.batchId ? " · Bulk submission" : ""}</span>}
         {item.requestType === "delay" && item.raw.extension_requested && <span className="mt-3 self-start rounded-md bg-[#EDF3FC] px-2 py-1 text-[10px] font-semibold text-[#3565A5]">Extension: {formatText(item.raw.extension_status)}</span>}
+        {item.requestType === "delay" && item.raw.delay_type && <span className="mt-3 grid w-full gap-1 break-words text-xs leading-5 text-[#817669]">
+            <span>Category: {formatText(item.raw.delay_type)}</span>
+            <span>Reported by: {item.raw.reported_by_name || "Unavailable"} / {formatDate(item.raw.reported_at)}</span>
+            <span>Current deadline: {formatDate(item.raw.current_end_date)}</span>
+            {item.raw.extension_requested && <span>Requested deadline: {formatDate(item.raw.requested_end_date)}</span>}
+            {item.raw.admin_comment && <span>Report feedback: {item.raw.admin_comment}</span>}
+            {item.raw.extension_admin_comment && <span>Extension feedback: {item.raw.extension_admin_comment}</span>}
+        </span>}
         <span className="mt-auto w-full pt-5"><span className="flex flex-wrap items-center justify-between gap-2 border-t border-[#EEE6DC] pt-4"><span className="min-w-0"><span className="block max-w-40 truncate text-xs font-semibold text-[#665E53]">{final ? item.reviewedBy || item.creator : item.creator}</span><span className="block text-[10px] text-[#948778]">{formatDate(final ? item.reviewedAt || item.createdAt : item.createdAt)}</span></span><span className="inline-flex items-center gap-1 text-xs font-bold text-[#3565A5]">{final ? "View decision" : "Review request"}<ChevronRight size={15} /></span></span></span>
     </button>;
 }

@@ -783,7 +783,7 @@ export default function ProjectOverview() {
                     style={{ "--d": `${stagger(3 + index)}ms` }}
                   >
                     <Link
-                      to={section.path === "tasks" ? `/admin/projects/${projectId}/tasks` : section.path === "reports" ? `/admin/projects/${projectId}/daily-reports` : `/admin/${section.path}?project=${projectId}`}
+                      to={section.path === "tasks" ? `/admin/projects/${projectId}/tasks` : section.path === "reports" ? `/admin/projects/${projectId}/daily-reports` : section.path === "delays" ? `/admin/projects/${projectId}/delays` : section.path === "documents" ? `/admin/projects/${projectId}/documents` : `/admin/${section.path}?project=${projectId}`}
                       className="
                                                 group block h-full rounded-[18px] border border-[#E7DED2]
                                                 bg-[#FFFDFA] p-4

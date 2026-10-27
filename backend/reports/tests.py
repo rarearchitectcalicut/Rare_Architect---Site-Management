@@ -209,6 +209,304 @@ class ApprovalWorkflowTests(TestCase):
         self.assertEqual(request.status, "PENDING")
 
 
+    def review_work(self, entry, decision="verify", note="Measured on site"):
+        response = self.client.post(reverse(f"reports:daily-task-work-{decision}", args=[entry.id]), {"verification_note": note}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        return response
+
+    def test_progress_uses_submitted_verified_work_and_accumulates(self):
+        self.assertEqual(calculate_task_progress(self.task)["progress_percentage"], "0.00")
+        self.review_work(self.work("25"))
+        self.assertEqual(calculate_task_progress(self.task)["progress_percentage"], "25.00")
+        self.review_work(self.work("15"))
+        self.work("10")  # Pending
+        self.review_work(self.work("10"), "reject", "Not measured")
+        draft = self.work("10", submitted=False)
+        DailyTaskWork.objects.filter(pk=draft.pk).update(verification_status="VERIFIED", verified_by=self.admin, verified_at=timezone.now())
+        progress = calculate_task_progress(self.task)
+        self.assertEqual(progress["verified_quantity"], "40.000")
+        self.assertEqual(progress["progress_percentage"], "40.00")
+        self.task.work_status = "COMPLETED"
+        self.task.save(update_fields=["work_status"])
+        self.assertEqual(calculate_task_progress(self.task), progress)
+
+    def test_progress_is_consistent_in_register_project_list_and_details(self):
+        self.review_work(self.work("25"))
+        detail = self.client.get(reverse("tasks:task-detail", args=[self.task.pk])).data["progress"]
+        for url in [reverse("tasks:task-register"), reverse("tasks:project-task-list-create", args=[self.project.pk])]:
+            for user in [self.admin, self.supervisor]:
+                self.client.force_authenticate(user)
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data["results"][0]["progress"], detail)
+        self.client.force_authenticate(self.other)
+        self.assertEqual(self.client.get(reverse("tasks:task-detail", args=[self.task.pk])).status_code, 404)
+
+    def test_progress_batch_query_count_is_constant(self):
+        from tasks.serializers import TaskListSerializer
+        tasks = [self.task]
+        for index in range(20):
+            tasks.append(Task.objects.create(project=self.project, created_by=self.supervisor, title=f"Batch {index}", approval_status="APPROVED"))
+        with self.assertNumQueries(1):
+            rows = TaskListSerializer(tasks, many=True).data
+        self.assertEqual(len(rows), 21)
+        self.assertTrue(all(row["progress"]["progress_percentage"] == "0.00" for row in rows))
+
+    def test_completion_progress_requires_verified_claim_and_does_not_set_status(self):
+        self.task.measurement_method = "COMPLETION_ONLY"
+        self.task.planned_quantity = None
+        self.task.measurement_unit = None
+        self.task.work_status = "COMPLETED"
+        self.task.save()
+        entry = self.work()
+        entry.quantity_completed_today = None
+        entry.completion_claimed = True
+        entry.save()
+        self.assertEqual(calculate_task_progress(self.task)["progress_percentage"], "0.00")
+        self.task.work_status = "IN_PROGRESS"
+        self.task.save(update_fields=["work_status"])
+        self.review_work(entry)
+        self.assertEqual(calculate_task_progress(self.task)["progress_percentage"], "100.00")
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.work_status, "IN_PROGRESS")
+        other = self.work()
+        other.quantity_completed_today = None
+        other.completion_claimed = True
+        other.save()
+        self.assertEqual(self.client.post(reverse("reports:daily-task-work-verify", args=[other.pk]), {}, format="json").status_code, 400)
+
+    def test_unavailable_progress_and_legacy_oververified_quantity(self):
+        from .progress import verified_work_totals
+        totals = verified_work_totals([self.task.pk])
+        self.task.approval_status = "PENDING"
+        self.assertIsNone(calculate_task_progress(self.task, totals)["progress_percentage"])
+        self.task.approval_status = "APPROVED"
+        for quantity, unit in [(None, "SQM"), (Decimal("0"), "SQM"), (Decimal("100"), None)]:
+            self.task.planned_quantity, self.task.measurement_unit = quantity, unit
+            self.assertIsNone(calculate_task_progress(self.task, totals)["progress_percentage"])
+        self.task.planned_quantity, self.task.measurement_unit = Decimal("100"), "SQM"
+        self.assertIsNone(calculate_task_progress(self.task, {self.task.pk: {"quantity": Decimal("101")}})["progress_percentage"])
+
+    def test_corrected_work_counts_only_after_verification(self):
+        original = self.work("25")
+        self.review_work(original, "reject", "Wrong measurement")
+        corrected = self.work("20")
+        corrected.correction_of = original
+        corrected.save()
+        self.assertEqual(calculate_task_progress(self.task)["progress_percentage"], "0.00")
+        self.review_work(corrected)
+        self.assertEqual(calculate_task_progress(self.task)["progress_percentage"], "20.00")
+        original.refresh_from_db()
+        self.assertEqual(original.verification_note, "Wrong measurement")
+
+    def test_unified_daily_work_decisions_filters_pagination_and_privacy(self):
+        original = self.work("25")
+        self.review_work(original, "reject", "Original rejection")
+        corrected = self.work("20")
+        corrected.correction_of = original
+        corrected.save()
+        self.review_work(corrected)
+        self.work()  # Pending is never a decision
+        draft = self.work(submitted=False)
+        DailyTaskWork.objects.filter(pk=draft.pk).update(verification_status="REJECTED", verified_by=self.admin, verified_at=timezone.now())
+        url = reverse("tasks:task-decision-list")
+        query = {"scope": "all", "type": "work", "project": self.project.pk, "task": self.task.pk, "reviewer": self.admin.pk, "sort": "oldest", "page_size": 1}
+        response = self.client.get(url, query)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["count"], 2)
+        row = response.data["results"][0]
+        self.assertEqual(row["decision_id"], str(original.pk))
+        self.assertEqual(row["decision_note"], "Original rejection")
+        self.assertEqual(row["reviewer_name"], self.admin.username)
+        self.assertIsNotNone(row["decision_date"])
+        second = self.client.get(url, {**query, "page": 2})
+        self.assertEqual(second.data["results"][0]["decision_id"], str(corrected.pk))
+        for status in ["VERIFIED", "REJECTED"]:
+            filtered = self.client.get(url, {**query, "status": status})
+            self.assertEqual(filtered.data["count"], 1)
+        for extra in [{"project": self.other_project.pk}, {"reviewer": self.supervisor.pk}, {"date_to": "2000-01-01"}, {"search": "no matching task"}, {"reviewer_search": "unmatched"}, {"task_search": "unmatched"}, {"category": uuid4()}]:
+            self.assertEqual(self.client.get(url, {**query, **extra}).data["count"], 0)
+        for extra in [{"task": "invalid"}, {"reviewer": "invalid"}, {"date_from": "2026-10-27", "date_to": "2026-10-01"}, {"sort": "invalid"}, {"status": "PENDING"}]:
+            self.assertEqual(self.client.get(url, {**query, **extra}).status_code, 400)
+        self.assertEqual(self.client.post(url, query).status_code, 405)
+        self.client.force_authenticate(self.supervisor)
+        self.assertEqual(self.client.get(url, query).status_code, 403)
+
+    def test_daily_work_history_recovers_baseline_at_rejection(self):
+        original = self.work("25")
+        self.review_work(original, "reject", "Remeasure")
+        from tasks.services import create_task_change_request, approve_task_change_request
+        request = create_task_change_request(task_id=self.task.pk, supervisor=self.supervisor,
+                                            new_values={"measurement_unit": "METER", "planned_quantity": "200"}, reason="Revised baseline")
+        approve_task_change_request(change_request_id=request.pk, admin_user=self.admin)
+        response = self.client.get(reverse("reports:daily-task-work-detail", args=[original.pk]))
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["measurement_unit"], "METER")
+        self.assertEqual(response.data["reviewed_baseline"]["measurement_unit"], "SQM")
+        self.assertEqual(Decimal(response.data["reviewed_baseline"]["planned_quantity"]), Decimal("100"))
+        self.assertEqual(response.data["verification_note"], "Remeasure")
+
+    def test_unified_history_preserves_all_existing_decision_types(self):
+        from tasks.models import TaskChangeRequest
+        pending = Task.objects.create(project=self.project, created_by=self.supervisor, title="Review scope")
+        reject_task(task_id=pending.pk, admin_user=self.admin, reason="Correct scope")
+        for change_type in ["EDIT", "ORDER_CHANGE"]:
+            TaskChangeRequest.objects.create(task=self.task, change_type=change_type, requested_by=self.supervisor, reason="Reorder", status="APPROVED", reviewed_by=self.admin, reviewed_at=timezone.now(), old_values={}, new_values={})
+        delay = self.delay()
+        self.post_decision("delay-report-approve", delay)
+        self.post_decision("delay-extension-reject", delay, "Keep deadline")
+        self.review_work(self.work())
+        response = self.client.get(reverse("tasks:task-decision-list"), {"scope": "all", "page_size": 100})
+        self.assertEqual(response.status_code, 200, response.data)
+        rows = response.data["results"]
+        self.assertEqual(len(rows), 6)
+        self.assertEqual({row["decision_type"] for row in rows}, {"tasks", "changes", "timeline", "delay", "extension", "work"})
+        self.assertEqual(next(row for row in rows if row["decision_type"] == "tasks")["decision_note"], "Correct scope")
+
+    def test_delay_creation_validation_and_no_scheduling_side_effects(self):
+        url = reverse("reports:task-delay-report-create", args=[self.task.pk])
+        self.client.force_authenticate(self.supervisor)
+        for invalid in [{"delay_type": "INVALID"}, {"reason": " "}, {"reason": "x" * 201}, {"extension_requested": True}, {"requested_end_date": "2026-11-01"}, {"extension_requested": True, "requested_end_date": "2026-10-30"}, {"expected_completion_date": "2026-09-30"}]:
+            response = self.client.post(url, {"delay_type": "WEATHER", "reason": "Rain", **invalid}, format="json")
+            self.assertEqual(response.status_code, 400, response.data)
+        for delay_type in DelayReport.DelayType.values:
+            response = self.client.post(url, {"delay_type": delay_type, "reason": "Valid delay", "extension_requested": False, "requested_end_date": None}, format="json")
+            self.assertEqual(response.status_code, 201, response.data)
+            self.assertEqual(response.data["status"], "PENDING")
+            self.assertIsNone(response.data["extension_status"])
+            self.assertTrue(response.data["deadline_history"]["submission_deadline_recorded"])
+            self.assertEqual(response.data["deadline_history"]["deadline_at_submission"], "2026-10-30")
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.work_status, "NOT_STARTED")
+        self.assertEqual(self.task.end_date, date(2026, 10, 30))
+        self.assertEqual(calculate_task_progress(self.task)["progress_percentage"], "0.00")
+
+    def test_delay_read_and_create_permissions_remain_project_scoped(self):
+        report = self.delay()
+        url = reverse("reports:delay-report-detail", args=[report.pk])
+        self.client.force_authenticate(self.other)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.get(reverse("reports:delay-report-list")).data["summary"]["total"], 0)
+        create_url = reverse("reports:task-delay-report-create", args=[self.task.pk])
+        self.assertEqual(self.client.post(create_url, {"delay_type": "WEATHER", "reason": "Rain"}).status_code, 404)
+        for user, flag in [(self.admin, "is_staff"), (self.supervisor, "is_active"), (self.supervisor, "is_staff")]:
+            original = getattr(user, flag)
+            setattr(user, flag, not original)
+            self.client.force_authenticate(user)
+            self.assertEqual(self.client.get(url).status_code, 403)
+            self.assertEqual(self.client.get(reverse("reports:delay-report-list")).status_code, 403)
+            setattr(user, flag, original)
+
+    def test_delay_register_pagination_filters_and_complete_summary(self):
+        report = self.delay()
+        self.post_decision("delay-report-approve", report)
+        self.post_decision("delay-extension-reject", report, "Keep deadline")
+        second = DelayReport.objects.create(task=self.task, reported_by=self.supervisor, delay_type="WEATHER", reason="Rain blocking access")
+        third = DelayReport.objects.create(task=self.task, reported_by=self.supervisor, delay_type="OTHER", reason="Rejected explanation", status="REJECTED", reviewed_by=self.admin, reviewed_at=timezone.now())
+        url = reverse("reports:delay-report-list")
+        response = self.client.get(url, {"project": self.project.pk, "page_size": 1, "sort": "oldest"})
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["count"], 3)
+        self.assertEqual(response.data["summary"], {"total": 3, "pending": 1, "approved": 1, "rejected": 1, "pending_extensions": 0, "approved_extensions": 0})
+        self.assertEqual(response.data["results"][0]["id"], str(report.pk))
+        checks = [({"search": "Rain access"}, second.pk), ({"delay_type": "OTHER"}, third.pk), ({"status": "APPROVED"}, report.pk), ({"extension_requested": "true", "extension_status": "REJECTED"}, report.pk)]
+        for filters, expected in checks:
+            filtered = self.client.get(url, filters)
+            self.assertEqual(filtered.data["count"], 1)
+            self.assertEqual(filtered.data["results"][0]["id"], str(expected))
+            self.assertEqual(filtered.data["summary"]["total"], 3)
+        self.assertEqual(self.client.get(url, {"extension_requested": "false"}).data["count"], 2)
+        self.assertEqual(self.client.get(url, {"date_to": "2000-01-01"}).data["count"], 0)
+        self.assertEqual(self.client.get(url, {"project_search": "unmatched"}).data["count"], 0)
+        for invalid in [{"extension_requested": "invalid"}, {"sort": "priority"}, {"date_from": "invalid"}, {"date_from": "2026-10-27", "date_to": "2026-10-01"}]:
+            self.assertEqual(self.client.get(url, invalid).status_code, 400)
+
+    def test_pending_delay_queue_includes_separate_extensions_after_report_decision(self):
+        report = self.delay()
+        url = reverse("reports:delay-report-list")
+        self.assertEqual(self.client.get(url, {"pending_only": True}).data["count"], 1)
+        self.post_decision("delay-report-reject", report, "Not accepted")
+        response = self.client.get(url, {"pending_only": True})
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["extension_status"], "PENDING")
+        self.assertEqual(self.post_decision("delay-extension-approve", report).status_code, 400)
+        self.assertEqual(self.post_decision("delay-extension-reject", report, "No extension").status_code, 200)
+        self.assertEqual(self.client.get(url, {"pending_only": True}).data["count"], 0)
+        self.assertEqual(self.post_decision("delay-extension-reject", report, "Repeat").status_code, 400)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.end_date, date(2026, 10, 30))
+
+    def test_extension_rejects_stale_submission_even_if_requested_date_is_later(self):
+        report = self.delay()
+        self.post_decision("delay-report-approve", report)
+        Task.objects.filter(pk=self.task.pk).update(end_date=date(2026, 11, 5))
+        response = self.post_decision("delay-extension-approve", report)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("changed after", response.data["requested_end_date"])
+        self.task.refresh_from_db(); report.refresh_from_db()
+        self.assertEqual(self.task.end_date, date(2026, 11, 5))
+        self.assertEqual(report.extension_status, "PENDING")
+        self.assertFalse(TaskHistory.objects.filter(task=self.task, action="EXTENSION_APPROVED").exists())
+
+    def test_extension_dates_history_notifications_and_task_progress_stay_independent(self):
+        self.review_work(self.work())
+        before = calculate_task_progress(self.task)
+        report = self.delay()
+        self.post_decision("delay-report-approve", report)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.post_decision("delay-extension-approve", report, "Allow delivery time")
+        self.assertEqual(response.status_code, 200, response.data)
+        history = response.data["deadline_history"]
+        self.assertEqual(history["previous_approved_deadline"], "2026-10-30")
+        self.assertEqual(history["new_approved_deadline"], "2026-11-10")
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.start_date, date(2026, 10, 1))
+        self.assertEqual(self.task.work_status, "NOT_STARTED")
+        self.assertEqual(calculate_task_progress(self.task), before)
+        self.assertTrue(Notification.objects.filter(recipient=self.supervisor, notification_type="EXTENSION_REQUEST").exists())
+        self.client.force_authenticate(self.supervisor)
+        detail = self.client.get(reverse("reports:delay-report-detail", args=[report.pk]))
+        self.assertEqual(detail.data["extension_admin_comment"], "Allow delivery time")
+        self.assertEqual(detail.data["extension_reviewed_by_name"], self.admin.username)
+        self.assertIsNotNone(detail.data["extension_reviewed_at"])
+        timeline = self.client.get(reverse("tasks:project-timeline", args=[self.project.pk]))
+        self.assertEqual(timeline.status_code, 200)
+        self.assertEqual(timeline.data["tasks"][0]["end_date"], "2026-11-10")
+        task = self.client.get(reverse("tasks:task-detail", args=[self.task.pk]))
+        self.assertEqual(task.data["end_date"], "2026-11-10")
+        self.assertEqual(task.data["progress"], before)
+
+    def test_delay_task_picker_is_paginated_and_uses_actual_eligibility(self):
+        report = self.delay()
+        for status in ["COMPLETED", "CANCELLED", "IN_PROGRESS"]:
+            Task.objects.create(project=self.project, created_by=self.supervisor, title=status, approval_status="APPROVED", work_status=status)
+        Task.objects.create(project=self.project, created_by=self.supervisor, title="Pending", approval_status="PENDING")
+        self.client.force_authenticate(self.supervisor)
+        response = self.client.get(reverse("tasks:task-register"), {"project": self.project.pk, "delay_eligible": True, "page_size": 1})
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["count"], 2)
+        page = self.client.get(reverse("tasks:task-register"), {"project": self.project.pk, "delay_eligible": True, "search": "Plastering"})
+        self.assertTrue(page.data["results"][0]["has_pending_extension"])
+        self.task.work_status = "COMPLETED"
+        self.task.save(update_fields=["work_status"])
+        self.assertEqual(self.client.post(reverse("reports:task-delay-report-create", args=[self.task.pk]), {"delay_type": "WEATHER", "reason": "Rain"}).status_code, 400)
+
+    def test_legacy_delay_without_submission_snapshot_is_explicitly_unavailable(self):
+        report = DelayReport.objects.create(task=self.task, reported_by=self.supervisor, delay_type="WEATHER", reason="Legacy rain")
+        response = self.client.get(reverse("reports:delay-report-detail", args=[report.pk]))
+        self.assertFalse(response.data["deadline_history"]["submission_deadline_recorded"])
+        self.assertIsNone(response.data["deadline_history"]["deadline_at_submission"])
+
+    def test_delay_register_audit_queries_are_batched(self):
+        for index in range(20):
+            DelayReport.objects.create(task=self.task, reported_by=self.supervisor, delay_type="WEATHER", reason=f"Rain {index}")
+        with self.assertNumQueries(4):
+            response = self.client.get(reverse("reports:delay-report-list"), {"page_size": 100})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["results"]), 20)
+
+
+
 @skipUnless(connection.vendor == "postgresql", "Report row-lock tests require PostgreSQL")
 class DailyReportDeleteConcurrencyTests(TransactionTestCase):
     def setUp(self):

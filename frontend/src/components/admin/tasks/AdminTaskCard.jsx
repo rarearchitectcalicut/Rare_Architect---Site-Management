@@ -1,3 +1,4 @@
+import { TaskProgress } from "../../tasks/TaskExecutionActions";
 import { ArrowUpRight, CalendarDays, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDate, formatText } from "../../approvals/approvalUtils";
@@ -57,6 +58,7 @@ export default function AdminTaskCard({ task, to, showProject = false, actionLab
             <span className="rounded-xl border border-[#E7DED2] bg-[#F8F4EE] p-2 text-[#817669] transition-colors group-hover:bg-[#EDE2D2]"><ArrowUpRight size={17} aria-hidden="true" /></span>
         </div>
         <TaskBadges task={task} />
+        <TaskProgress progress={task.progress} />
         {showProject && Array.isArray(task.supervisors) && <p className="mt-3 break-words text-xs leading-5 text-[#817669]">Assigned Supervisor: {task.supervisors.map((supervisor) => supervisor.name).join(", ") || "Not assigned"}</p>}
         {task.description && <p className="mt-4 line-clamp-2 break-words text-sm leading-6 text-[#817669]">{task.description}</p>}
         <div className="mb-5 mt-5 space-y-3 rounded-2xl bg-[#F8F5F0] p-4">

@@ -140,6 +140,11 @@ class TaskRegisterView(generics.ListAPIView):
         for term in filters.get("search", "").split():
             queryset = queryset.filter(Q(title__icontains=term) | Q(description__icontains=term) | Q(worker_name__icontains=term) | Q(project__name__icontains=term))
 
+        if filters["delay_eligible"]:
+            from django.db.models import Exists, OuterRef
+            from reports.models import DelayReport
+            queryset = queryset.annotate(has_pending_extension=Exists(DelayReport.objects.filter(task_id=OuterRef("pk"), extension_requested=True, extension_status="PENDING")))
+            queryset = queryset.filter(approval_status="APPROVED", project__status__in=["ACTIVE", "MAINTENANCE"]).exclude(work_status__in=["COMPLETED", "CANCELLED"])
         sort = filters["sort"]
         ordering = {
             "order": ["project__name", "project_id", "display_order", "created_at", "id"],
@@ -503,6 +508,81 @@ class TaskDecisionListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, MustChangePasswordPermission, IsAdminRole]
     serializer_class = TaskHistorySerializer
     pagination_class = ProjectPagination
+
+    def list(self, request, *args, **kwargs):
+        if request.query_params.get("scope") != "all":
+            return super().list(request, *args, **kwargs)
+        from django.db.models import CharField, Value
+        from django.db.models.functions import Cast, Coalesce
+        from django.db.models.fields.json import KeyTextTransform
+        from reports.models import DailyTaskWork, DelayReport
+
+        class Filters(serializers.Serializer):
+            type = serializers.ChoiceField(choices=["tasks", "changes", "timeline", "delay", "extension", "work"], required=False)
+            status = serializers.ChoiceField(choices=["APPROVED", "REJECTED", "VERIFIED"], required=False)
+            project = serializers.UUIDField(required=False)
+            category = serializers.UUIDField(required=False)
+            task = serializers.UUIDField(required=False)
+            reviewer = serializers.UUIDField(required=False)
+            task_search = serializers.CharField(required=False, max_length=200)
+            reviewer_search = serializers.CharField(required=False, max_length=200)
+            date_from = serializers.DateField(required=False)
+            date_to = serializers.DateField(required=False)
+            search = serializers.CharField(required=False, max_length=200)
+            sort = serializers.ChoiceField(choices=["newest", "oldest"], default="newest")
+
+            def validate(self, attrs):
+                if attrs.get("date_from") and attrs.get("date_to") and attrs["date_from"] > attrs["date_to"]:
+                    raise serializers.ValidationError({"date_to": "End date must be on or after start date."})
+                return attrs
+
+        validator = Filters(data=request.query_params)
+        validator.is_valid(raise_exception=True)
+        filters = validator.validated_data
+        sources = []
+
+        def source(queryset, kind, status_field, reviewer, date, reporter, comment):
+            if filters.get("type") and filters["type"] != kind:
+                return
+            queryset = queryset.filter(**{status_field + "__in": ["APPROVED", "REJECTED", "VERIFIED"]})
+            for key, field in [("status", status_field), ("project", "task__project_id"), ("category", "task__project__category_id"), ("task", "task_id"), ("reviewer", reviewer + "_id")]:
+                if key in filters:
+                    queryset = queryset.filter(**{field: filters[key]})
+            for key, lookup in [("date_from", "__date__gte"), ("date_to", "__date__lte")]:
+                if key in filters:
+                    queryset = queryset.filter(**{date + lookup: filters[key]})
+            if filters.get("search"):
+                term = filters["search"]
+                queryset = queryset.filter(Q(task__title__icontains=term) | Q(task__project__name__icontains=term) | Q(**{reporter + "__username__icontains": term}) | Q(**{reviewer + "__username__icontains": term}))
+            if filters.get("task_search"):
+                queryset = queryset.filter(task__title__icontains=filters["task_search"])
+            if filters.get("reviewer_search"):
+                term = filters["reviewer_search"]
+                queryset = queryset.filter(Q(**{reviewer + "__username__icontains": term}) | Q(**{reviewer + "__first_name__icontains": term}) | Q(**{reviewer + "__last_name__icontains": term}))
+            # Identical SQL columns allow database-level ordering and pagination across types.
+            columns = {
+                "decision_id": Cast("pk", CharField()), "decision_type": Value(kind, output_field=CharField()),
+                "task_ref": Cast("task_id", CharField()), "task_title": F("task__title"),
+                "project_ref": Cast("task__project_id", CharField()), "project_title": F("task__project__name"),
+                "decision_status": Cast(status_field, CharField()), "decision_date": F(date),
+                "reviewer_name": F(reviewer + "__username"), "reporter_name": F(reporter + "__username"),
+                "decision_note": comment,
+            }
+            sources.append(queryset.order_by().values(**columns))
+
+        source(TaskHistory.objects.all(), "tasks", "action", "actor", "created_at", "task__created_by",
+               Coalesce(KeyTextTransform("reason", "details"), KeyTextTransform("comment", "details"), Value(""), output_field=CharField()))
+        for kind, change_type in [("changes", "EDIT"), ("timeline", "ORDER_CHANGE")]:
+            source(TaskChangeRequest.objects.filter(change_type=change_type), kind, "status", "reviewed_by", "reviewed_at", "requested_by", F("admin_comment"))
+        source(DelayReport.objects.all(), "delay", "status", "reviewed_by", "reviewed_at", "reported_by", F("admin_comment"))
+        source(DelayReport.objects.filter(extension_requested=True), "extension", "extension_status", "extension_reviewed_by", "extension_reviewed_at", "reported_by", F("extension_admin_comment"))
+        source(DailyTaskWork.objects.filter(daily_report__status="SUBMITTED", daily_report__project_id=F("task__project_id")),
+               "work", "verification_status", "verified_by", "verified_at", "daily_report__reported_by", F("verification_note"))
+        queryset = sources[0].union(*sources[1:], all=True)
+        prefix = "-" if filters["sort"] == "newest" else ""
+        queryset = queryset.order_by(prefix + "decision_date", prefix + "decision_id", "decision_type")
+        page = self.paginate_queryset(queryset)
+        return self.get_paginated_response(list(page))
 
     def get_queryset(self):
         queryset = TaskHistory.objects.filter(action__in=["APPROVED", "REJECTED"])

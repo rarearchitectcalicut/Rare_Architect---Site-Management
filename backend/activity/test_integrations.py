@@ -111,7 +111,7 @@ class ActivityIntegrationTests(TestCase):
         )
 
     def pdf(self):
-        return SimpleUploadedFile("evidence.pdf", b"%PDF-1.4\nTest file", "application/pdf")
+        return SimpleUploadedFile("evidence.pdf", b"%PDF-1.4\nTest file\n%%EOF", "application/pdf")
 
     def test_successful_logins_record_each_users_identity_and_time(self):
         client = APIClient()
@@ -491,10 +491,10 @@ class ActivityIntegrationTests(TestCase):
             ("TASK_DOCUMENT", documents.create_task_document, documents.upload_task_document_version, {"task_id": task.id}),
         ]:
             with self.subTest(entity=entity):
-                (document, first), log = self.event(entity + "_UPLOADED", lambda: create(user=self.supervisor, title="Plan", document_type="DRAWING", uploaded_file=self.pdf(), **args))
+                (document, first), log = self.event(entity + "_UPLOADED", lambda: create(user=self.admin if "project_id" in args else self.supervisor, title="Plan", document_type="DRAWING", uploaded_file=self.pdf(), **args), actor=self.admin if "project_id" in args else self.supervisor)
                 self.assertEqual(log.metadata["version_number"], 1)
                 self.assertEqual(log.metadata["version_id"], str(first.id))
-                second, log = self.event(entity + "_VERSION_UPLOADED", lambda: upload(document_id=document.id, user=self.supervisor, uploaded_file=self.pdf()))
+                second, log = self.event(entity + "_VERSION_UPLOADED", lambda: upload(document_id=document.id, user=self.admin if "project_id" in args else self.supervisor, uploaded_file=self.pdf()), actor=self.admin if "project_id" in args else self.supervisor)
                 first.refresh_from_db()
                 self.assertFalse(first.is_current)
                 self.assertTrue(second.is_current)
@@ -519,14 +519,14 @@ class ActivityIntegrationTests(TestCase):
         ]:
             with patch("documents.services.create_activity_log", side_effect=RuntimeError("audit failed")):
                 with self.assertRaises(RuntimeError):
-                    create(user=self.supervisor, title="Rollback", document_type="DRAWING", uploaded_file=self.pdf(), **args)
+                    create(user=self.admin if "project_id" in args else self.supervisor, title="Rollback", document_type="DRAWING", uploaded_file=self.pdf(), **args)
             self.assertFalse(model.objects.exists())
-            document, first = create(user=self.supervisor, title="Keep", document_type="DRAWING", uploaded_file=self.pdf(), **args)
+            document, first = create(user=self.admin if "project_id" in args else self.supervisor, title="Keep", document_type="DRAWING", uploaded_file=self.pdf(), **args)
             previous_files = {path for path in self.storage_root.rglob("*") if path.is_file()}
             count = ActivityLog.objects.count()
             with patch("documents.services.create_activity_log", side_effect=RuntimeError("audit failed")):
                 with self.assertRaises(RuntimeError):
-                    upload(document_id=document.id, user=self.supervisor, uploaded_file=self.pdf())
+                    upload(document_id=document.id, user=self.admin if "project_id" in args else self.supervisor, uploaded_file=self.pdf())
             first.refresh_from_db()
             self.assertTrue(first.is_current)
             self.assertEqual(document.versions.count(), 1)
@@ -569,7 +569,7 @@ class ActivityIntegrationTests(TestCase):
         with self.assertRaises(PermissionDenied):
             documents.create_project_document(project_id=self.project.id, user=self.other, title="Denied", document_type="DRAWING", uploaded_file=self.pdf())
         with self.assertRaises(ValidationError):
-            documents.create_project_document(project_id=self.project.id, user=self.supervisor, title="Invalid", document_type="DRAWING", uploaded_file=SimpleUploadedFile("invalid.pdf", b"not a PDF"))
+            documents.create_project_document(project_id=self.project.id, user=self.admin, title="Invalid", document_type="DRAWING", uploaded_file=SimpleUploadedFile("invalid.pdf", b"not a PDF"))
         task = self.task()
         with self.assertRaises(ValidationError):
             tasks.approve_task(task_id=task.id, admin_user=self.admin)

@@ -24,7 +24,7 @@ function Detail({ icon: Icon, label, value }) {
     return <div className="flex min-w-0 items-start gap-2.5"><Icon size={17} aria-hidden="true" className="mt-0.5 shrink-0 text-[#8A6840]" /><div className="min-w-0"><dt className="text-xs font-semibold text-[#716658]">{label}</dt><dd className="mt-1 break-words text-sm font-medium leading-6 text-[#352D24]">{value || "Not specified"}</dd></div></div>;
 }
 
-export default function HorizontalProjectCard({ project, categoryName, to, layout = "list" }) {
+export default function HorizontalProjectCard({ project, categoryName, to, layout = "list", actionLabel = "View Project" }) {
     const [failedUrl, setFailedUrl] = useState(null);
     const imageUrl = getMediaUrl(project.cover_image);
     const gallery = layout === "grid";
@@ -37,7 +37,7 @@ export default function HorizontalProjectCard({ project, categoryName, to, layou
             <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1 basis-40"><p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[#80603B]">{project.category_name || categoryName || "Project"}</p><h3 className="break-words text-xl font-bold leading-7 tracking-tight text-[#2E271F] transition-colors group-hover:text-[#795016] sm:text-2xl">{project.name}</h3></div><ProjectStatus status={project.status} /></div>
             <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-[#665C50]"><MapPin size={16} aria-hidden="true" className="mt-1 shrink-0" /><span className="break-words">{project.location || "Location not specified"}</span></p>
             <dl className={`mb-5 mt-5 grid gap-x-5 gap-y-4 border-t border-[#EDE5DA] pt-4 ${gallery ? "sm:grid-cols-2" : "lg:grid-cols-3"}`}><Detail icon={UserRound} label="Client" value={project.client_name} /><Detail icon={CalendarDays} label="Start date" value={formatDate(project.start_date)} /><Detail icon={CalendarDays} label="Expected completion" value={formatDate(project.end_date)} /></dl>
-            <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#EDE5DA] pt-4"><span className="text-sm text-[#716658]">Project workspace</span><span className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#E3C78D] bg-[#F8E7BE] px-4 py-2 text-sm font-bold text-[#654510] transition-colors group-hover:bg-[#F3C45C] motion-reduce:transition-none">View Project<ArrowUpRight size={18} aria-hidden="true" className="transition-transform duration-200 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5 motion-reduce:transition-none" /></span></div>
+            <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#EDE5DA] pt-4"><span className="text-sm text-[#716658]">Project workspace</span><span className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#E3C78D] bg-[#F8E7BE] px-4 py-2 text-sm font-bold text-[#654510] transition-colors group-hover:bg-[#F3C45C] motion-reduce:transition-none">{actionLabel}<ArrowUpRight size={18} aria-hidden="true" className="transition-transform duration-200 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5 motion-reduce:transition-none" /></span></div>
         </div>
     </Link>;
 }
