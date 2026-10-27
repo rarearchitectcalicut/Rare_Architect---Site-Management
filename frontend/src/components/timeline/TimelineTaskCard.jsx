@@ -75,7 +75,7 @@ function Badge({ value, styles }) {
 
     return (
         <span
-            className={`inline-flex rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide ${styles[value] || "bg-[#EEE8E0] text-[#74695D]"
+            className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${styles[value] || "bg-[#EEE8E0] text-[#74695D]"
                 }`}
         >
             {readable(value)}
@@ -86,7 +86,7 @@ function Badge({ value, styles }) {
 function Detail({ label, value }) {
     return (
         <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#938778]">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#716658]">
                 {label}
             </p>
 
@@ -185,13 +185,13 @@ export default function TimelineTaskCard({
                         />
 
                         {overdue && (
-                            <span className="inline-flex rounded-full bg-[#FCE9E6] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#B5473E]">
+                            <span className="inline-flex rounded-full bg-[#FCE9E6] px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-[#B5473E]">
                                 Overdue
                             </span>
                         )}
                     </span>
 
-                    <span className="mt-3 grid gap-2 text-xs text-[#817669] md:grid-cols-2">
+                    <span className="mt-3 grid gap-2 text-xs text-[#716658] md:grid-cols-2">
                         <span className="flex items-start gap-2">
                             <UserRound size={15} className="mt-0.5 shrink-0" />
 
@@ -221,7 +221,7 @@ export default function TimelineTaskCard({
 
                 <ChevronDown
                     size={20}
-                    className={`mt-3 shrink-0 text-[#817669] transition-transform duration-200 ${expanded ? "rotate-180" : ""
+                    className={`mt-3 shrink-0 text-[#716658] transition-transform duration-200 ${expanded ? "rotate-180" : ""
                         }`}
                 />
             </button>
@@ -272,7 +272,7 @@ export default function TimelineTaskCard({
                                 Task Description
                             </h4>
 
-                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#817669]">
+                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#716658]">
                                 {task.description || "No description added."}
                             </p>
                         </div>
@@ -283,7 +283,7 @@ export default function TimelineTaskCard({
                                 Completion Criteria
                             </h4>
 
-                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#817669]">
+                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#716658]">
                                 {task.completion_criteria ||
                                     "No completion criteria specified."}
                             </p>
@@ -302,7 +302,7 @@ export default function TimelineTaskCard({
                                     Task Documents & Management
                                 </p>
 
-                                <p className="mt-1 text-xs leading-5 text-[#817669]">
+                                <p className="mt-1 text-xs leading-5 text-[#716658]">
                                     Open the full task page to view documents,
                                     upload files, or request changes.
                                 </p>

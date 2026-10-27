@@ -125,7 +125,7 @@ export default function TaskApprovalReview({ record, item }) {
                 <h4 className="text-sm font-bold text-[#211E1A]">
                     Description
                 </h4>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#817669]">
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#716658]">
                     {task.description ||
                         "No description provided."}
                 </p>
@@ -175,7 +175,7 @@ export default function TaskApprovalReview({ record, item }) {
                 {documentsOpen && (
                     <div className="space-y-2 rounded-b-xl border border-t-0 border-[#E4DCCD] p-3">
                         {docsLoading && (
-                            <p className="text-xs text-[#817669]">
+                            <p className="text-xs text-[#716658]">
                                 Loading documents...
                             </p>
                         )}
@@ -189,7 +189,7 @@ export default function TaskApprovalReview({ record, item }) {
                         {!docsLoading &&
                             !documents.length &&
                             !docsError && (
-                                <p className="text-xs text-[#817669]">
+                                <p className="text-xs text-[#716658]">
                                     No documents attached.
                                 </p>
                             )}

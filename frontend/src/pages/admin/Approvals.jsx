@@ -64,8 +64,8 @@ export default function AdminApprovals() {
         {list.error && ["history", "delays"].includes(tab) && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{list.error}</p>}
         {!!Object.keys(errors).length && <div role="alert" className="space-y-1 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{Object.entries(errors).map(([name, text]) => <p key={name}>{text}</p>)}</div>}
         <section className="overflow-hidden rounded-[26px] border border-[#E5DDD1] bg-[#FFFDFA]">
-            <header className="flex flex-wrap items-center justify-between gap-3 px-6 pt-6">
-                <h2 className="text-lg font-bold">{queueLabels[tab]} <span className="ml-2 text-sm font-medium text-[#817669]">{visibleLoading ? "..." : list.count ?? list.rows.length}</span></h2>
+            <header className="rare-page-header flex flex-wrap items-center justify-between gap-3 px-6 pt-6">
+                <h2 className="text-lg font-bold">{queueLabels[tab]} <span className="ml-2 text-sm font-medium text-[#716658]">{visibleLoading ? "..." : list.count ?? list.rows.length}</span></h2>
                 {tab === "history" && <div className="flex flex-wrap gap-2"><button type="button" aria-pressed={!historyStatus} onClick={() => { list.clear(); setParams({ tab: "history" }); }} className="rounded-full border border-[#E4DCCD] px-3 py-2 text-xs">All decisions</button><button type="button" aria-pressed={historyStatus === "REJECTED"} onClick={() => { list.clear(); setParams({ tab: "history", status: "REJECTED" }); }} className="rounded-full bg-[#FCE9E6] px-3 py-2 text-xs font-semibold text-[#B5473E]">Rejected Requests</button></div>}
                 {tab === "delays" && <Link className="text-xs font-semibold text-[#3565A5]" to="/admin/delays">Open delay workspace →</Link>}
                 {tab === "work" && <Link className="text-xs font-semibold text-[#3565A5]" to="/admin/reports">Open daily reports →</Link>}

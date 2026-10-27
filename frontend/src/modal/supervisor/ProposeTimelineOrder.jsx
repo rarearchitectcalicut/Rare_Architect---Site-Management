@@ -277,7 +277,7 @@ export default function ProposeTimelineOrder({
             )}
 
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/55 p-3 backdrop-blur-sm sm:p-6"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/55 p-0 backdrop-blur-sm sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -291,17 +291,17 @@ export default function ProposeTimelineOrder({
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="timeline-order-modal-title"
-                    className="flex max-h-[92dvh] w-full max-w-[760px] flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-2xl"
+                    className="rare-mobile-sheet flex max-h-[92dvh] w-full max-w-[760px] flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-2xl"
                 >
                     {/* HEADER */}
-                    <header className="flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] px-5 py-5 sm:px-7">
+                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] px-5 py-5 sm:px-7">
                         <div className="flex items-start gap-3">
                             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#E9F0FC] text-[#3565A5]">
                                 <ArrowRightLeft size={23} />
                             </span>
 
                             <div>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#948778]">
+                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
                                     Supervisor / Timeline
                                 </p>
 
@@ -312,7 +312,7 @@ export default function ProposeTimelineOrder({
                                     Propose Timeline Order
                                 </h2>
 
-                                <p className="mt-2 text-xs leading-5 text-[#817669]">
+                                <p className="mt-2 text-xs leading-5 text-[#716658]">
                                     Review the changes before submitting
                                     them for approval.
                                 </p>
@@ -339,7 +339,7 @@ export default function ProposeTimelineOrder({
                             {/* CHANGE SUMMARY */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="rounded-2xl bg-[#F8F4EE] p-4">
-                                    <p className="text-xs text-[#817669]">
+                                    <p className="text-xs text-[#716658]">
                                         Project Tasks
                                     </p>
 
@@ -385,7 +385,7 @@ export default function ProposeTimelineOrder({
                             <div className="space-y-2">
                                 <label
                                     htmlFor="timeline-order-reason"
-                                    className="block text-xs font-bold uppercase tracking-wide text-[#817669]"
+                                    className="block text-xs font-bold uppercase tracking-wide text-[#716658]"
                                 >
                                     Reason for Reordering *
                                 </label>
@@ -403,7 +403,7 @@ export default function ProposeTimelineOrder({
                                     className="w-full resize-y rounded-2xl border border-[#E4DCCD] bg-[#FFFDFA] px-4 py-3 text-sm leading-6 text-[#211E1A] outline-none transition-all focus:border-[#B7A58E] focus:ring-4 focus:ring-[#E8DDD0]/50"
                                 />
 
-                                <p className="text-[11px] text-[#948778]">
+                                <p className="text-xs text-[#716658]">
                                     This reason will be provided to Admin
                                     for review.
                                 </p>
@@ -442,7 +442,7 @@ export default function ProposeTimelineOrder({
 
                         {/* FOOTER */}
                         <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#EEE6DC] bg-[#FFFDFA] px-5 py-4 sm:px-7">
-                            <p className="flex items-center gap-2 text-xs text-[#817669]">
+                            <p className="flex items-center gap-2 text-xs text-[#716658]">
                                 <Info size={15} />
                                 {movedCount} positions changed
                             </p>

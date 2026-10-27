@@ -235,7 +235,7 @@ export default function SupervisorSettings() {
             )}
 
             <header>
-                <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#948778]">
+                <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
                     Supervisor / My Account
                 </p>
 
@@ -243,7 +243,7 @@ export default function SupervisorSettings() {
                     Settings
                 </h1>
 
-                <p className="mt-2 text-sm text-[#817669]">
+                <p className="mt-2 text-sm text-[#716658]">
                     Manage your personal information and account security.
                 </p>
             </header>
@@ -293,7 +293,7 @@ export default function SupervisorSettings() {
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#948778]">
+                                    <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
                                         RARE / Site Supervisor
                                     </p>
 
@@ -301,7 +301,7 @@ export default function SupervisorSettings() {
                                         {name}
                                     </h2>
 
-                                    <p className="mt-1 break-all text-sm text-[#817669]">
+                                    <p className="mt-1 break-all text-sm text-[#716658]">
                                         @{profile.username || "Not specified"}
                                     </p>
 
@@ -351,7 +351,7 @@ export default function SupervisorSettings() {
                                             </span>
 
                                             <div className="min-w-0">
-                                                <p className="text-[10px] font-bold uppercase tracking-wide text-[#938778]">
+                                                <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
                                                     {item.label}
                                                 </p>
                                                 <p className="mt-1 wrap-break-word text-xs font-semibold text-[#211E1A] sm:text-sm">
@@ -377,7 +377,7 @@ export default function SupervisorSettings() {
                                     <h2 className="text-lg font-bold text-[#211E1A]">
                                         Personal Information
                                     </h2>
-                                    <p className="mt-1 text-xs text-[#817669]">
+                                    <p className="mt-1 text-xs text-[#716658]">
                                         Keep your contact and account details current.
                                     </p>
                                 </div>
@@ -404,7 +404,7 @@ export default function SupervisorSettings() {
                                     <div key={field.key} className="min-w-0">
                                         <label
                                             htmlFor={`settings-${field.key}`}
-                                            className="text-[11px] font-bold uppercase tracking-wide text-[#938778]"
+                                            className="text-xs font-bold uppercase tracking-wide text-[#716658]"
                                         >
                                             {field.label}
                                         </label>

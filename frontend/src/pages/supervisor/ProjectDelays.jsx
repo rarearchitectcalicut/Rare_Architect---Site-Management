@@ -30,15 +30,15 @@ export default function ProjectDelays({ role = "SUPERVISOR" }) {
     }
     const list = { rows: items, pageRows: items, count: data.count, page: data.page, pageCount: data.pageCount, setPage: data.setPage };
     return <div className="space-y-6 pb-8">
-        <header className="rounded-[28px] bg-[#211E1A] p-6 text-[#FFFDFA] sm:p-8">
-            <Link className="text-xs text-[#F1EADF]" to={projectId ? `${prefix}/projects/${projectId}` : `${prefix}/projects`}>{projectId ? "Back to project" : "Projects"}</Link>
-            <h1 className="mt-4 text-3xl font-semibold">Delay Reports</h1>
-            <p className="mt-3 text-sm text-[#E7DED2]">{data.project?.name || (projectId ? "Project delays" : "All authorized projects")} / Track site issues and deadline-extension decisions.</p>
+        <header className="rare-page-header rounded-[28px] bg-[#FFFDFA] p-6 text-[#211E1A] sm:p-8">
+            <Link className="text-xs text-[#716658]" to={projectId ? `${prefix}/projects/${projectId}` : `${prefix}/projects`}>{projectId ? "Back to project" : "Projects"}</Link>
+            <h1 className="mt-4 text-2xl font-semibold">Delay Reports</h1>
+            <p className="mt-3 text-sm text-[#716658]">{data.project?.name || (projectId ? "Project delays" : "All authorized projects")} / Track site issues and deadline-extension decisions.</p>
             <div className="mt-5 flex flex-wrap gap-3">
-                {!admin && projectId && <button type="button" disabled={data.loading || Boolean(data.error) || !data.project || !["ACTIVE", "MAINTENANCE"].includes(data.project.status)} onClick={() => { data.refresh(); setFormOpen(true); }} className="inline-flex items-center gap-2 rounded-xl bg-[#FFFDFA] px-4 py-3 text-sm font-semibold text-[#211E1A] disabled:opacity-40"><Plus size={17} />Report delay</button>}
-                {!admin && !projectId && <Link to="/supervisor/projects" className="rounded-xl bg-[#FFFDFA] px-4 py-3 text-sm font-semibold text-[#211E1A]">Choose a project to report a delay</Link>}
-                <button type="button" disabled={data.loading} onClick={data.refresh} className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-3 text-sm"><RefreshCw size={16} />Refresh</button>
-                {admin && <Link to="/admin/approvals?tab=delays" className="rounded-xl border border-white/20 px-4 py-3 text-sm">Open Approval Center</Link>}
+                {!admin && projectId && <button type="button" disabled={data.loading || Boolean(data.error) || !data.project || !["ACTIVE", "MAINTENANCE"].includes(data.project.status)} onClick={() => { data.refresh(); setFormOpen(true); }} className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-[#FFFDFA] disabled:opacity-40"><Plus size={17} />Report delay</button>}
+                {!admin && !projectId && <Link to="/supervisor/projects" className="rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-[#FFFDFA]">Choose a project to report a delay</Link>}
+                <button type="button" disabled={data.loading} onClick={data.refresh} className="inline-flex items-center gap-2 rounded-xl border border-[#E7DED2] px-4 py-3 text-sm"><RefreshCw size={16} />Refresh</button>
+                {admin && <Link to="/admin/approvals?tab=delays" className="rounded-xl border border-[#E7DED2] px-4 py-3 text-sm">Open Approval Center</Link>}
             </div>
         </header>
         <DelaySummary summary={data.summary} loading={data.loading} />

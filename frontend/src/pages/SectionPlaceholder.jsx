@@ -53,7 +53,7 @@ export default function SectionPlaceholder() {
                 className="
           mx-auto mt-3 max-w-md
           text-sm leading-6
-          text-[#8a8175]
+          text-[#716658]
         "
             >
                 The {title.toLowerCase()} interface will be

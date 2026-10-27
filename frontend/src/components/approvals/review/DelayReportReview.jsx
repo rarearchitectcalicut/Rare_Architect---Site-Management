@@ -18,7 +18,7 @@ export default function DelayReportReview({ record, role = "ADMIN" }) {
         <div className="rounded-2xl border border-[#E7DED2] p-4">
             <h3 className="font-bold">Report decision</h3>
             <p className="mt-2 text-sm">{formatText(record.status)} · {record.reviewed_by_name || "Not yet reviewed"}</p>
-            <p className="mt-1 text-xs text-[#817669]">{formatDateTime(record.reviewed_at)}</p>
+            <p className="mt-1 text-xs text-[#716658]">{formatDateTime(record.reviewed_at)}</p>
             {record.admin_comment && <p className="mt-3 whitespace-pre-wrap text-sm">{record.admin_comment}</p>}
         </div>
         <Link className="inline-block text-sm font-semibold text-[#3565A5]" to={`${prefix}/projects/${record.project_id}`}>View affected project</Link>

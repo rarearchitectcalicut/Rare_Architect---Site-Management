@@ -291,18 +291,18 @@ function ScheduleTaskRow({
 
                     <ExternalLink
                         size={12}
-                        className="mt-1 shrink-0 text-[#948778]"
+                        className="mt-1 shrink-0 text-[#716658]"
                     />
                 </Link>
 
-                <span className="text-[10px] text-[#817669]">
+                <span className="text-xs text-[#716658]">
                     {dates
                         ? `${shortDate(dates.start)} – ${shortDate(dates.end)}`
                         : "Dates not fully scheduled"}
                 </span>
 
                 <span
-                    className="text-[10px] font-semibold"
+                    className="text-xs font-semibold"
                     style={{ color: status.bar }}
                 >
                     {status.label}
@@ -334,7 +334,7 @@ function ScheduleTaskRow({
               absolute top-1/2
               flex h-[28px] items-center
               overflow-hidden px-2
-              text-[10px] font-bold
+              text-xs font-bold
               text-white shadow-sm
               -translate-y-1/2
             "
@@ -360,7 +360,7 @@ function ScheduleTaskRow({
 
                 {/* UNSCHEDULED TASK HINT */}
                 {!dates && (
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg bg-[#F1EADF] px-3 py-2 text-[10px] text-[#817669]">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg bg-[#F1EADF] px-3 py-2 text-xs text-[#716658]">
                         No scheduled date range
                     </span>
                 )}
@@ -445,12 +445,12 @@ export default function TimelineSchedule({
                     <h2 className="flex items-center gap-2 text-lg font-bold text-[#211E1A]">
                         <CalendarDays
                             size={20}
-                            className="text-[#817669]"
+                            className="text-[#716658]"
                         />
                         Schedule View
                     </h2>
 
-                    <p className="mt-2 text-xs leading-6 text-[#817669]">
+                    <p className="mt-2 text-xs leading-6 text-[#716658]">
                         Visual overview of planned task dates and
                         overlapping work.
                     </p>
@@ -490,7 +490,7 @@ export default function TimelineSchedule({
                         {longDate(windowEnd)}
                     </p>
 
-                    <p className="mt-1 text-xs text-[#817669]">
+                    <p className="mt-1 text-xs text-[#716658]">
                         {datedTasks} of {tasks.length} tasks have valid
                         schedule ranges
                     </p>
@@ -531,14 +531,14 @@ export default function TimelineSchedule({
                 <div className="px-6 py-14 text-center">
                     <CalendarDays
                         size={32}
-                        className="mx-auto text-[#948778]"
+                        className="mx-auto text-[#716658]"
                     />
 
                     <h3 className="mt-4 font-bold text-[#211E1A]">
                         No tasks to display
                     </h3>
 
-                    <p className="mt-2 text-sm text-[#817669]">
+                    <p className="mt-2 text-sm text-[#716658]">
                         Tasks will appear here when added to the project.
                     </p>
                 </div>
@@ -585,7 +585,7 @@ export default function TimelineSchedule({
                             {/* DAY HEADERS */}
                             <div className="flex border-b border-[#EEE6DC] bg-[#FCF9F5]">
                                 <div className="sticky left-0 z-20 flex w-[224px] min-w-[224px] items-center border-r border-[#EEE6DC] bg-[#FCF9F5] px-4 py-3">
-                                    <span className="text-[11px] text-[#948778]">
+                                    <span className="text-xs text-[#716658]">
                                         Planned start / end
                                     </span>
                                 </div>
@@ -609,9 +609,9 @@ export default function TimelineSchedule({
                                                     }`}
                                             >
                                                 <span
-                                                    className={`text-[10px] ${current
+                                                    className={`text-xs ${current
                                                             ? "font-bold text-[#3565A5]"
-                                                            : "text-[#948778]"
+                                                            : "text-[#716658]"
                                                         }`}
                                                 >
                                                     {weekdayLabel(timestamp)}
@@ -665,7 +665,7 @@ export default function TimelineSchedule({
                             (status) => (
                                 <span
                                     key={status.label}
-                                    className="inline-flex items-center gap-2 text-[11px] text-[#817669]"
+                                    className="inline-flex items-center gap-2 text-xs text-[#716658]"
                                 >
                                     <span
                                         className="h-2.5 w-2.5 rounded-full"
@@ -678,7 +678,7 @@ export default function TimelineSchedule({
                             )
                         )}
 
-                        <span className="inline-flex items-center gap-2 text-[11px] text-[#817669]">
+                        <span className="inline-flex items-center gap-2 text-xs text-[#716658]">
                             <span className="h-2.5 w-2.5 rounded-full bg-[#C66A57]" />
                             Overdue
                         </span>
@@ -690,10 +690,10 @@ export default function TimelineSchedule({
             <div className="flex items-start gap-2 border-t border-[#EEE6DC] bg-[#F8F4EE] px-5 py-4">
                 <Info
                     size={16}
-                    className="mt-0.5 shrink-0 text-[#817669]"
+                    className="mt-0.5 shrink-0 text-[#716658]"
                 />
 
-                <p className="text-xs leading-5 text-[#817669]">
+                <p className="text-xs leading-5 text-[#716658]">
                     Bars represent planned task durations. They are
                     not editable here. Task progress and approval
                     remain controlled by the RARE workflow.

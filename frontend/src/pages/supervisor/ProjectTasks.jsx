@@ -132,7 +132,7 @@ function Badge({ value }) {
 
     return (
         <span
-            className={`inline-flex rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide ${statusColors[value] || "bg-[#EEE8E0] text-[#74695D]"
+            className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${statusColors[value] || "bg-[#EEE8E0] text-[#74695D]"
                 }`}
         >
             {readable(value)}
@@ -144,7 +144,7 @@ function SummaryCard({ label, value, icon: Icon, tone }) {
     return (
         <div className="rounded-[20px] border border-[#E7DED2] bg-[#FFFDFA] p-4 transition-all hover:-translate-y-0.5 hover:shadow-sm sm:p-5">
             <div className="flex items-start justify-between gap-2">
-                <p className="text-xs font-medium text-[#817669]">
+                <p className="text-xs font-medium text-[#716658]">
                     {label}
                 </p>
 
@@ -165,7 +165,7 @@ function SummaryCard({ label, value, icon: Icon, tone }) {
 function DetailItem({ label, value }) {
     return (
         <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-[#938778]">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
                 {label}
             </p>
 
@@ -190,7 +190,7 @@ function ExpandedTask({
 
     if (loading) {
         return (
-            <div className="flex items-center gap-3 border-t border-[#EEE6DC] p-6 text-sm text-[#817669]">
+            <div className="flex items-center gap-3 border-t border-[#EEE6DC] p-6 text-sm text-[#716658]">
                 <RefreshCw size={18} className="animate-spin" />
                 Loading task details...
             </div>
@@ -240,7 +240,7 @@ function ExpandedTask({
             {/* DETAILS HEADER */}
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#948778]">
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#716658]">
                         Task Information
                     </p>
 
@@ -248,7 +248,7 @@ function ExpandedTask({
                         Complete Task Details
                     </h3>
 
-                    <p className="mt-1 text-xs leading-5 text-[#817669]">
+                    <p className="mt-1 text-xs leading-5 text-[#716658]">
                         Scope, scheduling, approval, execution and documents.
                     </p>
                 </div>
@@ -276,7 +276,7 @@ function ExpandedTask({
                         key={label}
                         className="rounded-xl bg-[#F8F4EE] px-4 py-3"
                     >
-                        <p className="mb-2 text-[10px] font-bold uppercase text-[#938778]">
+                        <p className="mb-2 text-xs font-bold uppercase text-[#716658]">
                             {label}
                         </p>
 
@@ -339,7 +339,7 @@ function ExpandedTask({
                         Task Description
                     </h4>
 
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[#817669]">
+                    <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[#716658]">
                         {task.description || "No description provided."}
                     </p>
                 </div>
@@ -350,7 +350,7 @@ function ExpandedTask({
                         Completion Criteria
                     </h4>
 
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[#817669]">
+                    <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[#716658]">
                         {task.completion_criteria ||
                             "No completion criteria specified."}
                     </p>
@@ -375,7 +375,7 @@ function ExpandedTask({
                                 Documents & Drawings
                             </span>
 
-                            <span className="mt-1 block text-xs text-[#817669]">
+                            <span className="mt-1 block text-xs text-[#716658]">
                                 View, upload, download and manage versions
                             </span>
                         </span>
@@ -383,7 +383,7 @@ function ExpandedTask({
 
                     <ChevronDown
                         size={19}
-                        className={`shrink-0 text-[#817669] transition-transform ${documentsOpen ? "rotate-180" : ""
+                        className={`shrink-0 text-[#716658] transition-transform ${documentsOpen ? "rotate-180" : ""
                             }`}
                     />
                 </button>
@@ -414,7 +414,7 @@ function TaskCard({
                 aria-expanded={expanded}
                 aria-controls={`task-details-${task.id}`}
                 onClick={onToggle}
-                className="flex w-full items-start gap-3 p-4 text-left hover:bg-[#FCF9F4] sm:gap-4 sm:p-6"
+                className="flex w-full items-start gap-3 p-4 text-left hover:bg-[#FCF9F4] sm:gap-4 sm:p-5"
             >
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#E9F0FC] text-[#3565A5]">
                     <ClipboardList size={22} />
@@ -426,7 +426,7 @@ function TaskCard({
                     </span>
 
                     {task.description && (
-                        <span className="mt-2 line-clamp-2 block text-xs leading-5 text-[#817669]">
+                        <span className="mt-2 line-clamp-2 block text-xs leading-5 text-[#716658]">
                             {task.description}
                         </span>
                     )}
@@ -438,7 +438,7 @@ function TaskCard({
                     </span>
 
                     <TaskProgress progress={task.progress} />
-                    <span className="mt-4 grid gap-2 text-xs text-[#817669] sm:grid-cols-2">
+                    <span className="mt-4 grid gap-2 text-xs text-[#716658] sm:grid-cols-2">
                         <span className="flex items-start gap-2">
                             <UserRound size={15} className="shrink-0" />
                             {task.worker_name || "No worker assigned"}
@@ -459,7 +459,7 @@ function TaskCard({
 
                 <ChevronDown
                     size={20}
-                    className={`mt-2 shrink-0 text-[#817669] transition-transform ${expanded ? "rotate-180" : ""
+                    className={`mt-2 shrink-0 text-[#716658] transition-transform ${expanded ? "rotate-180" : ""
                         }`}
                 />
             </button>
@@ -827,7 +827,7 @@ export default function SupervisorProjectTasks() {
             {/* BREADCRUMB */}
             <nav
                 aria-label="Breadcrumb"
-                className="flex flex-wrap items-center gap-2 text-xs text-[#817669]"
+                className="flex flex-wrap items-center gap-2 text-xs text-[#716658]"
             >
                 <Link
                     to="/supervisor/projects"
@@ -853,9 +853,9 @@ export default function SupervisorProjectTasks() {
             </nav>
 
             {/* HEADER */}
-            <header className="flex flex-wrap items-end justify-between gap-4">
+            <header className="rare-page-header flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#948778]">
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#716658]">
                         Supervisor / Project Workspace
                     </p>
 
@@ -863,7 +863,7 @@ export default function SupervisorProjectTasks() {
                         Project Tasks
                     </h1>
 
-                    <p className="mt-2 text-sm text-[#817669]">
+                    <p className="mt-2 text-sm text-[#716658]">
                         {project?.name || "Assigned Project"}
                         {" · "}
                         Create, manage and execute project tasks.
@@ -960,7 +960,7 @@ export default function SupervisorProjectTasks() {
                     <div className="relative">
                         <Search
                             size={17}
-                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#938778]"
+                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
                         />
 
                         <input
@@ -1044,7 +1044,7 @@ export default function SupervisorProjectTasks() {
                         <button
                             type="button"
                             onClick={clearFilters}
-                            className="flex items-center gap-2 text-xs font-semibold text-[#817669] hover:text-[#211E1A]"
+                            className="flex items-center gap-2 text-xs font-semibold text-[#716658] hover:text-[#211E1A]"
                         >
                             <X size={15} />
                             Clear Filters
@@ -1060,7 +1060,7 @@ export default function SupervisorProjectTasks() {
                         Task Directory
                     </h2>
 
-                    <p className="mt-1 text-xs text-[#817669]">
+                    <p className="mt-1 text-xs text-[#716658]">
                         {filteredTasks.length} matching tasks
                     </p>
                 </div>
@@ -1123,7 +1123,7 @@ export default function SupervisorProjectTasks() {
                         <div className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] px-5 py-14 text-center">
                             <ClipboardList
                                 size={32}
-                                className="mx-auto text-[#948778]"
+                                className="mx-auto text-[#716658]"
                             />
 
                             <h3 className="mt-5 text-lg font-bold text-[#211E1A]">
@@ -1132,7 +1132,7 @@ export default function SupervisorProjectTasks() {
                                     : "No tasks added yet"}
                             </h3>
 
-                            <p className="mt-2 text-sm text-[#817669]">
+                            <p className="mt-2 text-sm text-[#716658]">
                                 {hasFilters
                                     ? "Try adjusting the filters."
                                     : "Create your first project task to get started."}
@@ -1178,7 +1178,7 @@ export default function SupervisorProjectTasks() {
                                 Previous
                             </button>
 
-                            <span className="text-xs font-semibold text-[#817669]">
+                            <span className="text-xs font-semibold text-[#716658]">
                                 Page {safePage} of {pageCount}
                             </span>
 

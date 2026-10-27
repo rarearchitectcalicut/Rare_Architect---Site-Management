@@ -177,7 +177,7 @@ function SectionTitle({ icon: Icon, tone, title, description }) {
                 </h3>
 
                 {description && (
-                    <p className="mt-0.5 text-xs text-[#948778]">
+                    <p className="mt-0.5 text-xs text-[#716658]">
                         {description}
                     </p>
                 )}
@@ -580,7 +580,7 @@ export default function AddProject({
                     aria-modal="true"
                     aria-labelledby="add-project-title"
                     className="
-                        rare-modal relative flex max-h-[94dvh]
+                        rare-mobile-sheet rare-modal relative flex max-h-[94dvh]
                         w-full max-w-190 flex-col overflow-hidden
                         rounded-t-[28px] bg-[#FFFDFA]
                         shadow-[0_-12px_50px_rgba(33,30,26,0.22)]
@@ -598,14 +598,14 @@ export default function AddProject({
                     </div>
 
                     {/* HEADER */}
-                    <header className="flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] bg-linear-to-b from-[#FFFDFA] to-[#FAF5ED] px-5 pb-4 pt-3 sm:px-8 sm:py-6">
+                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] bg-linear-to-b from-[#FFFDFA] to-[#FAF5ED] px-5 pb-4 pt-3 sm:px-8 sm:py-6">
                         <div className="flex min-w-0 items-start gap-3.5 sm:gap-4">
                             <span className="hidden shrink-0 rounded-2xl bg-[#E8F0FE] p-3 text-[#2563EB] min-[400px]:block">
                                 <FolderPlus size={24} strokeWidth={1.7} />
                             </span>
 
                             <div className="min-w-0">
-                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#948778]">
+                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#716658]">
                                     Project Management
                                 </p>
 
@@ -616,7 +616,7 @@ export default function AddProject({
                                     Create New Project
                                 </h2>
 
-                                <p className="mt-1 text-xs text-[#817669] sm:text-sm">
+                                <p className="mt-1 text-xs text-[#716658] sm:text-sm">
                                     Enter the details to create a new RARE project.
                                 </p>
                             </div>
@@ -666,7 +666,7 @@ export default function AddProject({
                                         Project Cover
                                     </h3>
 
-                                    <span className="rounded-full bg-[#F1EADF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#817669]">
+                                    <span className="rounded-full bg-[#F1EADF] px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-[#716658]">
                                         Optional
                                     </span>
                                 </div>
@@ -767,7 +767,7 @@ export default function AddProject({
                                                     : "Select a project cover image"}
                                             </span>
 
-                                            <span className="text-xs text-[#817669]">
+                                            <span className="text-xs text-[#716658]">
                                                 JPG, JPEG, PNG or WEBP
                                             </span>
 
@@ -841,7 +841,7 @@ export default function AddProject({
 
                                             <ChevronDown
                                                 size={17}
-                                                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#938778]"
+                                                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
                                             />
                                         </div>
                                     </Field>
@@ -880,7 +880,7 @@ export default function AddProject({
                                                     <span
                                                         className="
                                                             flex h-full items-center justify-center gap-2 rounded-lg
-                                                            px-2 text-sm font-semibold text-[#817669]
+                                                            px-2 text-sm font-semibold text-[#716658]
                                                             transition-all duration-200
                                                             hover:text-[#211E1A]
                                                             peer-checked:bg-[#FFFDFA] peer-checked:text-[#211E1A]
@@ -938,7 +938,7 @@ export default function AddProject({
                                         <div className="relative">
                                             <MapPin
                                                 size={17}
-                                                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#938778]"
+                                                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
                                             />
 
                                             <input
@@ -1062,7 +1062,7 @@ export default function AddProject({
                                 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-8
                             "
                         >
-                            <p className="hidden text-xs text-[#948778] sm:mr-auto sm:block">
+                            <p className="hidden text-xs text-[#716658] sm:mr-auto sm:block">
                                 <span className="text-red-600">*</span> Required fields
                             </p>
 

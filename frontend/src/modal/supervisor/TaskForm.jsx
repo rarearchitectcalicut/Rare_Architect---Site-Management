@@ -75,6 +75,7 @@ export default function TaskForm({
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
     const savingRef = useRef(false);
+    const [dialog, setDialog] = useState(null);
     const { confirm, cancelConfirmation, confirmationModal } = useConfirmation();
 
     const isEdit = Boolean(task?.id);
@@ -97,6 +98,12 @@ export default function TaskForm({
         };
     }, [open, task, cancelConfirmation]);
 
+    useEffect(() => {
+        if (!open || !dialog) return;
+        dialog.showModal();
+        return () => dialog.close();
+    }, [open, dialog]);
+
     if (!open) return null;
 
     function update(key, value) {
@@ -116,7 +123,7 @@ export default function TaskForm({
             <div className="space-y-2">
                 <label
                     htmlFor={`task-${name}`}
-                    className="block text-xs font-bold uppercase tracking-wide text-[#817669]"
+                    className="block text-xs font-bold uppercase tracking-wide text-[#716658]"
                 >
                     {label}
                 </label>
@@ -306,6 +313,7 @@ export default function TaskForm({
             {confirmationModal}
             {saving && (
                 <LoadingScreen
+                    portalTarget={dialog || undefined}
                     message={
                         isApproved
                             ? "Submitting task change request..."
@@ -318,8 +326,16 @@ export default function TaskForm({
                 />
             )}
 
-            <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/55 p-3 backdrop-blur-sm sm:p-6"
+            <dialog
+                ref={setDialog}
+                aria-labelledby="task-form-title"
+                aria-modal="true"
+                onCancel={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (!savingRef.current) onClose();
+                }}
+                className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-[#211E1A]/55 p-0 text-[#211E1A] backdrop-blur-sm backdrop:bg-transparent sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -328,14 +344,11 @@ export default function TaskForm({
                 }}
             >
                 <section
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="task-form-title"
-                    className="flex max-h-[92dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-2xl"
+                    className="rare-mobile-sheet flex max-h-[92dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-2xl"
                 >
-                    <header className="flex items-start justify-between gap-3 border-b border-[#EEE6DC] px-5 py-5 sm:px-7">
+                    <header className="rare-page-header flex items-start justify-between gap-3 border-b border-[#EEE6DC] px-5 py-5 sm:px-7">
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#948778]">
+                            <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
                                 Supervisor / Project Tasks
                             </p>
                             <h2
@@ -350,7 +363,7 @@ export default function TaskForm({
                                             ? "Request Task Changes"
                                             : "Edit Task"}
                             </h2>
-                            <p className="mt-2 text-xs leading-5 text-[#817669]">
+                            <p className="mt-2 text-xs leading-5 text-[#716658]">
                                 {isApproved
                                     ? "Changes will be reviewed by Admin before applying."
                                     : isRejected
@@ -459,7 +472,7 @@ export default function TaskForm({
                                 <h3 className="text-sm font-bold text-[#211E1A]">
                                     Progress Measurement
                                 </h3>
-                                <p className="mt-1 text-xs text-[#817669]">
+                                <p className="mt-1 text-xs text-[#716658]">
                                     This defines how progress is verified through
                                     daily work entries; it is not a manual percentage.
                                 </p>
@@ -599,7 +612,7 @@ export default function TaskForm({
                         </footer>
                     </form>
                 </section>
-            </div>
+            </dialog>
         </>
     );
 }

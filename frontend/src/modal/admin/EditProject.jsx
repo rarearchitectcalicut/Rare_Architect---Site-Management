@@ -461,7 +461,7 @@ export default function EditProject({
 
             {/* BACKDROP */}
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/55 p-3 backdrop-blur-sm sm:p-6"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/55 p-0 backdrop-blur-sm sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -477,10 +477,10 @@ export default function EditProject({
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="edit-project-title"
-                    className="flex max-h-[94dvh] w-full max-w-190 flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_24px_70px_rgba(33,30,26,0.24)]"
+                    className="rare-mobile-sheet flex max-h-[94dvh] w-full max-w-190 flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_24px_70px_rgba(33,30,26,0.24)]"
                 >
                     {/* HEADER */}
-                    <header className="flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] px-5 py-5 sm:px-7">
+                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] px-5 py-5 sm:px-7">
                         <div className="flex items-start gap-3">
                             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#E9F0FC] text-[#3565A5]">
                                 <FolderPen
@@ -490,7 +490,7 @@ export default function EditProject({
                             </span>
 
                             <div>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#948778]">
+                                <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
                                     Admin / Project Management
                                 </p>
 
@@ -501,7 +501,7 @@ export default function EditProject({
                                     Edit Project
                                 </h2>
 
-                                <p className="mt-1 text-xs leading-5 text-[#817669]">
+                                <p className="mt-1 text-xs leading-5 text-[#716658]">
                                     Update project details, schedule and status.
                                 </p>
                             </div>
@@ -565,12 +565,12 @@ export default function EditProject({
                                         >
                                             <ImagePlus
                                                 size={30}
-                                                className="text-[#938778]"
+                                                className="text-[#716658]"
                                             />
                                             <span className="text-sm font-semibold text-[#665E53]">
                                                 Upload Project Cover
                                             </span>
-                                            <span className="text-xs text-[#938778]">
+                                            <span className="text-xs text-[#716658]">
                                                 JPG, PNG or WEBP
                                             </span>
                                         </label>
@@ -579,7 +579,7 @@ export default function EditProject({
 
                                 {coverFile && (
                                     <div className="flex items-center justify-between gap-3">
-                                        <p className="truncate text-xs text-[#817669]">
+                                        <p className="truncate text-xs text-[#716658]">
                                             Selected: {coverFile.name}
                                         </p>
 
@@ -719,7 +719,7 @@ export default function EditProject({
                                     <div className="relative">
                                         <MapPin
                                             size={17}
-                                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#938778]"
+                                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
                                         />
 
                                         <input
@@ -742,7 +742,7 @@ export default function EditProject({
                                 <div className="mb-3 flex items-center gap-2">
                                     <CalendarDays
                                         size={18}
-                                        className="text-[#938778]"
+                                        className="text-[#716658]"
                                     />
                                     <h3 className="text-sm font-bold text-[#211E1A]">
                                         Project Schedule

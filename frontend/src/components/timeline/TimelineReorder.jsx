@@ -136,7 +136,7 @@ export default function TimelineReorder({
             {/* HEADER */}
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#EEE6DC] p-5 sm:p-6">
                 <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#948778]">
+                    <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#716658]">
                         Supervisor / Timeline Management
                     </p>
 
@@ -144,7 +144,7 @@ export default function TimelineReorder({
                         Reorder Project Tasks
                     </h2>
 
-                    <p className="mt-2 max-w-xl text-xs leading-6 text-[#817669]">
+                    <p className="mt-2 max-w-xl text-xs leading-6 text-[#716658]">
                         Drag tasks into the proposed sequence or use
                         the arrow buttons to move them individually.
                         Your changes are not applied until reviewed.
@@ -200,7 +200,7 @@ export default function TimelineReorder({
                     type="button"
                     onClick={reset}
                     disabled={!changed || disabled}
-                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-[#817669] hover:bg-[#F1EADF] disabled:opacity-40"
+                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-[#716658] hover:bg-[#F1EADF] disabled:opacity-40"
                 >
                     <RotateCcw size={15} />
                     Reset Order
@@ -210,7 +210,7 @@ export default function TimelineReorder({
             {/* REORDERABLE TASK LIST */}
             <div className="space-y-3 p-4 sm:p-6">
                 {proposedTasks.length === 0 && (
-                    <div className="rounded-2xl bg-[#F8F4EE] p-8 text-center text-sm text-[#817669]">
+                    <div className="rounded-2xl bg-[#F8F4EE] p-8 text-center text-sm text-[#716658]">
                         There are no project tasks to reorder.
                     </div>
                 )}
@@ -310,7 +310,7 @@ export default function TimelineReorder({
                                     {task.title || "Untitled Task"}
                                 </p>
 
-                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#817669]">
+                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#716658]">
                                     <span>
                                         {String(
                                             task.approval_status || "PENDING"
@@ -325,7 +325,7 @@ export default function TimelineReorder({
                                 </div>
 
                                 {moved && (
-                                    <p className="mt-2 text-[11px] font-bold text-[#94651D]">
+                                    <p className="mt-2 text-xs font-bold text-[#94651D]">
                                         Originally position {originallyAt + 1}
                                     </p>
                                 )}
@@ -369,7 +369,7 @@ export default function TimelineReorder({
 
             {/* FOOTER */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#EEE6DC] bg-[#F8F4EE] p-5 sm:px-6">
-                <div className="flex items-center gap-2 text-xs text-[#817669]">
+                <div className="flex items-center gap-2 text-xs text-[#716658]">
                     {changed ? (
                         <>
                             <Info size={16} />

@@ -45,7 +45,7 @@ export default function TimelineOrderPreview({
                     Order Change Preview
                 </h3>
 
-                <p className="mt-2 text-xs leading-5 text-[#817669]">
+                <p className="mt-2 text-xs leading-5 text-[#716658]">
                     Review every changed position before requesting
                     Admin approval.
                 </p>
@@ -100,7 +100,7 @@ export default function TimelineOrderPreview({
                                         {task.title}
                                     </p>
 
-                                    <p className="mt-1 text-xs text-[#817669]">
+                                    <p className="mt-1 text-xs text-[#716658]">
                                         {String(
                                             task.approval_status || "PENDING"
                                         ).replaceAll("_", " ")}
@@ -114,7 +114,7 @@ export default function TimelineOrderPreview({
 
                                     <ArrowRight
                                         size={16}
-                                        className="text-[#948778]"
+                                        className="text-[#716658]"
                                     />
 
                                     <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FFF2D8] text-xs font-bold text-[#94651D]">

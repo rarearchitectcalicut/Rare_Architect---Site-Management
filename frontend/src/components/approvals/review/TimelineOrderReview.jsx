@@ -21,6 +21,6 @@ export default function TimelineOrderReview({ record }) {
                 </section>
             ))}
         </div>
-        <p className="text-xs text-[#817669]">This request compares the approved sequence at submission with the proposal. Approval checks for later timeline changes before applying it.</p>
+        <p className="text-xs text-[#716658]">This request compares the approved sequence at submission with the proposal. Approval checks for later timeline changes before applying it.</p>
     </div>;
 }

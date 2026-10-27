@@ -8,7 +8,7 @@ import NavIcon from "./NavIcon";
 // Shared row styling for the footer actions (Settings, Sign Out)
 const rowBase = `
   group flex w-full items-center gap-3
-  rounded-2xl px-3 py-2.5
+  rounded-xl px-3 py-2.5
   text-left text-sm font-semibold
   transition-all duration-200 ease-out
   active:scale-[0.98]
@@ -38,14 +38,14 @@ export default function DesktopSidebar({ user, onLogout, loading }) {
       "
         >
             {/* Logo */}
-            <div className="border-b border-[#eee6dc] px-6 py-7">
+            <div className="border-b border-[#eee6dc] px-5 py-5">
                 <img
                     src={rareLogo}
                     alt="RARE - Rifath Associates LLP"
-                    className="h-auto w-36 object-contain"
+                    className="h-auto w-28 object-contain"
                 />
 
-                <p className="mt-2 text-xs text-[#8a8175]">
+                <p className="mt-2 text-xs text-[#716658]">
                     Project &amp; Site Management
                 </p>
             </div>
@@ -126,7 +126,7 @@ export default function DesktopSidebar({ user, onLogout, loading }) {
                             {displayName}
                         </p>
 
-                        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[#8a8175]">
+                        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[#716658]">
                             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#16A34A]" />
                             <span className="truncate">
                                 {isAdmin ? "Administrator" : "Site Supervisor"}

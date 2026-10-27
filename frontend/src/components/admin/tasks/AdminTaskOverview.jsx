@@ -14,7 +14,7 @@ export default function AdminTaskOverview({ task }) {
                 <h3 className="mb-5 flex items-center gap-2.5 text-sm font-semibold"><span className="rounded-lg bg-[#EEE5D8] p-2 text-[#8B6944]"><Icon size={16} aria-hidden="true" /></span>{title}</h3>
                 <dl className="grid gap-x-5 gap-y-4 sm:grid-cols-2">{fields.map(([label, value]) => (
                     <div key={label} className="min-w-0 border-t border-[#F0E9DF] pt-3">
-                        <dt className="text-[11px] font-medium text-[#817669]">{label}</dt>
+                        <dt className="text-xs font-medium text-[#716658]">{label}</dt>
                         <dd className="mt-1.5 break-words text-sm font-medium leading-6 text-[#3E352B]">{value == null || value === "" ? "Not specified" : value}</dd>
                     </div>
                 ))}</dl>

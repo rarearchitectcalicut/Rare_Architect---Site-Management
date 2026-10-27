@@ -38,7 +38,7 @@ const fields = [
 ];
 
 const strengthLevels = [
-    { label: "Too short", bar: "bg-[#E4DCCD]", text: "text-[#817669]" },
+    { label: "Too short", bar: "bg-[#E4DCCD]", text: "text-[#716658]" },
     { label: "Weak", bar: "bg-[#D9534F]", text: "text-[#B3342F]" },
     { label: "Fair", bar: "bg-[#E8A23A]", text: "text-[#9A6410]" },
     { label: "Good", bar: "bg-[#7855A0]", text: "text-[#7855A0]" },
@@ -203,7 +203,7 @@ export default function ChangePasswordForm() {
                                 Change password
                             </h2>
 
-                            <p className="mt-1 text-sm leading-6 text-[#817669]">
+                            <p className="mt-1 text-sm leading-6 text-[#716658]">
                                 Choose a strong password to keep your account safe.
                             </p>
                         </div>
@@ -281,7 +281,7 @@ export default function ChangePasswordForm() {
                                                     [field.key]: !previous[field.key],
                                                 }))
                                             }
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#817669] transition-colors hover:bg-[#F1EADF] hover:text-[#211E1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7855A0]"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#716658] transition-colors hover:bg-[#F1EADF] hover:text-[#211E1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7855A0]"
                                         >
                                             {visible[field.key]
                                                 ? <EyeOff size={18} />
@@ -369,7 +369,7 @@ export default function ChangePasswordForm() {
                                 key={check.label}
                                 className={`flex items-center gap-3 text-sm transition-colors ${check.met
                                         ? "font-medium text-[#211E1A]"
-                                        : "text-[#817669]"
+                                        : "text-[#716658]"
                                     }`}
                             >
                                 <span
@@ -386,7 +386,7 @@ export default function ChangePasswordForm() {
                         ))}
                     </ul>
 
-                    <p className="mt-8 border-t border-[#E4DCCD] pt-5 text-xs leading-6 text-[#817669]">
+                    <p className="mt-8 border-t border-[#E4DCCD] pt-5 text-xs leading-6 text-[#716658]">
                         Avoid names, birthdays and passwords you use on other sites.
                         A longer phrase is harder to guess than a short, complex one.
                     </p>

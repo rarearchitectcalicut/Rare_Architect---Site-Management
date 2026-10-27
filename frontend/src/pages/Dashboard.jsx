@@ -63,63 +63,12 @@ function DashboardStyles() {
 }
 
 // Staggered delay helper (capped so late items never feel slow)
-const stagger = (index, step = 70, max = 700) =>
-  Math.min(index * step, max);
+const stagger = () => 0;
 
-// Count-up hook for stat numbers
-function useCountUp(target, duration = 900) {
-  const end = Number(target);
-  const isNumber = Number.isFinite(end);
-
-  const [display, setDisplay] = useState(isNumber ? 0 : target);
-
-  useEffect(() => {
-    if (!isNumber) {
-      setDisplay(target);
-      return undefined;
-    }
-
-    const reduceMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-
-    if (reduceMotion || end === 0) {
-      setDisplay(end);
-      return undefined;
-    }
-
-    let frame;
-    const start = performance.now();
-
-    const tick = (now) => {
-      const progress = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-
-      setDisplay(Math.round(end * eased));
-
-      if (progress < 1) {
-        frame = requestAnimationFrame(tick);
-      }
-    };
-
-    frame = requestAnimationFrame(tick);
-
-    return () => cancelAnimationFrame(frame);
-  }, [end, isNumber, target, duration]);
-
-  return display;
-}
-
+// Render server-owned totals immediately, without repeated animation renders.
 function AnimatedNumber({ value }) {
-  const display = useCountUp(value ?? 0);
-
-  return (
-    <>
-      {typeof display === "number"
-        ? display.toLocaleString()
-        : display}
-    </>
-  );
+  const display = value ?? 0;
+  return <>{typeof display === "number" ? display.toLocaleString() : display}</>;
 }
 
 // =====================================================
@@ -135,7 +84,7 @@ function SectionHeading({ title, subtitle, action }) {
         </h2>
 
         {subtitle && (
-          <p className="mt-1 text-[13px] text-[#8a8175] sm:text-sm">
+          <p className="mt-1 text-[13px] text-[#716658] sm:text-sm">
             {subtitle}
           </p>
         )}
@@ -271,7 +220,7 @@ function StatusPill({ status }) {
       className={`
         inline-flex shrink-0 items-center gap-1.5
         rounded-full px-2.5 py-1
-        text-[10px] font-semibold
+        text-xs font-semibold
         tracking-wide
         transition-transform duration-200
         group-hover/row:scale-105
@@ -291,7 +240,7 @@ function EmptyState({ message }) {
         <CheckCircle2 size={26} strokeWidth={1.6} />
       </div>
 
-      <p className="text-sm text-[#8a8175]">
+      <p className="text-sm text-[#716658]">
         {message}
       </p>
     </div>
@@ -392,7 +341,7 @@ function ItemList({ items, getTitle, getSubtitle, getStatus }) {
               {getTitle(item)}
             </p>
 
-            <p className="mt-1 wrap-break-word text-xs text-[#8a8175]">
+            <p className="mt-1 wrap-break-word text-xs text-[#716658]">
               {getSubtitle(item)}
             </p>
           </div>
@@ -725,7 +674,7 @@ function AdminDashboard({ summary, reviewQueue }) {
                     </p>
                   )}
 
-                  <p className="mt-1 break-words text-xs text-[#8a8175]">
+                  <p className="mt-1 break-words text-xs text-[#716658]">
                     {entry.entity_type || "System"}
                     {entry.created_at
                       ? ` · ${new Date(
@@ -1071,7 +1020,7 @@ export default function Dashboard() {
           Dashboard unavailable
         </h2>
 
-        <p className="mx-auto mt-2 max-w-md text-sm text-[#8a8175]">
+        <p className="mx-auto mt-2 max-w-md text-sm text-[#716658]">
           {error || "Dashboard data is currently unavailable."}
         </p>
 
@@ -1111,7 +1060,7 @@ export default function Dashboard() {
   // ROLE-BASED DASHBOARD
   // ---------------------------------------------
 
-  return isAdmin ? (
+  return <div className="space-y-5"><header className="rare-page-header border border-[#E7DED2] bg-[#FFFDFA]"><h1>Dashboard</h1><p className="text-sm text-[#716658]">{isAdmin ? "Project priorities and decisions at a glance." : "Your sites and next actions."}</p></header>{isAdmin ? (
     <AdminDashboard
       summary={summary}
       reviewQueue={details}
@@ -1121,5 +1070,5 @@ export default function Dashboard() {
       summary={summary}
       actionItems={details}
     />
-  );
+  )}</div>;
 }

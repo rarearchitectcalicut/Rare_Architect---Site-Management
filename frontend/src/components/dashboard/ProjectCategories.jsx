@@ -57,10 +57,10 @@ function CategoryCard({ category }) {
                         <Images
                             size={36}
                             strokeWidth={1.4}
-                            className="text-[#8a8175]"
+                            className="text-[#716658]"
                         />
 
-                        <span className="text-xs text-[#8a8175]">
+                        <span className="text-xs text-[#716658]">
                             No cover image
                         </span>
                     </div>
@@ -91,7 +91,7 @@ function CategoryCard({ category }) {
                     {category.name}
                 </h3>
 
-                <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-[#8a8175]">
+                <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-[#716658]">
                     {category.description ||
                         "Explore projects in this category."}
                 </p>
@@ -171,7 +171,7 @@ export default function ProjectCategories() {
             {/* SECTION HEADER */}
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8a8175]">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#716658]">
                         Explore RARE
                     </p>
 
@@ -179,7 +179,7 @@ export default function ProjectCategories() {
                         Project Categories
                     </h2>
 
-                    <p className="mt-2 text-sm text-[#8a8175]">
+                    <p className="mt-2 text-sm text-[#716658]">
                         Explore our architecture and construction projects
                         by category.
                     </p>
@@ -210,14 +210,14 @@ export default function ProjectCategories() {
                     <FolderKanban
                         size={34}
                         strokeWidth={1.5}
-                        className="mx-auto text-[#8a8175]"
+                        className="mx-auto text-[#716658]"
                     />
 
                     <h3 className="mt-4 text-lg font-semibold text-[#211e1a]">
                         No project categories yet
                     </h3>
 
-                    <p className="mt-2 text-sm text-[#8a8175]">
+                    <p className="mt-2 text-sm text-[#716658]">
                         Categories created in Django will appear here.
                     </p>
                 </div>

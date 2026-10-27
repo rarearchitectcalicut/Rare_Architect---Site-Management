@@ -118,7 +118,7 @@ function PasswordInput({
             absolute right-3 top-1/2
             -translate-y-1/2
             rounded-md p-1
-            text-[#8a8175]
+            text-[#716658]
             transition-colors
             hover:text-[#292620]
             focus-visible:outline-2
@@ -445,7 +445,7 @@ export default function ChangePassword() {
                             className="
                 mt-2 max-w-sm
                 text-sm leading-6
-                text-[#8a8175]
+                text-[#716658]
               "
                         >
                             {user?.must_change_password
@@ -501,7 +501,7 @@ export default function ChangePassword() {
                         <p
                             className="
                 text-xs leading-5
-                text-[#8a8175]
+                text-[#716658]
               "
                         >
                             Choose a strong password. Your new password

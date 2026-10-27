@@ -82,7 +82,7 @@ export default function TimelineSummary({ tasks = [] }) {
     return (
         <section
             aria-label="Project timeline summary"
-            className="grid grid-cols-2 gap-3 xl:grid-cols-4"
+            className="rare-compact-stats grid grid-cols-2 gap-3 xl:grid-cols-4"
         >
             {cards.map((card) => {
                 const Icon = card.icon;
@@ -103,13 +103,13 @@ export default function TimelineSummary({ tasks = [] }) {
             "
                     >
                         <div className="flex items-start justify-between gap-2">
-                            <p className="text-xs font-medium leading-5 text-[#817669]">
+                            <p className="text-xs font-medium leading-5 text-[#716658]">
                                 {card.label}
                             </p>
 
                             <span
                                 className={`
-                  flex h-11 w-11 shrink-0
+                  flex h-8 w-8 shrink-0
                   items-center justify-center rounded-2xl
                   transition-transform duration-300
                   group-hover:rotate-[-6deg]
@@ -122,11 +122,11 @@ export default function TimelineSummary({ tasks = [] }) {
                             </span>
                         </div>
 
-                        <p className="mt-4 text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">
                             {stats[card.key]}
                         </p>
 
-                        <p className="mt-1 text-[11px] text-[#948778]">
+                        <p className="mt-1 text-xs text-[#716658]">
                             {card.key === "overdue"
                                 ? "Past scheduled end date"
                                 : card.key === "approved"
