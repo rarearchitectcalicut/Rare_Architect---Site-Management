@@ -38,7 +38,6 @@ const STATUS_OPTIONS = [
     { value: "ACTIVE", label: "Active" },
     { value: "COMPLETED", label: "Completed" },
     { value: "ON_HOLD", label: "On Hold" },
-    { value: "CANCELLED", label: "Cancelled" },
 ];
 
 // Add MAINTENANCE to STATUS_OPTIONS only if
@@ -362,6 +361,7 @@ export default function EditProject({
             "end_date",
             "status",
         ]) {
+            if (field === "status" && form.status === project.status) continue;
             // Empty optional dates are omitted because
             // DRF DateField rejects blank strings.
             if (
@@ -679,7 +679,7 @@ export default function EditProject({
                                         onChange={(e) =>
                                             updateField("status", e.target.value)
                                         }
-                                        disabled={Boolean(busyMessage)}
+                                        disabled={Boolean(busyMessage) || project.status === "CANCELLED"}
                                         className={inputClass}
                                     >
                                         {statusOptions.map((item) => (

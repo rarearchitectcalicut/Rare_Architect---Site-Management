@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowUpRight,
+  Ban,
   CalendarDays,
   Check,
   Clock3,
@@ -29,6 +30,7 @@ import { getMediaUrl } from "../../utils/mediaUrl";
 import LoadingScreen from "../../components/LoadingScreen";
 import { Pencil } from "lucide-react";
 import EditProject from "../../modal/admin/EditProject";
+import { validationMessage } from "../../hooks/useApprovalReview";
 
 // =====================================================
 // MOTION SYSTEM
@@ -456,7 +458,15 @@ function AddSupervisorDialog({
 
 export default function ProjectOverview() {
   const [showEditProject, setShowEditProject] = useState(false);
-  const [refreshProjectKey, setRefreshProjectKey] = useState(0);
+  const [showCancelProject, setShowCancelProject] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancellationError, setCancellationError] = useState("");
+  const [notice, setNotice] = useState("");
+  const cancellationInFlight = useRef(false);
+  const cancelDialog = useRef(null);
+  const cancelTitleId = useId();
+  const cancelMessageId = useId();
 
   const { projectId } = useParams();
 
@@ -491,6 +501,37 @@ export default function ProjectOverview() {
   useEffect(() => {
     loadProject();
   }, [loadProject, retryKey]);
+
+  useEffect(() => {
+    if (!showCancelProject) return;
+    const dialog = cancelDialog.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog.showModal();
+    return () => { dialog.close(); document.body.style.overflow = previousOverflow; };
+  }, [showCancelProject]);
+
+  async function cancelProject(event) {
+    event.preventDefault();
+    if (cancellationInFlight.current || !cancellationReason.trim()) return;
+    cancellationInFlight.current = true;
+    setCancelling(true);
+    setCancellationError("");
+    try {
+      const updated = await projectApi.updateProject(projectId, {
+        status: "CANCELLED", cancellation_reason: cancellationReason.trim(),
+      });
+      setProject((previous) => ({ ...previous, status: updated.status }));
+      setShowCancelProject(false);
+      setNotice("Project cancelled. All existing records have been preserved.");
+      await loadProject();
+    } catch (failure) {
+      setCancellationError(validationMessage(failure, "Unable to cancel this project. Please try again."));
+    } finally {
+      cancellationInFlight.current = false;
+      setCancelling(false);
+    }
+  }
 
   const assignSupervisors = async (ids) => {
     setLoadingMessage("Assigning supervisors...");
@@ -538,6 +579,12 @@ export default function ProjectOverview() {
       <OverviewStyles />
 
       {loadingMessage && <LoadingScreen message={loadingMessage} />}
+      {notice && <p role="status" className="rounded-xl border border-[#B8D5C1] bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
+      {project?.status === "CANCELLED" && <section className="space-y-2 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5 text-sm text-[#716658]">
+        <p className="font-semibold text-[#211E1A]">This project has been cancelled. Existing records remain available for reference.</p>
+        <p>Pending approvals remain available for separate Admin review; cancellation does not decide them.</p>
+        {project.cancellation && <><p>Cancelled by {project.cancellation.cancelled_by} on {new Date(project.cancellation.cancelled_at).toLocaleString("en-IN")}</p><p className="whitespace-pre-wrap break-words">Reason: {project.cancellation.reason || "No reason recorded in the existing history."}</p></>}
+      </section>}
 
       {error && (
         <div
@@ -661,30 +708,31 @@ export default function ProjectOverview() {
                     Edit Project
                   </button>
 
-                  {/* DELETE PROJECT - RED */}
-                  <button
+                  {/* Cancellation retains the complete project history. */}
+                  {["ACTIVE", "MAINTENANCE", "ON_HOLD"].includes(project.status) && <button
                     type="button"
-                    onClick={() => setShowDeleteProject(true)}
+                    onClick={() => { setCancellationReason(""); setCancellationError(""); setShowCancelProject(true); }}
                     className="
       group inline-flex w-full items-center justify-center gap-2 sm:w-auto
-      rounded-xl border border-[#F1C3BD]
-      bg-[#FDE9E6] px-5 py-3
-      text-sm font-semibold text-[#B5473E]
+      rounded-xl border border-[#B42318]
+      bg-[#B42318] px-5 py-3
+      text-sm font-semibold text-white
       transition-all duration-200
       hover:-translate-y-0.5
       hover:border-[#E99B92]
-      hover:bg-[#FAD5D0]
+      hover:bg-[#921C13]
+      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B42318]
       hover:shadow-[0_8px_20px_rgba(181,71,62,0.13)]
       active:translate-y-0
       motion-reduce:transform-none
     "
                   >
-                    <Trash2
+                    <Ban
                       size={17}
                       className="transition-transform duration-200 group-hover:scale-110"
                     />
-                    Delete Project
-                  </button>
+                    Cancel Project
+                  </button>}
                   </div>
                 </div>
               </div>
@@ -1092,10 +1140,25 @@ export default function ProjectOverview() {
         open={showEditProject}
         project={project}
         onClose={() => setShowEditProject(false)}
-        onUpdated={() => {
-          setRefreshProjectKey((value) => value + 1);
-        }}
+        onUpdated={loadProject}
       />
+      {showCancelProject && <dialog ref={cancelDialog} aria-labelledby={cancelTitleId} aria-describedby={cancelMessageId}
+        onCancel={(event) => { event.preventDefault(); if (!cancellationInFlight.current) setShowCancelProject(false); }}
+        className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5 text-[#211E1A] shadow-2xl backdrop:bg-[#211E1A]/55 sm:p-7">
+        <form onSubmit={cancelProject} className="space-y-5">
+          <h2 id={cancelTitleId} className="text-xl font-bold">Cancel Project?</h2>
+          <p className="break-words font-semibold">{project?.name}</p>
+          <p id={cancelMessageId} className="text-sm leading-6 text-[#716658]">Are you sure you want to cancel this project? The project will be marked as Cancelled. All existing tasks, reports, documents, approvals and history will be preserved.</p>
+          <label className="block text-sm font-semibold">Cancellation reason (required)
+            <textarea autoFocus required maxLength={1000} rows={4} value={cancellationReason} disabled={cancelling} onChange={(event) => setCancellationReason(event.target.value)} className="mt-2 w-full rounded-xl border border-[#CDBFAE] p-3 text-sm outline-none focus:border-[#244F87] focus:ring-2 focus:ring-[#BACDE4]" />
+          </label>
+          {cancellationError && <p role="alert" className="text-sm text-[#B42318]">{cancellationError}</p>}
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <button type="button" disabled={cancelling} onClick={() => setShowCancelProject(false)} className="min-h-12 rounded-xl border border-[#CDBFAE] bg-[#FFFDFA] px-5 py-3 text-sm font-semibold hover:bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87] disabled:opacity-60">Keep Project</button>
+            <button type="submit" disabled={cancelling || !cancellationReason.trim()} className="min-h-12 rounded-xl bg-[#B42318] px-5 py-3 text-sm font-semibold text-white hover:bg-[#921C13] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B42318] disabled:cursor-not-allowed disabled:opacity-60">{cancelling ? "Cancelling..." : "Cancel Project"}</button>
+          </div>
+        </form>
+      </dialog>}
     </div>
   );
 }

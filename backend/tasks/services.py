@@ -1,3 +1,4 @@
+from projects.permissions import lock_project_for_work
 from django.db import transaction
 from rest_framework.exceptions import (
     PermissionDenied,
@@ -336,6 +337,7 @@ def reject_task(*, task_id, admin_user, reason):
 
 @transaction.atomic
 def start_task(*, task_id, user):
+    lock_project_for_work(get_object_or_404(Task.objects.only("project_id"), pk=task_id).project_id)
     if (
         not user.is_authenticated
         or not user.is_active
@@ -388,6 +390,7 @@ def start_task(*, task_id, user):
 
 @transaction.atomic
 def complete_task(*, task_id, user, comment=""):
+    lock_project_for_work(get_object_or_404(Task.objects.only("project_id"), pk=task_id).project_id)
     task = get_object_or_404(
         Task.objects.select_related("project").select_for_update(),
         pk=task_id,
@@ -536,6 +539,7 @@ def cancel_task(*, task_id, user, reason):
 
 @transaction.atomic
 def reopen_task(*, task_id, admin_user, reason):
+    lock_project_for_work(get_object_or_404(Task.objects.only("project_id"), pk=task_id).project_id)
     if not (admin_user.is_authenticated and admin_user.is_active and admin_user.role == "ADMIN" and admin_user.is_staff):
         raise PermissionDenied("Only active Admins can reopen tasks.")
     reason = validate_lifecycle_reason(reason)
@@ -624,6 +628,7 @@ def create_task_change_request(
     new_values,
     reason,
 ):
+    lock_project_for_work(get_object_or_404(Task.objects.only("project_id"), pk=task_id).project_id)
     task = get_object_or_404(
         Task.objects.select_for_update(),
         pk=task_id,
@@ -1022,6 +1027,7 @@ def create_timeline_reorder_request(
     task_ids,
     reason,
 ):
+    lock_project_for_work(project.pk)
     project = Project.objects.select_for_update().get(pk=project.pk)
 
     validate_supervisor_assignment(project, supervisor)

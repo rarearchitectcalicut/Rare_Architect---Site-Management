@@ -352,6 +352,9 @@ class ProjectDetailView(generics.RetrieveUpdateAPIView):
     def perform_update(self, serializer):
         instance = Project.objects.select_for_update().get(pk=serializer.instance.pk)
         serializer.instance = instance
+        # Recheck transitions against the locked row, including concurrent retries.
+        serializer.validate(serializer.validated_data)
+        cancellation_reason = serializer.validated_data.pop("cancellation_reason", "")
         old_status = instance.status
         changed_fields = [
             field for field, value in serializer.validated_data.items()
@@ -370,6 +373,7 @@ class ProjectDetailView(generics.RetrieveUpdateAPIView):
                     "project_id": str(project.id),
                     "old_status": old_status,
                     "new_status": project.status,
+                    **({"reason": cancellation_reason} if project.status == Project.Status.CANCELLED else {}),
                 },
             )
         detail_fields = sorted(set(changed_fields) - {"status"})

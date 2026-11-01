@@ -218,7 +218,7 @@ function ExpandedTask({
 
     if (!task) return null;
 
-    const canEdit = ["PENDING", "REJECTED", "APPROVED"].includes(
+    const canEdit = task.project_status !== "CANCELLED" && ["PENDING", "REJECTED", "APPROVED"].includes(
         task.approval_status
     );
 
@@ -389,7 +389,7 @@ function ExpandedTask({
                 </button>
 
                 {documentsOpen && (
-                    <TaskDocuments taskId={task.id} />
+                    <TaskDocuments taskId={task.id} readOnly={task.project_status === "CANCELLED"} />
                 )}
             </div>
         </div>
@@ -874,7 +874,7 @@ export default function SupervisorProjectTasks() {
                     <button
                         type="button"
                         onClick={() => setBulkOpen(true)}
-                        disabled={loading || Boolean(error)}
+                        disabled={loading || Boolean(error) || project?.status === "CANCELLED"}
                         className="inline-flex items-center gap-2 rounded-xl border border-[#D6C6B2] bg-[#F1EADF] px-5 py-3 text-sm font-semibold text-[#66513D] hover:bg-[#E8DCCB] disabled:opacity-50"
                     >
                         <Layers3 size={18} />
@@ -884,7 +884,7 @@ export default function SupervisorProjectTasks() {
                     <button
                         type="button"
                         onClick={openCreate}
-                        disabled={loading || Boolean(error)}
+                        disabled={loading || Boolean(error) || project?.status === "CANCELLED"}
                         className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#39332B] disabled:opacity-50"
                     >
                         <Plus size={18} />
@@ -893,6 +893,7 @@ export default function SupervisorProjectTasks() {
                 </div>
             </header>
 
+            {project?.status === "CANCELLED" && <p role="status" className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-sm text-[#716658]">This project has been cancelled. Existing records remain available for reference.</p>}
             {/* SUCCESS NOTICE */}
             {notice && (
                 <div
@@ -1150,6 +1151,7 @@ export default function SupervisorProjectTasks() {
                                 <button
                                     type="button"
                                     onClick={openCreate}
+                                    disabled={project?.status === "CANCELLED"}
                                     className="mt-5 rounded-xl bg-[#211E1A] px-4 py-2.5 text-sm font-semibold text-white"
                                 >
                                     Create First Task

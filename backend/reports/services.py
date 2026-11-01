@@ -1,3 +1,4 @@
+from projects.permissions import lock_project_for_work
 from .progress import eligible_verified_work
 from django.db import transaction,IntegrityError
 from django.shortcuts import get_object_or_404
@@ -206,6 +207,7 @@ def create_daily_report(*, project, supervisor, validated_data):
 
 @transaction.atomic
 def update_daily_report(*, report_id, supervisor, data):
+    lock_project_for_work(get_object_or_404(DailyReport.objects.only("project_id"), pk=report_id).project_id)
     report = get_object_or_404(
         DailyReport.objects.select_for_update(),
         pk=report_id,
@@ -268,6 +270,7 @@ def update_daily_report(*, report_id, supervisor, data):
 @transaction.atomic
 def delete_daily_report(*, report_id, supervisor):
     # Match submit and child mutations: lock the parent report first.
+    lock_project_for_work(get_object_or_404(DailyReport.objects.only("project_id"), pk=report_id).project_id)
     report = get_object_or_404(DailyReport.objects.select_for_update(), pk=report_id)
     validate_daily_report_draft(report, supervisor)
     attachments = list(report.attachments.all())
@@ -302,6 +305,7 @@ def delete_daily_report(*, report_id, supervisor):
 
 @transaction.atomic
 def submit_daily_report(*, report_id, supervisor):
+    lock_project_for_work(get_object_or_404(DailyReport.objects.only("project_id"), pk=report_id).project_id)
     report = get_object_or_404(
         DailyReport.objects.select_for_update(),
         pk=report_id,
@@ -399,6 +403,7 @@ def add_daily_task_work(
 ):
     # Lock the report so submission and adding
     # work cannot happen simultaneously.
+    lock_project_for_work(get_object_or_404(DailyReport.objects.only("project_id"), pk=report_id).project_id)
     report = get_object_or_404(
         DailyReport.objects.select_for_update().select_related("project"),
         pk=report_id,
@@ -483,6 +488,7 @@ def get_locked_draft_work_entry(*, entry_id, supervisor):
     This prevents edits from racing with submission.
     """
 
+    lock_project_for_work(get_object_or_404(DailyTaskWork.objects.select_related("daily_report"), pk=entry_id).daily_report.project_id)
     existing_entry = get_object_or_404(
         DailyTaskWork.objects.only(
             "id",
@@ -649,6 +655,7 @@ def prepare_draft_row(model, report, validated_data):
 
 @transaction.atomic
 def add_daily_manpower(*, report_id, supervisor, data):
+    lock_project_for_work(get_object_or_404(DailyReport.objects.only("project_id"), pk=report_id).project_id)
     report = get_object_or_404(
         DailyReport.objects.select_for_update().select_related("project"),
         pk=report_id,
@@ -697,6 +704,7 @@ def get_locked_draft_manpower(*, entry_id, supervisor):
     Lock the parent report before locking the entry.
     """
 
+    lock_project_for_work(get_object_or_404(DailyManpower.objects.select_related("daily_report"), pk=entry_id).daily_report.project_id)
     existing = get_object_or_404(
         DailyManpower.objects.only("id", "daily_report_id"),
         pk=entry_id,
@@ -841,6 +849,7 @@ def save_validated_material(entry, *, update_fields=None):
 
 @transaction.atomic
 def add_daily_material(*, report_id, supervisor, data):
+    lock_project_for_work(get_object_or_404(DailyReport.objects.only("project_id"), pk=report_id).project_id)
     report = get_object_or_404(
         DailyReport.objects.select_for_update().select_related("project"),
         pk=report_id,
@@ -886,6 +895,7 @@ def get_locked_draft_material(*, entry_id, supervisor):
     preventing edits after report submission.
     """
 
+    lock_project_for_work(get_object_or_404(DailyMaterialEntry.objects.select_related("daily_report"), pk=entry_id).daily_report.project_id)
     existing = get_object_or_404(
         DailyMaterialEntry.objects.only(
             "id",
@@ -1003,6 +1013,7 @@ def upload_daily_report_attachment(
     supervisor,
     data,
 ):
+    lock_project_for_work(get_object_or_404(DailyReport.objects.only("project_id"), pk=report_id).project_id)
     report = get_object_or_404(
         DailyReport.objects.select_for_update().select_related("project"),
         pk=report_id,
@@ -1102,6 +1113,7 @@ def get_locked_draft_attachment(
     cannot happen at the same time.
     """
 
+    lock_project_for_work(get_object_or_404(DailyReportAttachment.objects.select_related("daily_report"), pk=attachment_id).daily_report.project_id)
     existing = get_object_or_404(
         DailyReportAttachment.objects.only(
             "id",
@@ -1460,6 +1472,7 @@ def correct_rejected_daily_task_work(
     """
 
     # Find the original entry's parent report.
+    lock_project_for_work(get_object_or_404(DailyReport.objects.only("project_id"), pk=new_report_id).project_id)
     original_reference = get_object_or_404(
         DailyTaskWork.objects.only(
             "id",

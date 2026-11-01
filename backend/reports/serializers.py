@@ -86,6 +86,7 @@ class DailyReportCreateSerializer(serializers.ModelSerializer):
 # DAILY REPORT DETAIL SERIALIZER
 # =====================================================
 class DailyReportDetailSerializer(serializers.ModelSerializer):
+    project_status = serializers.CharField(source="project.status", read_only=True)
 
     project_name = serializers.CharField(
         source="project.name",
@@ -122,6 +123,7 @@ class DailyReportDetailSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "project",
+            "project_status",
             "project_name",
             "reported_by",
             "reported_by_name",

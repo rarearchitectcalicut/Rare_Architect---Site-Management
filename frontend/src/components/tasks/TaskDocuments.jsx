@@ -311,6 +311,7 @@ function DocumentRow({
     taskId,
     onRefresh,
     onBusyChange,
+    readOnly = false,
 }) {
     const [showVersions, setShowVersions] = useState(false);
     const [versions, setVersions] = useState([]);
@@ -419,6 +420,7 @@ function DocumentRow({
                 <button
                     type="button"
                     onClick={() => setShowVersionUpload((value) => !value)}
+                    disabled={readOnly}
                     className="inline-flex items-center gap-2 rounded-xl bg-[#E7F2E8] px-3 py-2 text-xs font-semibold text-[#296F40]"
                 >
                     <FilePlus2 size={15} />
@@ -482,7 +484,7 @@ function DocumentRow({
                 </div>
             )}
 
-            {showVersionUpload && (
+            {showVersionUpload && !readOnly && (
                 <div className="border-t border-[#EEE6DC] p-4">
                     <DocumentUploadForm
                         taskId={taskId}
@@ -506,7 +508,7 @@ function DocumentRow({
 // TASK DOCUMENTS SECTION
 // =====================================================
 
-export default function TaskDocuments({ taskId }) {
+export default function TaskDocuments({ taskId, readOnly = false }) {
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
@@ -603,6 +605,7 @@ export default function TaskDocuments({ taskId }) {
                     <button
                         type="button"
                         onClick={() => setShowUpload((value) => !value)}
+                        disabled={readOnly}
                         className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-xs font-semibold text-white"
                     >
                         <FilePlus2 size={17} />
@@ -611,7 +614,7 @@ export default function TaskDocuments({ taskId }) {
                 </div>
             </div>
 
-            {showUpload && (
+            {showUpload && !readOnly && (
                 <div className="mt-5">
                     <DocumentUploadForm
                         taskId={taskId}
@@ -643,6 +646,7 @@ export default function TaskDocuments({ taskId }) {
                             taskId={taskId}
                             onRefresh={load}
                             onBusyChange={setBusy}
+                            readOnly={readOnly}
                         />
                     ))}
 

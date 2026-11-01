@@ -8,6 +8,23 @@ from .models import ProjectCategory, MAX_IMAGE_SIZE , Project , ProjectSuperviso
 
 User = get_user_model()
 
+
+def project_cancellation(project):
+    if project.status != Project.Status.CANCELLED:
+        return None
+    from activity.models import ActivityLog
+    log = ActivityLog.objects.filter(
+        entity_type="PROJECT", entity_id=project.pk,
+        action="PROJECT_STATUS_CHANGED", metadata__new_status="CANCELLED",
+    ).select_related("actor").first()
+    if not log:
+        return None
+    return {
+        "reason": log.metadata.get("reason", ""),
+        "cancelled_at": log.created_at.isoformat(),
+        "cancelled_by": log.metadata.get("actor_name") or (log.actor.username if log.actor else "Former Admin"),
+    }
+
 # ============================================================
 # PROJECT CATEGORY SERIALIZERS
 # ============================================================
@@ -101,6 +118,7 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(
         queryset=ProjectCategory.objects.filter(is_active=True)
     )
+    cancellation_reason = serializers.CharField(write_only=True, required=False, max_length=1000)
 
     class Meta:
         model = Project
@@ -115,6 +133,7 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
             "start_date",
             "end_date",
             "status",
+            "cancellation_reason",
             "cover_image",
             "created_at",
             "updated_at",
@@ -143,6 +162,18 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        current_status = getattr(self.instance, "status", None)
+        new_status = attrs.get("status")
+        if current_status == Project.Status.CANCELLED and new_status is not None:
+            raise serializers.ValidationError({"status": "Cancelled projects cannot be cancelled again or reactivated."})
+        if new_status == Project.Status.CANCELLED:
+            if current_status not in {Project.Status.ACTIVE, Project.Status.MAINTENANCE, Project.Status.ON_HOLD}:
+                raise serializers.ValidationError({"status": "Only active, maintenance or on-hold projects can be cancelled."})
+            if not attrs.get("cancellation_reason", "").strip():
+                raise serializers.ValidationError({"cancellation_reason": "A cancellation reason is required."})
+        elif "cancellation_reason" in attrs:
+            raise serializers.ValidationError({"cancellation_reason": "A reason is only accepted when cancelling a project."})
+
         start_date = attrs.get(
             "start_date",
             getattr(self.instance, "start_date", None),
@@ -197,6 +228,10 @@ class ProjectListSerializer(serializers.ModelSerializer):
 #          PROJECT DETAILED SERIALIZER
 # ===========================================
 class ProjectDetailSerializer(serializers.ModelSerializer):
+    cancellation = serializers.SerializerMethodField()
+
+    def get_cancellation(self, obj):
+        return project_cancellation(obj)
 
     category_name = serializers.CharField(
         source="category.name",
@@ -230,6 +265,7 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
             "created_by",
             "created_by_name",
             "supervisor_count",
+            "cancellation",
             "created_at",
             "updated_at",
         )
@@ -315,6 +351,10 @@ class ProjectAssignmentSerializer(serializers.Serializer):
 #     PROJECT OVERVIEW SERIALIZER
 # ===========================================
 class ProjectOverviewSerializer(serializers.ModelSerializer):
+    cancellation = serializers.SerializerMethodField()
+
+    def get_cancellation(self, obj):
+        return project_cancellation(obj)
     category_name = serializers.CharField(
         source="category.name",
         read_only=True,
@@ -360,6 +400,7 @@ class ProjectOverviewSerializer(serializers.ModelSerializer):
             "created_by_name",
             "supervisor_count",
             "supervisors",
+            "cancellation",
             "created_at",
             "updated_at",
         )
