@@ -7,12 +7,14 @@ export function getMediaUrl(value) {
     }
 
     try {
-        const apiBase = new URL(API_BASE_URL);
+        const pageOrigin = globalThis.location?.origin;
+        const apiBase = new URL(API_BASE_URL, pageOrigin);
+        const usesProxy = API_BASE_URL.startsWith("/") &&
+            !API_BASE_URL.startsWith("//");
 
         // Support absolute URLs.
         const resolved = new URL(
-            value.startsWith("http://") ||
-                value.startsWith("https://") ||
+            /^[a-z][a-z\d+.-]*:/i.test(value) ||
                 value.startsWith("/")
                 ? value
                 : `/${value}`,
@@ -22,6 +24,17 @@ export function getMediaUrl(value) {
         // Only allow HTTP(S) image URLs.
         if (!["http:", "https:"].includes(resolved.protocol)) {
             return null;
+        }
+
+        // Vite's changeOrigin proxy makes Django return loopback media URLs.
+        // Route those through /media on the origin the phone actually opened.
+        if (usesProxy &&
+            ["localhost", "127.0.0.1", "[::1]"].includes(resolved.hostname) &&
+            resolved.pathname.startsWith("/media/")) {
+            return new URL(
+                resolved.pathname + resolved.search + resolved.hash,
+                apiBase.origin
+            ).href;
         }
 
         return resolved.href;

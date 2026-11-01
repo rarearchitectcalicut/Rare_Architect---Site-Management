@@ -81,6 +81,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (!error.response && error.code !== "ERR_CANCELED") {
+      globalThis.window?.dispatchEvent(new Event("rare:network-error"));
+    }
     const originalRequest = error.config;
 
     if (

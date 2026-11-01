@@ -1,5 +1,6 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { registerSW } from "virtual:pwa-register";
 import {
   Navigate,
   Route,
@@ -50,6 +51,7 @@ import SupervisorNotifications from "./pages/supervisor/Notifications";
 import SupervisorProjectTimeline from "./pages/supervisor/ProjectTimeline";
 import SupervisorProjectDelays from "./pages/supervisor/ProjectDelays";
 import SupervisorDelays from "./pages/supervisor/Delays";
+import SupervisorDailyReports from "./pages/supervisor/DailyReports";
 
 
 // =====================================================
@@ -59,6 +61,7 @@ import SupervisorDelays from "./pages/supervisor/Delays";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AppLayout from "./layouts/AppLayout";
 import LoadingScreen from "./components/LoadingScreen";
+import { useConfirmation } from "./hooks/useConfirmation";
 
 // =====================================================
 // HOME REDIRECT
@@ -121,6 +124,77 @@ function UnauthorizedPage() {
 export default function App() {
   const [isInitializing, setIsInitializing] =
     useState(true);
+  const [updateReady, setUpdateReady] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState("");
+  const [connectionError, setConnectionError] = useState(!navigator.onLine);
+  const updateWorker = useRef(null);
+  const registration = useRef(null);
+  const reloadRequired = useRef(false);
+  const reloadApproved = useRef(false);
+  const { confirm, confirmationModal } = useConfirmation();
+
+  useEffect(() => {
+    // The ref avoids a second registration in React Strict Mode.
+    if (!updateWorker.current) {
+      updateWorker.current = registerSW({
+        immediate: true,
+        onNeedRefresh: () => setUpdateReady(true),
+        onNeedReload: () => {
+          reloadRequired.current = true;
+          // Another tab can activate the worker. Never reload this tab's form.
+          if (reloadApproved.current && !document.querySelector('form, dialog[open], [role="dialog"], input, textarea, select, [contenteditable="true"]')) {
+            window.location.reload();
+          } else {
+            reloadApproved.current = false;
+            setUpdateReady(true);
+          }
+        },
+        onRegisteredSW: (_url, current) => { registration.current = current; },
+        onRegisterError: () => setUpdateMessage("App installation is unavailable. You can continue using the website; retry by reopening RARE when connected."),
+      });
+    }
+    const offline = () => setConnectionError(true);
+    const checkUpdate = () => {
+      if (navigator.onLine && document.visibilityState === "visible") {
+        registration.current?.update().catch(() => {});
+      }
+    };
+    const online = () => { setConnectionError(false); checkUpdate(); };
+    window.addEventListener("offline", offline);
+    window.addEventListener("online", online);
+    window.addEventListener("rare:network-error", offline);
+    document.addEventListener("visibilitychange", checkUpdate);
+    const interval = window.setInterval(checkUpdate, 60 * 60 * 1000);
+    return () => {
+      window.removeEventListener("offline", offline);
+      window.removeEventListener("online", online);
+      window.removeEventListener("rare:network-error", offline);
+      document.removeEventListener("visibilitychange", checkUpdate);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const applyUpdate = async () => {
+    // Existing forms do not share a dirty-state API. Conservatively require
+    // users to finish/close all editors, including uploads, before updating.
+    if (document.querySelector('form, dialog[open], [role="dialog"], input, textarea, select, [contenteditable="true"]')) {
+      setUpdateMessage("Save your work, wait for uploads to finish, then close forms and return to the dashboard to update.");
+      return;
+    }
+    if (!navigator.onLine) {
+      setConnectionError(true);
+      return;
+    }
+    if (!await confirm({
+      title: "Update RARE?",
+      message: "RARE will reload this window. Confirm that your work is saved and uploads have finished. Other open windows will wait for their own update action.",
+      confirmLabel: "Update now",
+    })) return;
+
+    reloadApproved.current = true;
+    if (reloadRequired.current) window.location.reload();
+    else await updateWorker.current?.(true);
+  };
 
   useEffect(() => {
     // Keep your existing RARE startup loader.
@@ -138,6 +212,19 @@ export default function App() {
   }
 
   return (
+    <>
+      {(connectionError || updateReady || updateMessage) && (
+        <aside aria-label="RARE app status" className="sticky top-0 z-50 border-b border-[#D8C7B2] bg-[#FFFDFA] px-4 py-3 text-sm text-[#211E1A]">
+          {connectionError && <p role="alert">Connection unavailable. RARE needs an internet connection to load or save project data. Changes are not queued for offline submission. Reconnect and retry the action; check the record before submitting again.</p>}
+          {updateReady && <p role="status">A new version of RARE is ready. Save your work before updating.</p>}
+          {updateMessage && <p role="status">{updateMessage}</p>}
+          <div className="mt-2 flex flex-wrap gap-3">
+            {updateReady && <button type="button" onClick={applyUpdate} className="rounded-xl bg-[#211E1A] px-4 py-2 font-semibold text-white">Update RARE</button>}
+            {(connectionError || updateMessage) && <button type="button" onClick={() => { setConnectionError(!navigator.onLine); setUpdateMessage(""); }} className="rounded-xl border border-[#E4DCCD] px-4 py-2 font-semibold">Dismiss</button>}
+          </div>
+        </aside>
+      )}
+      {confirmationModal}
     <Routes>
 
       {/* ==========================================
@@ -337,7 +424,7 @@ export default function App() {
           {/* DAILY REPORTS */}
           <Route
             path="/supervisor/reports"
-            element={<SectionPlaceholder />}
+            element={<SupervisorDailyReports />}
           />
 
           {/* DOCUMENTS */}
@@ -382,5 +469,6 @@ export default function App() {
       />
 
     </Routes>
+    </>
   );
 }

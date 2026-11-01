@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CloudSun, FileText, FolderOpen, ListFilter, Plus, RefreshCw, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CloudSun, FileText, ListFilter, Plus, RefreshCw, UserRound } from "lucide-react";
 import DailyReportSummary, { ReportAttachmentForm, ReportDiaryForm, ReportRowForm, ReportWorkEntry, ReportWorkForm, ReportStatusBadge } from "../../components/daily-reports/DailyReportSummary";
+import ReportProjectPicker from "../../components/daily-reports/ReportProjectPicker";
 import ReportEvidence from "../../components/daily-reports/ReportEvidence";
 import LoadingScreen from "../../components/LoadingScreen";
 import { dailyReportApi } from "../../api/dailyReportApi";
@@ -11,29 +12,6 @@ import { useAuth } from "../../hooks/useAuth";
 import { useConfirmation } from "../../hooks/useConfirmation";
 import { validationMessage } from "../../hooks/useApprovalReview";
 import { formatDate, formatText } from "../../components/approvals/approvalUtils";
-
-function ReportProjectPicker() {
-    const [search, setSearch] = useState("");
-    const [query, setQuery] = useState("");
-    const [page, setPage] = useState(1);
-    const [revision, setRevision] = useState(0);
-    const [result, setResult] = useState(null);
-    const key = `${query}:${page}:${revision}`;
-    const current = result?.key === key ? result : null;
-    useEffect(() => {
-        let active = true;
-        projectApi.getProjects({ search: query, page, page_size: 25 }).then((response) => { if (active) setResult({ key, data: reportPage(response, page) }); })
-            .catch((error) => { if (active) setResult({ key, error: validationMessage(error, "Unable to load projects.") }); });
-        return () => { active = false; };
-    }, [key, query, page]);
-    return <div className="space-y-6 pb-8 text-[#211E1A]">
-        {!current && <LoadingScreen message="Loading project reports..." />}
-        <header className="rare-page-header space-y-4 rounded-[28px] border border-[#E7DED2] bg-[#FFFDFA] p-6 text-[#211E1A] shadow-[0_12px_36px_-24px_rgba(0,0,0,0.6)] sm:p-8"><div className="border-l-2 border-[#E7DED2] pl-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#716658]">Site records / Administration</p><h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Daily Reports</h1><p className="mt-3 max-w-xl text-base leading-7 text-[#716658]">Choose a project to review its site diary, work records and evidence.</p></div><Link className={primaryAction} to="/admin/approvals?tab=work">Open Daily Work Verification</Link></header>
-        <form className="flex flex-wrap gap-3 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4" onSubmit={(event) => { event.preventDefault(); setQuery(search.trim()); setPage(1); }}><label className="min-w-0 flex-1 basis-52 text-xs text-[#716658]">Search projects<input type="search" value={search} onChange={(event) => setSearch(event.target.value)} className={control} /></label><button type="submit" className={`${action} self-end`}>Search</button><button type="button" className={`${action} self-end`} onClick={() => { setSearch(""); setQuery(""); setPage(1); }}>Clear</button><button type="button" className={`${action} self-end`} disabled={!current} onClick={() => setRevision((v) => v + 1)}>Refresh</button></form>
-        {current?.error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700"><p>{current.error}</p><button type="button" className={`${action} mt-3`} onClick={() => setRevision((v) => v + 1)}>Retry</button></div>}
-        {current?.data && <><p className="text-xs text-[#716658]">{current.data.count} matching projects</p><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{current.data.results.map((project) => <Link key={project.id} to={`/admin/projects/${project.id}/daily-reports`} className="group min-w-0 rounded-[24px] border border-[#E2D6C6] bg-[#FFFDFA] p-6 transition-[border-color,box-shadow] hover:border-[#BCA17D] hover:shadow-md motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#94651D]"><span className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F6EAD5] text-[#795A30]"><FolderOpen size={23} aria-hidden="true" /></span><h2 className="break-words text-xl font-bold text-[#352D24]">{project.name}</h2><p className="mt-3 text-sm leading-6 text-[#665C50]">View daily reports and site evidence</p><span className="mt-5 inline-flex items-center gap-2 text-base font-bold text-[#795016]">Open reports<ArrowUpRight size={18} aria-hidden="true" /></span></Link>)}</div>{!current.data.count && <p className="rounded-2xl bg-[#FFFDFA] p-8 text-center text-sm text-[#716658]">No projects match this search.</p>}<nav aria-label="Project pages" className="flex items-center justify-between gap-3 text-xs"><button type="button" className={action} disabled={!current.data.previous} onClick={() => setPage((v) => v - 1)}>Previous</button><span>Page {page} of {Math.max(1, Math.ceil(current.data.count / 25))}</span><button type="button" className={action} disabled={!current.data.next} onClick={() => setPage((v) => v + 1)}>Next</button></nav></>}
-    </div>;
-}
 
 const control = "mt-2 w-full min-w-0 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] px-3 py-3 text-sm outline-none focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]";
 const actionBase = "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-5 py-3 text-base font-bold leading-6 transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#94651D] disabled:cursor-not-allowed disabled:opacity-50";
