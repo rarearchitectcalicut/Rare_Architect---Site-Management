@@ -141,6 +141,7 @@ const iconTones = {
 };
 
 function StatCard({
+  to,
   label,
   value,
   icon: Icon,
@@ -149,13 +150,14 @@ function StatCard({
   tone = "neutral",
 }) {
   return (
-    <div
-      className="rare-rise h-full min-w-0"
+    <Link
+      to={to}
+      className="rare-rise block h-full min-w-0 rounded-[18px] focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[#244F87] sm:rounded-[22px]"
       style={{ "--d": `${delay}ms` }}
     >
       <div
         className="
-          group h-full cursor-default
+          group h-full cursor-pointer
           rounded-[18px] border border-[#e8dfd3]
           bg-[#fffdfa] p-4
           shadow-[0_3px_14px_rgba(33,30,26,0.025)]
@@ -198,7 +200,7 @@ function StatCard({
           </p>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -399,6 +401,7 @@ function AdminDashboard({ summary, reviewQueue }) {
           <StatCard
             delay={stagger(0)}
             label="Total Projects"
+            to="/admin/projects"
             tone="blue"
             value={projects.total}
             icon={FolderKanban}
@@ -408,6 +411,7 @@ function AdminDashboard({ summary, reviewQueue }) {
           <StatCard
             delay={stagger(1)}
             label="Pending Tasks"
+            to="/admin/approvals?tab=tasks"
             tone="orange"
             value={tasks.pending_approval}
             icon={ClipboardCheck}
@@ -417,6 +421,7 @@ function AdminDashboard({ summary, reviewQueue }) {
           <StatCard
             delay={stagger(2)}
             label="Daily Reports"
+            to="/admin/reports"
             tone="green"
             value={reports.total}
             icon={FileText}
@@ -426,6 +431,7 @@ function AdminDashboard({ summary, reviewQueue }) {
           <StatCard
             delay={stagger(3)}
             label="Pending Delays"
+            to="/admin/approvals?tab=delays"
             tone="red"
             value={delays.pending_review}
             icon={AlertTriangle}
@@ -770,6 +776,7 @@ function SupervisorDashboard({ summary, actionItems }) {
           <StatCard
             delay={stagger(0)}
             label="Assigned Projects"
+            to="/supervisor/projects"
             tone="blue"
             value={projects.total_assigned}
             icon={FolderKanban}
@@ -779,6 +786,7 @@ function SupervisorDashboard({ summary, actionItems }) {
           <StatCard
             delay={stagger(1)}
             label="My Tasks"
+            to="/supervisor/tasks"
             tone="orange"
             value={tasks.total_created}
             icon={ListTodo}
@@ -788,6 +796,7 @@ function SupervisorDashboard({ summary, actionItems }) {
           <StatCard
             delay={stagger(2)}
             label="Project Reports"
+            to="/supervisor/reports"
             tone="green"
             value={reports.total}
             icon={FileText}
@@ -797,6 +806,7 @@ function SupervisorDashboard({ summary, actionItems }) {
           <StatCard
             delay={stagger(3)}
             label="My Pending Delays"
+            to="/supervisor/delays"
             tone="red"
             value={delays.pending_review}
             icon={AlertTriangle}

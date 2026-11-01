@@ -8,6 +8,43 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { loadSource } from "./source-loader.js";
 
+test("Admin and Supervisor dashboard stat cards link to their role's existing pages", async () => {
+    const { exports } = await loadSource("pages/Dashboard.jsx", {
+        overrides: {
+            "components/dashboard/ProjectCategories.jsx": { default: () => null },
+            "components/dashboard/AdminQuickActions.jsx": { default: () => null },
+            "hooks/useAuth.js": { useAuth: () => ({ user: null }) },
+            "api/dashboardApi.js": { dashboardApi: {} },
+        },
+        append: "\nexport { AdminDashboard, SupervisorDashboard };",
+    });
+    for (const [Component, props, destinations] of [
+        [exports.AdminDashboard, { summary: {}, reviewQueue: {} }, [
+            ["Total Projects", "/admin/projects"],
+            ["Pending Tasks", "/admin/approvals?tab=tasks"],
+            ["Daily Reports", "/admin/reports"],
+            ["Pending Delays", "/admin/approvals?tab=delays"],
+        ]],
+        [exports.SupervisorDashboard, { summary: {}, actionItems: {} }, [
+            ["Assigned Projects", "/supervisor/projects"],
+            ["My Tasks", "/supervisor/tasks"],
+            ["Project Reports", "/supervisor/reports"],
+            ["My Pending Delays", "/supervisor/delays"],
+        ]],
+    ]) {
+        const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(Component, props)));
+        const cards = [...html.matchAll(/<a\b[^>]*class="[^"]*rare-rise[^"]*"[^>]*>[\s\S]*?<\/a>/g)].map(([card]) => card);
+        assert.equal(cards.length, 4);
+        for (const [label, path] of destinations) {
+            const card = cards.find((markup) => markup.includes(`>${label}</p>`));
+            assert(card, `Missing stat card for ${label}`);
+            assert(card.includes(`href="${path}"`), `${label} should link to ${path}`);
+            assert(card.includes("focus-visible:outline"), `${label} needs a keyboard focus indicator`);
+            assert(!card.includes("<button"), "Stat links must not contain nested interactive controls");
+        }
+    }
+});
+
 // Run form handlers and the real confirmation hook without a browser or backend.
 async function formHarness(filename, props) {
     const slots = [];
