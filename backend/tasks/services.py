@@ -12,7 +12,7 @@ from projects.models import Project, ProjectSupervisor
 from activity.services import create_activity_log
 
 from .models import Task, TaskBatch, TaskHistory, Task, TaskChangeRequest
-from .serializers import TaskCreateSerializer, TaskResubmissionSerializer
+from .serializers import TaskCreateSerializer, TaskResubmissionSerializer, validate_task_schedule
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from notifications.task_events import (
@@ -92,6 +92,8 @@ def create_task(*, project, user, validated_data):
     validate_supervisor_assignment(project, user)
     validate_project_allows_tasks(project)
 
+    validate_task_schedule(project, validated_data.get("start_date"), validated_data.get("end_date"))
+
     task = Task.objects.create(
         project=project,
         created_by=user,
@@ -142,6 +144,16 @@ def create_bulk_tasks(*, project, user, tasks_data):
 
     validate_supervisor_assignment(project, user)
     validate_project_allows_tasks(project)
+
+    errors = []
+    for item in tasks_data:
+        try:
+            validate_task_schedule(project, item.get("start_date"), item.get("end_date"))
+            errors.append({})
+        except ValidationError as exc:
+            errors.append(exc.detail)
+    if any(errors):
+        raise ValidationError({"tasks": errors})
 
     # Create one batch for the submission.
     batch = TaskBatch.objects.create(
@@ -216,7 +228,7 @@ def approve_task(*, task_id, admin_user, comment=""):
 
     # Serialize timeline membership changes with project-first reorder decisions.
     reference = get_object_or_404(Task.objects.only("project_id"), pk=task_id)
-    Project.objects.select_for_update().get(pk=reference.project_id)
+    project = Project.objects.select_for_update().get(pk=reference.project_id)
     task = get_object_or_404(
         Task.objects.select_for_update(),
         pk=task_id,
@@ -224,6 +236,8 @@ def approve_task(*, task_id, admin_user, comment=""):
 
     if task.approval_status != Task.ApprovalStatus.PENDING:
         raise ValidationError({"detail": "Only pending tasks can be approved."})
+
+    validate_task_schedule(project, task.start_date, task.end_date)
 
     task.approval_status = Task.ApprovalStatus.APPROVED
     task.approved_by = admin_user
@@ -745,8 +759,9 @@ def approve_task_change_request(
         change_type=TaskChangeRequest.ChangeType.EDIT,
     )
 
-    # Lock the Task first to stay consistent with
-    # the existing task-change workflow.
+    # Project-first locking serializes date edits with project schedule updates.
+    reference = Task.objects.only("project_id").get(pk=request_obj.task_id)
+    Project.objects.select_for_update().get(pk=reference.project_id)
     task = Task.objects.select_for_update().get(pk=request_obj.task_id)
 
     # Lock the change request before reviewing it.

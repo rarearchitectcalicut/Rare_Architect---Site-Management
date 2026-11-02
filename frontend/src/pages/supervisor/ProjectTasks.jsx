@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 import { projectApi } from "../../api/projectApi";
-import { taskApi } from "../../api/taskApi";
+import { taskApi, taskScheduleErrors } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
 import TaskDocuments from "../../components/tasks/TaskDocuments";
 import TaskExecutionActions, { TaskProgress } from "../../components/tasks/TaskExecutionActions";
@@ -397,6 +397,7 @@ function ExpandedTask({
 }
 
 function TaskCard({
+    project,
     task,
     expanded,
     onToggle,
@@ -437,6 +438,7 @@ function TaskCard({
                         <Badge value={task.work_status} />
                     </span>
 
+                    {Object.keys(taskScheduleErrors(task, project)).length > 0 && <span role="status" className="mt-3 block rounded-xl bg-[#F1EADF] p-3 text-sm text-[#665E53]">Task schedule conflicts with the current project schedule. Ask Admin to review the project dates; approved deadline changes require an extension review.</span>}
                     <TaskProgress progress={task.progress} />
                     <span className="mt-4 grid gap-2 text-xs text-[#716658] sm:grid-cols-2">
                         <span className="flex items-start gap-2">
@@ -874,7 +876,7 @@ export default function SupervisorProjectTasks() {
                     <button
                         type="button"
                         onClick={() => setBulkOpen(true)}
-                        disabled={loading || Boolean(error) || project?.status === "CANCELLED"}
+                        disabled={loading || Boolean(error) || !["ACTIVE", "MAINTENANCE"].includes(project?.status)}
                         className="inline-flex items-center gap-2 rounded-xl border border-[#D6C6B2] bg-[#F1EADF] px-5 py-3 text-sm font-semibold text-[#66513D] hover:bg-[#E8DCCB] disabled:opacity-50"
                     >
                         <Layers3 size={18} />
@@ -884,7 +886,7 @@ export default function SupervisorProjectTasks() {
                     <button
                         type="button"
                         onClick={openCreate}
-                        disabled={loading || Boolean(error) || project?.status === "CANCELLED"}
+                        disabled={loading || Boolean(error) || !["ACTIVE", "MAINTENANCE"].includes(project?.status)}
                         className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#39332B] disabled:opacity-50"
                     >
                         <Plus size={18} />
@@ -1108,6 +1110,7 @@ export default function SupervisorProjectTasks() {
                                     <TaskCard
                                         key={task.id}
                                         task={task}
+                                        project={project}
                                         expanded={expanded}
                                         onToggle={() => toggleTask(task.id)}
                                         detail={expanded ? expandedTask : null}
@@ -1208,6 +1211,7 @@ export default function SupervisorProjectTasks() {
             <TaskForm
                 open={formOpen}
                 projectId={projectId}
+                project={project}
                 task={editingTask}
                 onClose={closeTaskForm}
                 onSaved={handleTaskSaved}
@@ -1216,6 +1220,7 @@ export default function SupervisorProjectTasks() {
             <BulkAddTasks
                 open={bulkOpen}
                 projectId={projectId}
+                project={project}
                 onClose={() => setBulkOpen(false)}
                 onSaved={handleBulkSaved}
             />

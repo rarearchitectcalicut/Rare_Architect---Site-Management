@@ -10,7 +10,7 @@ import {
     X,
 } from "lucide-react";
 
-import { taskApi } from "../../api/taskApi";
+import { taskApi, taskScheduleErrors, projectScheduleText } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
 import { useConfirmation } from "../../hooks/useConfirmation";
 
@@ -65,19 +65,11 @@ function errorText(value) {
     return "";
 }
 
-function validateRow(row) {
-    const errors = {};
+function validateRow(row, project) {
+    const errors = taskScheduleErrors(row, project);
 
     if (!row.title.trim()) {
         errors.title = "Task title is required.";
-    }
-
-    if (
-        row.start_date &&
-        row.end_date &&
-        row.end_date < row.start_date
-    ) {
-        errors.end_date = "End date must be after start date.";
     }
 
     if (row.measurement_method === "QUANTITY") {
@@ -136,6 +128,7 @@ function FormField({ label, error, children }) {
 export default function BulkAddTasks({
     open,
     projectId,
+    project,
     onClose,
     onSaved,
 }) {
@@ -187,6 +180,7 @@ export default function BulkAddTasks({
             [key]: {
                 ...current[key],
                 [field]: "",
+                ...(["start_date", "end_date"].includes(field) ? { start_date: "", end_date: "" } : {}),
             },
         }));
 
@@ -234,7 +228,7 @@ export default function BulkAddTasks({
         const validation = {};
 
         rows.forEach((row) => {
-            const errors = validateRow(row);
+            const errors = validateRow(row, project);
 
             if (Object.keys(errors).length) {
                 validation[row.key] = errors;
@@ -267,6 +261,12 @@ export default function BulkAddTasks({
         } catch (err) {
             const data = err.response?.data;
 
+            if (Array.isArray(data?.tasks) && data.tasks.length === rows.length && data.tasks.every((fields) => fields && typeof fields === "object" && !Array.isArray(fields))) {
+                setRowErrors(Object.fromEntries(data.tasks.map((fields, index) => [rows[index].key,
+                    Object.fromEntries(Object.entries(fields).map(([field, message]) => [field, errorText(message)]))])));
+                setError("Please correct the highlighted task rows. No tasks were saved.");
+                return;
+            }
             setError(
                 errorText(data?.detail) ||
                 errorText(data?.non_field_errors) ||
@@ -368,13 +368,14 @@ export default function BulkAddTasks({
                                 </p>
                             </div>
 
+                            {(project?.start_date || project?.end_date) && <p className="rounded-xl bg-[#F1EADF] p-3 text-sm text-[#665E53]">Project schedule: {projectScheduleText(project)}. Adjust task dates to this schedule or ask Admin to review the project deadline.</p>}
                             {rows.map((row, index) => {
-                                const errors = rowErrors[row.key] || {};
+                                const errors = { ...rowErrors[row.key], ...taskScheduleErrors(row, project) };
 
                                 return (
                                     <article
                                         key={row.key}
-                                        className="overflow-hidden rounded-[21px] border border-[#E7DED2] bg-[#FFFDFA]"
+                                        className={`overflow-hidden rounded-[21px] border bg-[#FFFDFA] ${Object.values(errors).some(Boolean) ? "border-red-400" : "border-[#E7DED2]"}`}
                                     >
                                         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEE6DC] bg-[#F7F0E7] p-4">
                                             <h3 className="text-sm font-bold text-[#211E1A]">
@@ -461,7 +462,7 @@ export default function BulkAddTasks({
                                                 </select>
                                             </FormField>
 
-                                            <FormField label="Start Date">
+                                            <FormField label="Start Date" error={errors.start_date}>
                                                 <input
                                                     type="date"
                                                     aria-label={`Task ${index + 1} start date`}
@@ -659,7 +660,7 @@ export default function BulkAddTasks({
 
                                 <button
                                     type="submit"
-                                    disabled={saving}
+                                    disabled={saving || rows.some((row) => Object.keys(taskScheduleErrors(row, project)).length > 0)}
                                     className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#39332B] disabled:opacity-50"
                                 >
                                     <Send size={17} />
