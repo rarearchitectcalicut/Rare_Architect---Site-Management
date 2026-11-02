@@ -1924,7 +1924,7 @@ def get_locked_pending_extension(*, report_id):
     """
     Must be called inside transaction.atomic().
 
-    Lock the Task first, then the DelayReport.
+    Lock the Project, Task, then the DelayReport.
 
     This keeps concurrent deadline changes
     from silently overwriting one another.
@@ -1937,6 +1937,10 @@ def get_locked_pending_extension(*, report_id):
         ),
         pk=report_id,
     )
+
+    from projects.models import Project
+    task_reference = Task.objects.only("project_id").get(pk=reference.task_id)
+    Project.objects.select_for_update().get(pk=task_reference.project_id)
 
     task = get_object_or_404(
         Task.objects.select_for_update(),
@@ -2074,14 +2078,16 @@ def approve_delay_extension(
             }
         )
 
-    if task.start_date is not None and new_end_date < task.start_date:
-        raise ValidationError(
-            {
-                "requested_end_date": (
-                    "The new deadline cannot be " "earlier than the task start date."
-                )
-            }
-        )
+    from tasks.serializers import validate_task_schedule
+    try:
+        validate_task_schedule(task.project, task.start_date, new_end_date)
+    except ValidationError as exc:
+        raise ValidationError({
+            "requested_end_date": [
+                *exc.detail.values(),
+                "Review and update the project schedule first through project editing.",
+            ],
+        })
 
     # -----------------------------------------
     # CHANGE TASK DEADLINE

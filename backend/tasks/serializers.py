@@ -3,6 +3,26 @@ from rest_framework import serializers
 from .models import Task,TaskChangeRequest
 
 
+def validate_task_schedule(project, start_date, end_date):
+    """Validate nullable planned dates against the approved project window."""
+    errors = {}
+    if start_date is not None and end_date is not None and start_date > end_date:
+        errors["end_date"] = "End date cannot be earlier than start date."
+    for field, value in (("start_date", start_date), ("end_date", end_date)):
+        if value is None or project is None:
+            continue
+        label = "Task start date" if field == "start_date" else "Task end date"
+        if project.start_date is not None and value < project.start_date:
+            errors[field] = f"{label} cannot be before the project start date ({project.start_date:%d %B %Y})."
+        elif project.end_date is not None and value > project.end_date:
+            errors[field] = (
+                f"{label} cannot be after the project completion date ({project.end_date:%d %B %Y}). "
+                "Adjust task dates or ask Admin to review the project deadline."
+            )
+    if errors:
+        raise serializers.ValidationError(errors)
+
+
 # =====================================================
 # TASK CREATE SERIALIZER
 # =====================================================
@@ -88,17 +108,10 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             getattr(self.instance, "end_date", None),
         )
 
-        if (
-            start_date is not None
-            and end_date is not None
-            and start_date > end_date
-        ):
-            raise serializers.ValidationError({
-                "end_date": (
-                    "End date cannot be earlier "
-                    "than start date."
-                )
-            })
+        validate_task_schedule(
+            self.context.get("project") or getattr(self.instance, "project", None),
+            start_date, end_date,
+        )
 
         # -----------------------------------------
         # Progress measurement validation

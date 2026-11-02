@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ClipboardPlus, Save, X } from "lucide-react";
-import { taskApi } from "../../api/taskApi";
+import { taskApi, taskScheduleErrors, projectScheduleText } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
 import { useConfirmation } from "../../hooks/useConfirmation";
 
@@ -67,6 +67,7 @@ function valuesFor(task) {
 export default function TaskForm({
     open,
     projectId,
+    project,
     task = null,
     onClose,
     onSaved,
@@ -106,6 +107,8 @@ export default function TaskForm({
 
     if (!open) return null;
 
+    const scheduleErrors = taskScheduleErrors(form, project);
+
     function update(key, value) {
         setForm((previous) => ({
             ...previous,
@@ -114,6 +117,7 @@ export default function TaskForm({
         setErrors((previous) => ({
             ...previous,
             [key]: "",
+            ...(["start_date", "end_date"].includes(key) ? { start_date: "", end_date: "" } : {}),
             general: "",
         }));
     }
@@ -128,9 +132,9 @@ export default function TaskForm({
                     {label}
                 </label>
                 {children}
-                {errors[name] && (
+                {(scheduleErrors[name] || errors[name]) && (
                     <p role="alert" className="text-xs text-red-700">
-                        {errors[name]}
+                        {scheduleErrors[name] || errors[name]}
                     </p>
                 )}
             </div>
@@ -141,17 +145,11 @@ export default function TaskForm({
         event.preventDefault();
         if (savingRef.current) return;
 
-        const nextErrors = {};
+        const nextErrors = { ...scheduleErrors };
 
         if (!form.title.trim()) {
             nextErrors.title = "Task title is required.";
         }
-        if (form.start_date && form.end_date &&
-            form.end_date < form.start_date) {
-            nextErrors.end_date =
-                "End date cannot be before the start date.";
-        }
-
         if (form.measurement_method === "QUANTITY") {
             if (!(Number(form.planned_quantity) > 0)) {
                 nextErrors.planned_quantity =
@@ -429,6 +427,7 @@ export default function TaskForm({
                             </div>
 
                             <div className="grid gap-4 sm:grid-cols-2">
+                                {(project?.start_date || project?.end_date) && <p className="sm:col-span-2 rounded-xl bg-[#F1EADF] p-3 text-sm text-[#665E53]">Project schedule: {projectScheduleText(project)}. Adjust task dates to this schedule or ask Admin to review the project deadline.</p>}
                                 {field("start_date", "Start Date", (
                                     <input
                                         id="task-start_date"
@@ -597,7 +596,7 @@ export default function TaskForm({
                             </button>
                             <button
                                 type="submit"
-                                disabled={saving}
+                                disabled={saving || Object.keys(scheduleErrors).length > 0}
                                 className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#39332B] disabled:opacity-50"
                             >
                                 {isEdit ? <Save size={17} /> : <ClipboardPlus size={17} />}

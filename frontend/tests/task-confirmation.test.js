@@ -182,9 +182,10 @@ async function formHarness(filename, props) {
     const icons = synthetic(Object.fromEntries([
         "ClipboardPlus", "Save", "X", "AlertCircle", "ClipboardList", "CopyPlus", "Plus", "Send", "Trash2",
     ].map((name) => [name, name])));
-    const api = synthetic({ taskApi: Object.fromEntries([
+    const schedule = (await loadSource("api/taskApi.js")).exports;
+    const api = synthetic({ taskScheduleErrors: schedule.taskScheduleErrors, projectScheduleText: schedule.projectScheduleText, taskApi: Object.fromEntries([
         "create", "resubmit", "requestChange", "update", "bulkCreate",
-    ].map((name) => [name, async (...args) => { calls.push({ name, args }); }])) });
+    ].map((name) => [name, async (...args) => { calls.push({ name, args }); if (props.apiError) throw props.apiError; }])) });
     async function load(path) {
         const source = await readFile(new URL(path, import.meta.url), "utf8");
         const { code } = await transformWithOxc(source, path, { jsx: { runtime: "automatic" } });
@@ -634,4 +635,64 @@ test("project card renders accessible list and gallery links with fallback dates
         for (const text of ["Cedar residence", "Cedar client", "Kochi", "Active", "Residential", "Not scheduled", "Expected completion", 'href="/supervisor/projects/project-1"']) assert(html.includes(text));
         assert(!html.includes("<button"));
     }
+});
+
+for (const filename of ["TaskForm", "BulkAddTasks"]) {
+    test(`${filename}: invalid scheduling is inline, blocks submission, and preserves values`, async () => {
+        const form = await formHarness(filename, { open: true, projectId: "project-1", project: { start_date: "2026-10-01", end_date: "2026-11-02" } });
+        if (filename === "TaskForm") {
+            form.change("task-title", "Retained scope");
+            form.change("task-start_date", "2026-11-03");
+        } else {
+            form.find((n) => n.props?.["aria-label"] === "Task 1 title").props.onChange({ target: { value: "Retained scope" } });
+            form.find((n) => n.props?.["aria-label"] === "Task 1 start date").props.onChange({ target: { value: "2026-11-03" } });
+            form.render();
+        }
+        assert.equal(form.find((n) => n.props?.type === "submit").props.disabled, true);
+        assert.ok(form.find((n) => n.props?.role === "alert" || /project completion date/.test(n.props?.error || "")));
+        await form.submit();
+        form.render();
+        assert.equal(form.calls.length, 0);
+        assert.ok(form.find((n) => n.props?.value === "Retained scope"));
+        assert.ok(form.find((n) => n.props?.value === "2026-11-03"));
+    });
+}
+
+test("task form retains input and shows backend field error after project schedule changes", async () => {
+    const form = await formHarness("TaskForm", { open: true, projectId: "project-1", apiError: { response: { data: { end_date: ["Task end date exceeds the current project completion date."] } } } });
+    form.change("task-title", "Retained title");
+    form.change("task-end_date", "2026-11-05");
+    const pending = form.submit();
+    form.decide(true);
+    await pending;
+    form.render();
+    assert.equal(form.find((n) => n.props?.id === "task-title").props.value, "Retained title");
+    assert.equal(form.find((n) => n.props?.id === "task-end_date").props.value, "2026-11-05");
+    assert.match(form.find((n) => n.props?.role === "alert").props.children, /project completion/);
+});
+
+
+test("bulk schedule errors from the server identify the row and preserve every input", async () => {
+    const form = await formHarness("BulkAddTasks", { open: true, projectId: "project-1", apiError: { response: { data: { tasks: [{ end_date: ["Task end date exceeds the project completion date."] }] } } } });
+    form.find((n) => n.props?.["aria-label"] === "Task 1 title").props.onChange({ target: { value: "Preserved row" } });
+    form.find((n) => n.props?.["aria-label"] === "Task 1 end date").props.onChange({ target: { value: "2026-11-05" } });
+    form.render();
+    const pending = form.submit();
+    form.decide(true);
+    await pending;
+    form.render();
+    assert.ok(form.find((n) => n.props?.value === "Preserved row"));
+    assert.ok(form.find((n) => n.props?.value === "2026-11-05"));
+    assert.ok(form.find((n) => /project completion date/.test(n.props?.error || "")));
+    assert.match(form.find((n) => n.type === "article").props.className, /border-red-400/);
+});
+
+test("shared schedule feedback supports either nullable project boundary and equal dates", async () => {
+    const { exports: api } = await loadSource("api/taskApi.js");
+    const check = (task, project) => JSON.parse(JSON.stringify(api.taskScheduleErrors(task, project)));
+    assert.deepEqual(check({ start_date: "2026-11-03" }, { end_date: "2026-11-02" }), { start_date: "Task start date cannot be after the project completion date (2 November 2026)." });
+    assert.match(check({ end_date: "2026-09-30" }, { start_date: "2026-10-01" }).end_date, /before the project start/);
+    assert.deepEqual(check({ start_date: "2026-11-02", end_date: "2026-11-02" }, { end_date: "2026-11-02" }), {});
+    assert.deepEqual(check({}, { start_date: "2026-10-01", end_date: "2026-11-02" }), {});
+    assert.deepEqual(check({ start_date: "2030-01-01" }, {}), {});
 });

@@ -1,7 +1,8 @@
+import { projectApi } from "../../api/projectApi";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, CalendarDays, Layers3, RefreshCw, Ruler, UserRound } from "lucide-react";
-import { isTaskId, loadTaskPages, taskApi } from "../../api/taskApi";
+import { isTaskId, loadTaskPages, taskApi, taskScheduleErrors } from "../../api/taskApi";
 import { timelineApi } from "../../api/timelineApi";
 import { approvalApi } from "../../api/approvalApi";
 import { dailyReportApi } from "../../api/dailyReportApi";
@@ -123,6 +124,7 @@ export default function AdminTaskDetails() {
 
 function TaskDetailsPage({ projectId, taskId }) {
     const [task, setTask] = useState(null);
+    const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [revision, setRevision] = useState(0);
@@ -142,6 +144,9 @@ function TaskDetailsPage({ projectId, taskId }) {
             } finally { if (!controller.signal.aborted) setLoading(false); }
         }
         load();
+        projectApi.getProjectOverview(projectId).then((data) => {
+            if (!controller.signal.aborted) setProject(data);
+        }).catch(() => { if (!controller.signal.aborted) setProject(null); });
         return () => controller.abort();
     }, [projectId, taskId, revision]);
 
@@ -152,6 +157,7 @@ function TaskDetailsPage({ projectId, taskId }) {
         <div className="flex flex-wrap items-center justify-between gap-3"><Link to={`/admin/projects/${projectId}/tasks`} className="task-secondary inline-flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#665C50]"><ArrowLeft size={15} aria-hidden="true" />Back to Tasks</Link><button type="button" disabled={loading} onClick={() => setRevision((value) => value + 1)} className="task-secondary flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#665C50] disabled:opacity-50"><RefreshCw size={15} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />Refresh</button></div>
         {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{error} Use Refresh to retry.</p>}
         {notice && <p role="status" className="rounded-2xl border border-[#D6E5D8] bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
+        {task && project && Object.keys(taskScheduleErrors(task, project)).length > 0 && <p role="status" className="rounded-xl border border-[#E7DED2] bg-[#F1EADF] p-4 text-sm text-[#665E53]">Task schedule conflicts with the current project schedule. <Link className="underline" to={`/admin/projects/${projectId}`}>Review project dates</Link> before approving scheduling changes. Approved deadline changes still require extension approval.</p>}
         {task && <>
             <header className="rare-page-header task-enter overflow-hidden rounded-[28px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_8px_32px_#422F1608]">
                 <div className="task-hero rounded-xl p-4 text-[#211E1A] sm:p-5">

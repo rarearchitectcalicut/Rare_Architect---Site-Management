@@ -12,6 +12,7 @@ import {
 import { projectApi } from "../../api/projectApi";
 import { getMediaUrl } from "../../utils/mediaUrl";
 import LoadingScreen from "../../components/LoadingScreen";
+import { useConfirmation } from "../../hooks/useConfirmation";
 
 const inputClass = `
   w-full rounded-xl border border-[#E3D9CC]
@@ -105,6 +106,7 @@ export default function EditProject({
     onClose,
     onUpdated,
 }) {
+    const { confirm, cancelConfirmation, confirmationModal } = useConfirmation();
     const [form, setForm] = useState(initialValues);
     const [categories, setCategories] = useState([]);
     const [coverFile, setCoverFile] = useState(null);
@@ -193,10 +195,11 @@ export default function EditProject({
 
         return () => {
             cancelled = true;
+            cancelConfirmation();
             document.body.style.overflow = oldOverflow;
             oldFocus?.focus?.();
         };
-    }, [open, project]);
+    }, [open, project, cancelConfirmation]);
 
     // --------------------------------------------
     // COVER IMAGE PREVIEW
@@ -341,10 +344,21 @@ export default function EditProject({
     // UPDATE PROJECT
     // --------------------------------------------
 
+    const narrowsSchedule = Boolean(
+        (form.start_date && (!project?.start_date || form.start_date > project.start_date)) ||
+        (form.end_date && (!project?.end_date || form.end_date < project.end_date))
+    );
+
     const submit = async (event) => {
         event.preventDefault();
 
         if (busyRef.current || !validate()) return;
+
+        if (narrowsSchedule && !await confirm({
+            title: "Change the project schedule?",
+            message: "Existing tasks may fall outside the proposed project dates. Review their dates in Project Tasks. Saving preserves all tasks, dates and approval history; conflicting pending tasks and extensions cannot be approved until their schedule is resolved.",
+            confirmLabel: "Update Project",
+        })) return;
 
         busyRef.current = true;
         setBusyMessage("Updating project...");
@@ -455,6 +469,7 @@ export default function EditProject({
 
     return (
         <>
+            {confirmationModal}
             {busyMessage && (
                 <LoadingScreen message={busyMessage} />
             )}
@@ -806,6 +821,7 @@ export default function EditProject({
                                 />
                             </Field>
 
+                            {narrowsSchedule && <p role="status" className="rounded-xl border border-[#E7DED2] bg-[#F1EADF] p-4 text-sm text-[#665E53]">Existing tasks may fall outside these proposed dates. Review Project Tasks before saving. Task dates and history will be preserved.</p>}
                             {errors.general && (
                                 <div
                                     role="alert"

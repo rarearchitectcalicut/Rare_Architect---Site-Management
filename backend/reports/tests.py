@@ -64,6 +64,24 @@ class ApprovalWorkflowTests(TestCase):
         report = DailyReport.objects.create(project=self.project, reported_by=self.supervisor, report_date=date(2026, 10, 23), work_summary="Plastered walls", status="SUBMITTED" if submitted else "DRAFT", submitted_at=timezone.now() if submitted else None)
         return DailyTaskWork.objects.create(daily_report=report, task=self.task, work_description="Wall plastering", quantity_completed_today=Decimal(quantity))
 
+    def test_extension_cannot_exceed_current_project_deadline(self):
+        self.project.end_date = date(2026, 11, 2)
+        self.project.save(update_fields=["end_date"])
+        report = self.delay()
+        self.assertEqual(self.post_decision("delay-report-approve", report).status_code, 200)
+        history_count = self.task.history.count()
+        response = self.post_decision("delay-extension-approve", report)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("requested_end_date", response.data)
+        report.refresh_from_db()
+        self.task.refresh_from_db()
+        self.assertEqual(report.extension_status, "PENDING")
+        self.assertEqual(self.task.end_date, date(2026, 10, 30))
+        self.assertEqual(self.task.history.count(), history_count)
+        self.project.end_date = date(2026, 11, 10)
+        self.project.save(update_fields=["end_date"])
+        self.assertEqual(self.post_decision("delay-extension-approve", report).status_code, 200)
+
     def test_delay_approval_does_not_approve_extension_or_change_deadline(self):
         report = self.delay()
         self.assertEqual(self.post_decision("delay-report-approve", report).status_code, 200)

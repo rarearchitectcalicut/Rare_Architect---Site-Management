@@ -8,6 +8,30 @@ export function isTaskOverdue(task, today = new Date()) {
     return Boolean(task.end_date && task.end_date < date && task.approval_status === "APPROVED" && !["COMPLETED", "CANCELLED"].includes(task.work_status));
 }
 
+export function taskScheduleErrors(task, project) {
+    const errors = {};
+    if (task.start_date && task.end_date && task.start_date > task.end_date) {
+        errors.end_date = "End date cannot be earlier than start date.";
+    }
+    const format = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    for (const field of ["start_date", "end_date"]) {
+        const value = task[field];
+        if (!value) continue;
+        const label = field === "start_date" ? "Task start date" : "Task end date";
+        if (project?.start_date && value < project.start_date) {
+            errors[field] = `${label} cannot be before the project start date (${format(project.start_date)}).`;
+        } else if (project?.end_date && value > project.end_date) {
+            errors[field] = `${label} cannot be after the project completion date (${format(project.end_date)}).`;
+        }
+    }
+    return errors;
+}
+
+export function projectScheduleText(project) {
+    const format = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    return [project?.start_date && `Starts ${format(project.start_date)}`, project?.end_date && `Completion ${format(project.end_date)}`].filter(Boolean).join("; ");
+}
+
 // Follow DRF page numbers without sending authenticated requests to response URLs.
 export async function loadTaskPages(fetchPage, signal) {
     const items = [];

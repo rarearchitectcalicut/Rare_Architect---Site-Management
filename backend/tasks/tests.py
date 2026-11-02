@@ -491,3 +491,117 @@ class TaskRegisterTests(TaskStartFixture, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["results"]), 6)
         self.assertLessEqual(len(queries), 8)
+
+
+class TaskScheduleTests(TaskStartFixture, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.project.start_date = date(2026, 10, 1)
+        self.project.end_date = date(2026, 11, 2)
+        self.project.save(update_fields=["start_date", "end_date"])
+        self.create_url = reverse("tasks:project-task-list-create", args=[self.project.id])
+        self.bulk_url = reverse("tasks:bulk-task-create", args=[self.project.id])
+
+    def test_date_boundaries_and_nullable_dates(self):
+        from .serializers import TaskCreateSerializer
+        cases = [
+            ("2026-10-01", "2026-11-02", None),
+            ("2026-11-03", "2026-11-05", "start_date"),
+            ("2026-10-01", "2026-11-03", "end_date"),
+            ("2026-09-30", None, "start_date"),
+            (None, "2026-09-30", "end_date"),
+            ("2026-10-10", "2026-10-09", "end_date"),
+            (None, None, None),
+            (None, "2026-10-20", None),
+        ]
+        for start, end, field in cases:
+            with self.subTest(start=start, end=end):
+                serializer = TaskCreateSerializer(data={"title": "Schedule", "start_date": start, "end_date": end}, context={"project": self.project})
+                self.assertEqual(serializer.is_valid(), field is None, serializer.errors)
+                if field:
+                    self.assertIn(field, serializer.errors)
+        self.project.start_date = self.project.end_date = None
+        serializer = TaskCreateSerializer(data={"title": "Optional", "start_date": "2030-01-01"}, context={"project": self.project})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_single_create_and_status_policy(self):
+        response = self.client.post(self.create_url, {"title": "Invalid", "start_date": "2026-11-03"}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("start_date", response.data)
+        self.assertFalse(Task.objects.filter(title="Invalid").exists())
+        self.assertEqual(self.client.post(self.create_url, {"title": "Valid", "end_date": "2026-11-02"}, format="json").status_code, 201)
+        for status in ["ON_HOLD", "COMPLETED", "CANCELLED"]:
+            Project.objects.filter(pk=self.project.pk).update(status=status)
+            self.assertEqual(self.client.post(self.create_url, {"title": "Blocked"}, format="json").status_code, 400)
+        self.assertFalse(Task.objects.filter(title="Blocked").exists())
+
+    def test_bulk_validation_is_indexed_and_atomic(self):
+        from .models import TaskBatch
+        rows = [{"title": "Valid row", "start_date": "2026-10-01"}, {"title": "Invalid row", "end_date": "2026-11-03"}]
+        response = self.client.post(self.bulk_url, {"tasks": rows}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["tasks"][0], {})
+        self.assertIn("end_date", response.data["tasks"][1])
+        self.assertFalse(TaskBatch.objects.exists())
+        self.assertFalse(Task.objects.filter(title="Valid row").exists())
+        rows[1]["end_date"] = "2026-11-02"
+        self.assertEqual(self.client.post(self.bulk_url, {"tasks": rows}, format="json").status_code, 201)
+        self.assertEqual(TaskBatch.objects.count(), 1)
+        self.assertEqual(Task.objects.filter(batch__isnull=False).count(), 2)
+
+    def test_approval_rechecks_current_project_without_history_changes(self):
+        from .services import approve_task
+        self.task.approval_status = "PENDING"
+        self.task.end_date = date(2026, 11, 3)
+        self.task.save()
+        with self.assertRaises(ValidationError):
+            approve_task(task_id=self.task.id, admin_user=self.admin)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.approval_status, "PENDING")
+        self.assertFalse(self.task.history.exists())
+
+    def test_resubmission_keeps_identity_and_rejects_invalid_dates(self):
+        from .services import resubmit_task
+        self.task.created_by = self.supervisor
+        self.task.approval_status = "REJECTED"
+        self.task.save()
+        with self.assertRaises(ValidationError):
+            resubmit_task(task_id=self.task.id, supervisor=self.supervisor, validated_data={"end_date": "2026-11-03", "resubmission_note": "Corrected dates"})
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.approval_status, "REJECTED")
+        result = resubmit_task(task_id=self.task.id, supervisor=self.supervisor, validated_data={"end_date": "2026-11-02", "resubmission_note": "Corrected dates"})
+        self.assertEqual(result.id, self.task.id)
+        self.assertEqual(result.approval_status, "PENDING")
+        self.assertEqual(result.history.filter(action="RESUBMITTED").count(), 1)
+
+    def test_approved_edits_revalidate_current_window(self):
+        from .services import create_task_change_request, approve_task_change_request
+        with self.assertRaises(ValidationError):
+            create_task_change_request(task_id=self.task.id, supervisor=self.supervisor, new_values={"start_date": "2026-11-03"}, reason="Revise schedule")
+        request = create_task_change_request(task_id=self.task.id, supervisor=self.supervisor, new_values={"start_date": "2026-10-20"}, reason="Revise schedule")
+        Project.objects.filter(pk=self.project.pk).update(end_date=date(2026, 10, 10))
+        with self.assertRaises(ValidationError):
+            approve_task_change_request(change_request_id=request.id, admin_user=self.admin)
+        request.refresh_from_db()
+        self.assertEqual(request.status, "PENDING")
+        self.task.refresh_from_db()
+        self.assertIsNone(self.task.start_date)
+
+    def test_project_shortening_preserves_visible_tasks_and_supervisor_cannot_edit(self):
+        self.task.end_date = date(2026, 11, 2)
+        self.task.save()
+        url = reverse("projects:project-detail", args=[self.project.id])
+        self.assertEqual(self.client.patch(url, {"end_date": "2026-10-15"}, format="json").status_code, 403)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.patch(url, {"end_date": "2026-10-15"}, format="json").status_code, 200)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.end_date, date(2026, 11, 2))
+        self.client.force_authenticate(self.supervisor)
+        self.assertEqual(self.client.get(reverse("tasks:task-detail", args=[self.task.id])).status_code, 200)
+
+    def test_overdue_active_project_can_record_actual_work(self):
+        from reports.services import create_daily_report
+        Project.objects.filter(pk=self.project.pk).update(start_date=None, end_date=timezone.localdate() - timedelta(days=1))
+        self.project.refresh_from_db()
+        report = create_daily_report(project=self.project, supervisor=self.supervisor, validated_data={"report_date": timezone.localdate(), "work_summary": "Actual site work"})
+        self.assertEqual(report.project_id, self.project.id)
