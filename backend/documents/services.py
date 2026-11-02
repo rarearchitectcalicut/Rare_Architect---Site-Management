@@ -1,3 +1,4 @@
+from projects.permissions import lock_project_for_work
 import uuid
 import logging
 
@@ -132,6 +133,7 @@ def create_project_document(
     uploaded_file,
     description="",
 ):
+    lock_project_for_work(project_id)
     file_info = validate_document_file(uploaded_file)
 
     project = get_object_or_404(
@@ -217,6 +219,7 @@ def upload_project_document_version(
     user,
     uploaded_file,
 ):
+    lock_project_for_work(get_object_or_404(ProjectDocument.objects.only("project_id"), pk=document_id).project_id)
     file_info = validate_document_file(uploaded_file)
 
     document = get_object_or_404(
@@ -309,6 +312,7 @@ def create_task_document(
     uploaded_file,
     description="",
 ):
+    lock_project_for_work(get_object_or_404(Task.objects.only("project_id"), pk=task_id).project_id)
     file_info = validate_document_file(uploaded_file)
 
     task = get_object_or_404(
@@ -393,6 +397,7 @@ def upload_task_document_version(
     user,
     uploaded_file,
 ):
+    lock_project_for_work(get_object_or_404(TaskDocument.objects.select_related("task"), pk=document_id).task.project_id)
     file_info = validate_document_file(uploaded_file)
 
     document = get_object_or_404(

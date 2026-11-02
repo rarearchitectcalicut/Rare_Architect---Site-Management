@@ -39,6 +39,7 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
     }, [dialogAction]);
 
     if (!task?.id) return null;
+    if (task.project_status === "CANCELLED") return <p role="status" className="mt-5 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-sm text-[#716658]">This project has been cancelled. Existing records remain available for reference.</p>;
     const approved = task.approval_status === "APPROVED";
     const supervisor = role === "SUPERVISOR";
     const canStart = supervisor && approved && task.work_status === "NOT_STARTED";

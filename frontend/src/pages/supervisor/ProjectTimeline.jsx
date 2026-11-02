@@ -591,6 +591,7 @@ export default function SupervisorProjectTimeline() {
                             onClick={enterReorderMode}
                             disabled={
                                 loading ||
+                                project?.status === "CANCELLED" ||
                                 Boolean(error) ||
                                 historyLoading ||
                                 Boolean(historyError) ||

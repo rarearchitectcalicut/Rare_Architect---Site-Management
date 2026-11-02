@@ -303,6 +303,7 @@ class TaskRegisterQuerySerializer(serializers.Serializer):
 
 
 class TaskDetailSerializer(TaskProgressSerializer):
+    project_status = serializers.CharField(source="project.status", read_only=True)
 
     project_name = serializers.CharField(
         source="project.name",
@@ -329,6 +330,7 @@ class TaskDetailSerializer(TaskProgressSerializer):
         fields = (
             "id",
             "project",
+            "project_status",
             "project_name",
             "batch",
             "title",

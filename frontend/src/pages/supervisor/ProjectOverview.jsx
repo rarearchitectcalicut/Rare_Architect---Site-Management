@@ -369,6 +369,7 @@ export default function SupervisorProjectOverview() {
               PROJECT INFORMATION
               ===================================== */}
 
+                    {project.status === "CANCELLED" && <p role="status" className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5 text-sm text-[#716658]">This project has been cancelled. Existing records remain available for reference.</p>}
                     <section className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
                         <div>
                             <h2 className="text-lg font-bold text-[#211E1A]">

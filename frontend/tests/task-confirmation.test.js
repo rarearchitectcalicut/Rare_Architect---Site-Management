@@ -8,6 +8,103 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { loadSource } from "./source-loader.js";
 
+async function projectCancellationHarness(status = "ACTIVE", update) {
+    const slots = [], calls = [];
+    let cursor = 0, seeded = false, tree;
+    const project = { id: "project", name: "Preserved Site", status, supervisors: [] };
+    const { exports } = await loadSource("pages/admin/ProjectOverview.jsx", { overrides: {
+        react: {
+            ...React,
+            useEffect() {},
+            useCallback: (callback) => callback,
+            useId: () => `id-${cursor++}`,
+            useRef(initial) { const i = cursor++; return slots[i] ??= { current: initial }; },
+            useState(initial) {
+                const i = cursor++;
+                if (!(i in slots)) { slots[i] = !seeded && initial === null ? project : initial; if (initial === null) seeded = true; }
+                return [slots[i], (value) => { slots[i] = typeof value === "function" ? value(slots[i]) : value; }];
+            },
+        },
+        "react-router-dom": { Link() {}, useParams: () => ({ projectId: project.id }) },
+        "api/projectApi.js": { projectApi: {
+            updateProject: async (...args) => { calls.push(args); return update ? update(...args) : { status: "CANCELLED" }; },
+            getProjectOverview: async () => ({ ...project, status: "CANCELLED" }),
+        } },
+        "api/supervisorApi.js": { supervisorApi: {} },
+        "modal/admin/EditProject.jsx": { default: () => null },
+        "components/LoadingScreen.jsx": { default: () => null },
+        "hooks/useApprovalReview.js": { validationMessage: (error) => error.message },
+    } });
+    function walk(node, predicate) {
+        if (Array.isArray(node)) return node.map((child) => walk(child, predicate)).find(Boolean);
+        if (!node || typeof node !== "object") return null;
+        return predicate(node) ? node : walk(node.props?.children, predicate);
+    }
+    function text(node) {
+        if (typeof node === "string") return node;
+        if (Array.isArray(node)) return node.map(text).join("");
+        return node && typeof node === "object" ? text(node.props?.children) : "";
+    }
+    const find = (predicate) => walk(tree, predicate);
+    const render = () => { cursor = 0; tree = exports.default(); };
+    render();
+    return {
+        calls, find, render, text: () => text(tree),
+        open() { find((node) => node.type === "button" && text(node).trim() === "Cancel Project").props.onClick(); render(); },
+        reason(value) { find((node) => node.type === "textarea").props.onChange({ target: { value } }); render(); },
+        submit() { return find((node) => node.type === "form").props.onSubmit({ preventDefault() {} }); },
+    };
+}
+
+test("project cancellation requires a reason and explicit confirmation, prevents duplicates, and waits for success", async () => {
+    let resolve;
+    const page = await projectCancellationHarness("ACTIVE", () => new Promise((done) => { resolve = done; }));
+    page.open();
+    assert.match(page.text(), /Cancel Project\?/);
+    assert.match(page.text(), /Preserved Site/);
+    assert.equal(page.calls.length, 0);
+    await page.submit();
+    assert.equal(page.calls.length, 0);
+    page.reason("  Contract ended  ");
+    const pending = page.submit();
+    await page.submit();
+    page.render();
+    assert.equal(page.calls.length, 1);
+    assert.equal(page.calls[0][0], "project");
+    assert.equal(page.calls[0][1].status, "CANCELLED");
+    assert.equal(page.calls[0][1].cancellation_reason, "Contract ended");
+    assert(!page.text().includes("Project cancelled. All existing records have been preserved."));
+    assert.equal(page.find((node) => node.type === "button" && node.props.type === "submit").props.disabled, true);
+    resolve({ status: "CANCELLED" });
+    await pending;
+    page.render();
+    assert(!page.find((node) => node.type === "dialog"));
+    assert.match(page.text(), /Project cancelled. All existing records have been preserved/);
+});
+
+test("Keep Project makes no request and cancellation errors remain retryable", async () => {
+    const page = await projectCancellationHarness("ACTIVE", async () => { throw new Error("Please retry"); });
+    page.open();
+    page.find((node) => node.type === "button" && node.props.children === "Keep Project").props.onClick();
+    page.render();
+    assert.equal(page.calls.length, 0);
+    assert(!page.find((node) => node.type === "dialog"));
+    page.open(); page.reason("Reason");
+    await page.submit(); page.render();
+    assert(page.find((node) => node.type === "dialog"));
+    assert.match(page.text(), /Please retry/);
+    assert.equal(page.find((node) => node.type === "textarea").props.value, "Reason");
+    assert.equal(page.find((node) => node.type === "button" && node.props.type === "submit").props.disabled, false);
+});
+
+test("cancelled and completed projects have no active cancellation control", async () => {
+    for (const status of ["CANCELLED", "COMPLETED"]) {
+        const page = await projectCancellationHarness(status);
+        assert(!page.find((node) => node.type === "button" && node.props.children === "Cancel Project"));
+        if (status === "CANCELLED") assert.match(page.text(), /Existing records remain available for reference/);
+    }
+});
+
 test("Admin and Supervisor dashboard stat cards link to their role's existing pages", async () => {
     const { exports } = await loadSource("pages/Dashboard.jsx", {
         overrides: {
