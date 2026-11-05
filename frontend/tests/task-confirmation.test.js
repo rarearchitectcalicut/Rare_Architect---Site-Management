@@ -337,7 +337,7 @@ test("Supervisor cancellation requires a reason and confirmation, and ignores du
     let resolve;
     const ui = await executionHarness({ save: () => new Promise((done) => { resolve = done; }) });
     assert(ui.button("Start Task"));
-    ui.button("Cancel Task").props.onClick(); ui.render();
+    ui.button("Request Cancellation").props.onClick(); ui.render();
     assert.equal(ui.calls.length, 0);
     ui.reason("  "); ui.submit(); ui.render();
     assert.equal(ui.calls.length, 0);
@@ -348,10 +348,11 @@ test("Supervisor cancellation requires a reason and confirmation, and ignores du
     assert.equal(ui.calls[0].name, "cancel");
     assert.equal(ui.calls[0].args[1], "Scope removed");
     assert.equal(ui.find((node) => node.type === "textarea").props.disabled, true);
-    resolve({ task: { id: "task", work_status: "CANCELLED" } });
+    resolve({ task: { id: "task", work_status: "NOT_STARTED", cancellation_pending: true } });
     await flushExecution(); ui.render();
     assert.equal(ui.successes[0][0], "cancel");
-    assert.equal(ui.successes[0][1].work_status, "CANCELLED");
+    assert.equal(ui.successes[0][1].work_status, "NOT_STARTED");
+    assert.equal(ui.successes[0][1].cancellation_pending, true);
     assert.equal(ui.find((node) => node.type === "dialog"), undefined);
     ui.cleanup();
 });
@@ -363,10 +364,10 @@ test("cancellation can be dismissed and backend errors remain retryable", async 
         return { task: { work_status: "CANCELLED" } };
     } });
     assert(ui.button("Complete Task"));
-    ui.button("Cancel Task").props.onClick(); ui.render();
+    ui.button("Request Cancellation").props.onClick(); ui.render();
     ui.button("Back").props.onClick(); ui.render();
     assert.equal(ui.calls.length, 0);
-    ui.button("Cancel Task").props.onClick(); ui.render(); ui.reason("Reason"); ui.submit();
+    ui.button("Request Cancellation").props.onClick(); ui.render(); ui.reason("Reason"); ui.submit();
     await flushExecution(); ui.render();
     assert(ui.find((node) => node.props?.role === "alert"));
     assert.equal(ui.successes.length, 0);
@@ -381,7 +382,7 @@ test("cancellation can be dismissed and backend errors remain retryable", async 
 test("only Admin gets the completed-task reopen action and it refreshes after confirmation", async () => {
     const supervisor = await executionHarness({ status: "COMPLETED" });
     assert.equal(supervisor.button("Reopen Task"), undefined);
-    assert.equal(supervisor.button("Cancel Task"), undefined);
+    assert.equal(supervisor.button("Request Cancellation"), undefined);
     supervisor.cleanup();
     const admin = await executionHarness({ status: "COMPLETED", role: "ADMIN" });
     admin.button("Reopen Task").props.onClick(); admin.render();
@@ -394,7 +395,7 @@ test("only Admin gets the completed-task reopen action and it refreshes after co
 
 test("cancelled tasks have no Supervisor execution buttons", async () => {
     const ui = await executionHarness({ status: "CANCELLED" });
-    for (const label of ["Start Task", "Complete Task", "Cancel Task", "Reopen Task"]) assert.equal(ui.button(label), undefined);
+    for (const label of ["Start Task", "Complete Task", "Request Cancellation", "Reopen Task"]) assert.equal(ui.button(label), undefined);
     ui.cleanup();
 });
 

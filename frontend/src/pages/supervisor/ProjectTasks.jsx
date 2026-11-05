@@ -861,7 +861,7 @@ export default function SupervisorProjectTasks() {
     }
 
     function handleStatusChanged(action) {
-        setNotice(({ start: "Task started successfully.", complete: "Task completed successfully.", cancel: "Task cancelled successfully." })[action] || "Task updated successfully.");
+        setNotice(({ start: "Task started successfully.", complete: "Task completed successfully.", cancel: "Cancellation request submitted for Admin approval." })[action] || "Task updated successfully.");
 
         refreshTasks();
     }

@@ -507,7 +507,7 @@ class TaskHistoryView(generics.ListAPIView):
         )
         if self.request.query_params.get("decisions_only") == "true":
             queryset = queryset.filter(action__in=[
-                "APPROVED", "REJECTED", "EDIT_APPROVED", "EDIT_REJECTED",
+                "APPROVED", "REJECTED", "EDIT_APPROVED", "EDIT_REJECTED", "CANCELLED", "CANCEL_REJECTED",
                 "ORDER_CHANGE_APPROVED", "ORDER_CHANGE_REJECTED",
                 "EXTENSION_APPROVED", "EXTENSION_REJECTED",
             ])
@@ -584,7 +584,7 @@ class TaskDecisionListView(generics.ListAPIView):
         source(TaskHistory.objects.all(), "tasks", "action", "actor", "created_at", "task__created_by",
                Coalesce(KeyTextTransform("reason", "details"), KeyTextTransform("comment", "details"), Value(""), output_field=CharField()))
         for kind, change_type in [("changes", "EDIT"), ("timeline", "ORDER_CHANGE")]:
-            source(TaskChangeRequest.objects.filter(change_type=change_type), kind, "status", "reviewed_by", "reviewed_at", "requested_by", F("admin_comment"))
+            source(TaskChangeRequest.objects.filter(change_type__in=["EDIT", "CANCEL"] if kind == "changes" else [change_type]), kind, "status", "reviewed_by", "reviewed_at", "requested_by", F("admin_comment"))
         source(DelayReport.objects.all(), "delay", "status", "reviewed_by", "reviewed_at", "reported_by", F("admin_comment"))
         source(DelayReport.objects.filter(extension_requested=True), "extension", "extension_status", "extension_reviewed_by", "extension_reviewed_at", "reported_by", F("extension_admin_comment"))
         source(DailyTaskWork.objects.filter(daily_report__status="SUBMITTED", daily_report__project_id=F("task__project_id")),
@@ -691,7 +691,7 @@ class TaskCancelView(generics.GenericAPIView):
 
         return Response(
             {
-                "message": "Task cancelled successfully.",
+                "message": "Cancellation request submitted for Admin approval." if request.user.role == "SUPERVISOR" else "Task cancelled successfully.",
                 "task": TaskDetailSerializer(
                     task,
                     context={"request": request},
@@ -802,9 +802,9 @@ class TaskChangeRequestListView(generics.ListAPIView):
             self.request.user
         )
 
-        # Ordinary task edits only.
+        # Task edits and cancellations share the Admin review queue.
         queryset = queryset.filter(
-            change_type=TaskChangeRequest.ChangeType.EDIT
+            change_type__in=[TaskChangeRequest.ChangeType.EDIT, TaskChangeRequest.ChangeType.CANCEL]
         )
 
         requested_status = self.request.query_params.get("status")

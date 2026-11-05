@@ -317,6 +317,11 @@ class TaskRegisterQuerySerializer(serializers.Serializer):
 
 
 class TaskDetailSerializer(TaskProgressSerializer):
+    cancellation_pending = serializers.SerializerMethodField()
+
+    def get_cancellation_pending(self, obj):
+        return obj.change_requests.filter(change_type="CANCEL", status="PENDING").exists()
+
     project_status = serializers.CharField(source="project.status", read_only=True)
 
     project_name = serializers.CharField(
@@ -365,6 +370,7 @@ class TaskDetailSerializer(TaskProgressSerializer):
             "created_by",
             "created_by_name",
             "approved_by",
+            "cancellation_pending",
             "approved_by_name",
             "approved_at",
             "created_at",
