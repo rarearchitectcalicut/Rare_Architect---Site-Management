@@ -147,8 +147,26 @@ class PhoneLoginSerializer(serializers.Serializer):
         }
 
 
-# Current User Details Serializer(Read Only)
+# Current User Profile Serializer
 class CurrentUserSerializer(serializers.ModelSerializer):
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if User.objects.filter(email__iexact=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError("This email is already used by another user.")
+        return value
+
+    def validate_username(self, value):
+        if User.objects.filter(username__iexact=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
+
+    def validate_phone(self, value):
+        if not re.fullmatch(r"\+[1-9]\d{7,14}", value):
+            raise serializers.ValidationError(
+                "Enter a valid international phone number, for example +919876543210."
+            )
+        return value
+
     class Meta:
         model = User
         fields = [
@@ -161,7 +179,8 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "last_name",
             "role",
         ]
-        read_only_fields = fields
+        read_only_fields = ("id", "role", "must_change_password")
+        extra_kwargs = {"first_name": {"allow_blank": False}}
 
 
 # Change Password Serializers
