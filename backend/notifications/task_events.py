@@ -175,7 +175,7 @@ def notify_admins_task_change_requested(change_request):
         recipient_ids=admin_ids,
         project_id=change_request.task.project_id,
         notification_type=(Notification.Type.TASK_CHANGE_REQUEST),
-        title="Task change request requires approval",
+        title="Task cancellation requires approval" if change_request.change_type == "CANCEL" else "Task change request requires approval",
         message=(
             f"A change request for task '{task.title}' "
             "has been submitted and requires "
@@ -201,7 +201,7 @@ def notify_task_change_approved(change_request):
         recipient_ids=[change_request.requested_by_id],
         project_id=change_request.task.project_id,
         notification_type=Notification.Type.TASK_CHANGE_REQUEST,
-        title="Task change request approved",
+        title="Task cancellation approved" if change_request.change_type == "CANCEL" else "Task change request approved",
         message=(
             f"Your requested changes to task "
             f"'{change_request.task.title}' "
@@ -227,7 +227,7 @@ def notify_task_change_rejected(change_request):
         recipient_ids=[change_request.requested_by_id],
         project_id=change_request.task.project_id,
         notification_type=Notification.Type.TASK_CHANGE_REQUEST,
-        title="Task change request rejected",
+        title="Task cancellation rejected" if change_request.change_type == "CANCEL" else "Task change request rejected",
         message=(
             f"Your requested changes to task "
             f"'{change_request.task.title}' "

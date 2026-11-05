@@ -206,7 +206,7 @@ class TaskStartConcurrencyTests(TaskStartFixture, TransactionTestCase):
 
     def test_concurrent_cancellations_are_audited_once(self):
         url = reverse("tasks:task-cancel", args=[self.task.id])
-        self.assertCountEqual(self.race_posts(url, self.supervisor, {"reason": "Scope removed"}), [200, 400])
+        self.assertCountEqual(self.race_posts(url, self.admin, {"reason": "Scope removed"}), [200, 400])
         self.assertEqual(self.task.history.filter(action="CANCELLED").count(), 1)
         self.assertEqual(ActivityLog.objects.filter(action="TASK_CANCELLED").count(), 1)
 
@@ -220,8 +220,10 @@ class TaskStartConcurrencyTests(TaskStartFixture, TransactionTestCase):
 
 class TaskLifecycleTests(TaskStartFixture, TestCase):
     def cancel(self, actor=None, payload=None):
-        self.client.force_authenticate(actor or self.supervisor)
-        return self.client.post(reverse("tasks:task-cancel", args=[self.task.id]), payload if payload is not None else {"reason": "Scope removed"}, format="json")
+        self.client.force_authenticate(actor or self.admin)
+        response = self.client.post(reverse("tasks:task-cancel", args=[self.task.id]), payload if payload is not None else {"reason": "Scope removed"}, format="json")
+        self.client.force_authenticate(self.supervisor)
+        return response
 
     def reopen(self, actor=None, payload=None):
         self.client.force_authenticate(actor or self.admin)
@@ -230,8 +232,8 @@ class TaskLifecycleTests(TaskStartFixture, TestCase):
     def report(self, **kwargs):
         return DailyReport.objects.create(project=self.project, reported_by=self.supervisor, report_date=date(2026, 10, 26), work_summary="Site work", **kwargs)
 
-    def test_admin_and_assigned_supervisor_cancel_eligible_tasks(self):
-        for actor in [self.admin, self.supervisor]:
+    def test_admin_cancels_eligible_tasks(self):
+        for actor in [self.admin]:
             for status in ["NOT_STARTED", "IN_PROGRESS"]:
                 with self.subTest(actor=actor.role, status=status):
                     Task.objects.filter(pk=self.task.id).update(work_status=status)
@@ -244,6 +246,59 @@ class TaskLifecycleTests(TaskStartFixture, TestCase):
                     self.assertEqual(history.details["new_status"], "CANCELLED")
                     self.assertEqual(history.details["reason"], "Scope removed")
                     self.assertEqual(ActivityLog.objects.latest("created_at").actor_id, actor.id)
+
+    def test_supervisor_requests_cancellation_then_admin_approves(self):
+        from .models import TaskChangeRequest
+        from .services import approve_task_change_request
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.cancel(self.supervisor)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["task"]["work_status"], "NOT_STARTED")
+        self.assertTrue(response.data["task"]["cancellation_pending"])
+        request = TaskChangeRequest.objects.get(task=self.task, change_type="CANCEL")
+        self.assertEqual(request.reason, "Scope removed")
+        from notifications.models import Notification
+        self.assertTrue(Notification.objects.filter(recipient=self.admin, reference_id=request.id).exists())
+        self.assertEqual(self.cancel(self.supervisor).status_code, 400)
+        self.client.force_authenticate(self.admin)
+        queue = self.client.get(reverse("tasks:task-change-request-list"))
+        self.assertEqual(queue.status_code, 200, queue.data)
+        self.assertIn(str(request.id), [row["id"] for row in queue.data["results"]])
+        approve_task_change_request(change_request_id=request.id, admin_user=self.admin)
+        self.task.refresh_from_db()
+        request.refresh_from_db()
+        self.assertEqual(self.task.work_status, "CANCELLED")
+        self.assertEqual(request.status, "APPROVED")
+        self.assertEqual(request.reviewed_by, self.admin)
+        with self.assertRaises(ValidationError):
+            approve_task_change_request(change_request_id=request.id, admin_user=self.admin)
+
+    def test_rejected_cancellation_keeps_task_active_and_allows_another_request(self):
+        from .models import TaskChangeRequest
+        from .services import reject_task_change_request
+        self.cancel(self.supervisor)
+        request = TaskChangeRequest.objects.get(task=self.task)
+        reject_task_change_request(change_request_id=request.id, admin_user=self.admin, admin_comment="Work still required")
+        self.task.refresh_from_db()
+        request.refresh_from_db()
+        self.assertEqual(self.task.work_status, "NOT_STARTED")
+        self.assertEqual(request.status, "REJECTED")
+        self.assertTrue(self.task.history.filter(action="CANCEL_REJECTED").exists())
+        self.assertEqual(self.cancel(self.supervisor).status_code, 200)
+
+    def test_cancellation_approval_rechecks_task_and_requires_admin(self):
+        from .models import TaskChangeRequest
+        from .services import approve_task_change_request
+        from rest_framework.exceptions import PermissionDenied
+        self.cancel(self.supervisor)
+        request = TaskChangeRequest.objects.get(task=self.task)
+        with self.assertRaises(PermissionDenied):
+            approve_task_change_request(change_request_id=request.id, admin_user=self.supervisor)
+        Task.objects.filter(pk=self.task.id).update(work_status="COMPLETED")
+        with self.assertRaises(ValidationError):
+            approve_task_change_request(change_request_id=request.id, admin_user=self.admin)
+        request.refresh_from_db()
+        self.assertEqual(request.status, "PENDING")
 
     def test_cancellation_rejects_unassigned_and_anonymous_users(self):
         self.assertEqual(self.cancel(self.other).status_code, 403)

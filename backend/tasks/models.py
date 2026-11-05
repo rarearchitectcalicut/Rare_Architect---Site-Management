@@ -378,6 +378,7 @@ class TaskChangeRequest(models.Model):
 
     class ChangeType(models.TextChoices):
         EDIT = "EDIT", "Edit"
+        CANCEL = "CANCEL", "Cancellation"
         ORDER_CHANGE = "ORDER_CHANGE", "Order Change"
 
     class Status(models.TextChoices):
@@ -459,7 +460,7 @@ class TaskChangeRequest(models.Model):
                 name="unique_pending_task_change",
             ),
             models.CheckConstraint(
-                condition=Q(change_type__in=["EDIT", "ORDER_CHANGE"]),
+                condition=Q(change_type__in=["EDIT", "ORDER_CHANGE", "CANCEL"]),
                 name="task_change_valid_type",
             ),
             models.CheckConstraint(
@@ -500,6 +501,9 @@ class TaskHistory(models.Model):
         RESUBMITTED = "RESUBMITTED", "Resubmitted"
         APPROVED = "APPROVED", "Approved"
         REJECTED = "REJECTED", "Rejected"
+
+        CANCEL_REQUESTED = "CANCEL_REQUESTED", "Cancellation Requested"
+        CANCEL_REJECTED = "CANCEL_REJECTED", "Cancellation Rejected"
 
         EDIT_REQUESTED = "EDIT_REQUESTED", "Edit Requested"
         EDIT_APPROVED = "EDIT_APPROVED", "Edit Approved"
@@ -585,6 +589,8 @@ class TaskHistory(models.Model):
                         "RESUBMITTED",
                         "APPROVED",
                         "REJECTED",
+                        "CANCEL_REQUESTED",
+                        "CANCEL_REJECTED",
                         "EDIT_REQUESTED",
                         "EDIT_APPROVED",
                         "EDIT_REJECTED",

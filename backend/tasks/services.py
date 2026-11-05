@@ -511,6 +511,28 @@ def cancel_task(*, task_id, user, reason):
             {"detail": "Completed or cancelled tasks cannot be cancelled again."}
         )
 
+    if is_supervisor:
+        if task.change_requests.filter(status=TaskChangeRequest.Status.PENDING).exists():
+            raise ValidationError({"detail": "This task already has a pending change request."})
+        request_obj = TaskChangeRequest.objects.create(
+            task=task, requested_by=user, change_type=TaskChangeRequest.ChangeType.CANCEL,
+            old_values={"work_status": task.work_status},
+            new_values={"work_status": Task.WorkStatus.CANCELLED}, reason=reason,
+        )
+        TaskHistory.objects.create(
+            task=task, actor=user, action=TaskHistory.Action.CANCEL_REQUESTED,
+            details={"change_request_id": str(request_obj.id), "change_type": "CANCEL",
+                     "old_values": request_obj.old_values, "new_values": request_obj.new_values, "reason": reason},
+        )
+        create_activity_log(
+            actor=user, action="TASK_CANCEL_REQUESTED", entity_type="TASK_CHANGE_REQUEST",
+            entity_id=request_obj.id, description=f"Cancellation requested for task '{task.title}'.",
+            metadata={"task_id": str(task.id), "project_id": str(task.project_id),
+                      "change_request_id": str(request_obj.id), "reason": reason, "new_status": "PENDING"},
+        )
+        notify_admins_task_change_requested(request_obj)
+        return task
+
     old_work_status = task.work_status
     task.work_status = Task.WorkStatus.CANCELLED
     task.save(update_fields=["work_status", "updated_at"])
@@ -754,7 +776,7 @@ def approve_task_change_request(
     request_obj = get_object_or_404(
         TaskChangeRequest,
         pk=change_request_id,
-        change_type=TaskChangeRequest.ChangeType.EDIT,
+        change_type__in=[TaskChangeRequest.ChangeType.EDIT, TaskChangeRequest.ChangeType.CANCEL],
     )
 
     # Project-first locking serializes date edits with project schedule updates.
@@ -769,6 +791,17 @@ def approve_task_change_request(
         raise ValidationError(
             {"detail": "This change request has already been reviewed."}
         )
+
+    if request_obj.change_type == TaskChangeRequest.ChangeType.CANCEL:
+        # Recheck cancellation eligibility while holding the project and task locks.
+        cancel_task(task_id=task.id, user=admin_user, reason=request_obj.reason)
+        request_obj.status = TaskChangeRequest.Status.APPROVED
+        request_obj.reviewed_by = admin_user
+        request_obj.reviewed_at = timezone.now()
+        request_obj.admin_comment = admin_comment
+        request_obj.save(update_fields=["status", "reviewed_by", "reviewed_at", "admin_comment", "updated_at"])
+        notify_task_change_approved(request_obj)
+        return request_obj
 
     validate_task_can_be_edited(task)
 
@@ -900,7 +933,7 @@ def reject_task_change_request(
     request_obj = get_object_or_404(
         TaskChangeRequest,
         pk=change_request_id,
-        change_type=TaskChangeRequest.ChangeType.EDIT,
+        change_type__in=[TaskChangeRequest.ChangeType.EDIT, TaskChangeRequest.ChangeType.CANCEL],
     )
 
     task = Task.objects.select_for_update().get(pk=request_obj.task_id)
@@ -932,19 +965,20 @@ def reject_task_change_request(
     TaskHistory.objects.create(
         task=task,
         actor=admin_user,
-        action=TaskHistory.Action.EDIT_REJECTED,
+        action=TaskHistory.Action.CANCEL_REJECTED if request_obj.change_type == TaskChangeRequest.ChangeType.CANCEL else TaskHistory.Action.EDIT_REJECTED,
         details={
             "change_request_id": str(request_obj.id),
             "reason": admin_comment,
+            "change_type": request_obj.change_type,
         },
     )
 
     create_activity_log(
         actor=admin_user,
-        action="TASK_EDIT_REJECTED",
+        action="TASK_CANCEL_REJECTED" if request_obj.change_type == TaskChangeRequest.ChangeType.CANCEL else "TASK_EDIT_REJECTED",
         entity_type="TASK_CHANGE_REQUEST",
         entity_id=request_obj.id,
-        description="Task edit rejected.",
+        description="Task cancellation rejected." if request_obj.change_type == TaskChangeRequest.ChangeType.CANCEL else "Task edit rejected.",
         metadata={
             "change_request_id": str(request_obj.id),
             "task_id": str(task.id),
