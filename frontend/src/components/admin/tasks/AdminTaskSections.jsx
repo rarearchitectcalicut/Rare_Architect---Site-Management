@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { taskApi } from "../../../api/taskApi";
+import { ProjectSearch } from "../../daily-reports/ReportProjectPicker";
 import { Link } from "react-router-dom";
 import { CalendarRange, ClipboardList, FileText, GitPullRequest, History, Ruler } from "lucide-react";
 import AdminTaskOverview from "./AdminTaskOverview";
@@ -40,10 +43,30 @@ function Timeline({ task, data }) {
     ]} /><div><h3 className="text-sm font-bold">Overlapping approved tasks</h3>{!task.start_date || !task.end_date ? <p className="mt-2 text-sm text-[#716658]">Both task dates are needed to check overlaps.</p> : <ul className="mt-2 space-y-2 text-sm">{overlaps.map((item) => <li key={item.id}>{taskLink(item)} · {formatDate(item.start_date)} – {formatDate(item.end_date)}</li>)}{!overlaps.length && <li>No date overlaps found.</li>}</ul>}</div></div>;
 }
 
-function Documents({ documents, resources, onRetry, onVersions, onDownload, downloading, downloadError }) {
+function Documents({ taskId, resources, onRetry, onVersions, onDownload, downloading, downloadError }) {
+    const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
+    const [revision, setRevision] = useState(0);
+    const [state, setState] = useState(null);
+    const key = `${taskId}:${search}:${page}:${revision}`;
+    const current = state?.key === key ? state : null;
+    const documents = current?.data?.results || [];
+    const count = current?.data?.count || 0;
+    useEffect(() => {
+        const controller = new AbortController();
+        taskApi.documents(taskId, { search, page, page_size: 8 }, controller.signal).then((data) => {
+            if (!Array.isArray(data?.results) || !Number.isInteger(data.count)) throw new Error("Unexpected document response.");
+            if (!controller.signal.aborted) setState({ key, data });
+        }).catch((error) => { if (!controller.signal.aborted) setState({ key, error: error.response?.data?.detail || error.message || "Unable to load documents." }); });
+        return () => controller.abort();
+    }, [taskId, search, page, revision, key]);
     return <div className="space-y-4">
+        <ProjectSearch query={search} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search task documents" placeholder="Title, description or filename" loading={!current} suggestions={documents.map((doc) => ({ id: doc.id, name: doc.title, context: doc.current_version?.original_filename }))} />
+        {!current && <p role="status" className="text-sm text-[#817669]">Updating documents...</p>}
+        {current?.error && <div role="alert" className="text-sm text-red-700">{current.error}<button type="button" className={button} onClick={() => setRevision((value) => value + 1)}>Retry</button></div>}
+        {current?.data && <nav aria-label="Task document pages" className="flex flex-wrap items-center justify-between gap-3 text-sm text-[#817669]"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className={button}>Previous</button><span>{count} documents / {page} / {Math.max(1, Math.ceil(count / 8))}</span><button type="button" disabled={page * 8 >= count} onClick={() => setPage(page + 1)} className={button}>Next</button></nav>}
         {downloadError && <p role="alert" className="text-sm text-red-700">{downloadError}</p>}
-        {!documents.length && <p className="text-sm text-[#716658]">No task documents.</p>}
+        {current?.data && !documents.length && <p className="text-sm text-[#716658]">No task documents.</p>}
         {documents.map((doc) => <article key={doc.id} className="space-y-4 rounded-2xl border border-[#E7DED2] p-4">
             <h3 className="break-words font-bold">{doc.title}</h3><Fields rows={[["Type", formatText(doc.document_type)], ["Description", doc.description], ["Uploaded", formatDate(doc.created_at)], ["Uploader reference", doc.uploaded_by], ["Current version", doc.current_version?.version_number], ["Original filename", doc.current_version?.original_filename]]} />
             <div className="flex flex-wrap gap-2"><button type="button" className={button} disabled={Boolean(downloading) || !doc.current_version} onClick={() => onDownload(doc.current_version)}>{downloading === doc.current_version?.id ? "Downloading…" : "Download current version"}</button><button type="button" className={button} disabled={resources[`versions:${doc.id}`]?.loading} onClick={() => onVersions(doc.id)}>View version history</button></div>
@@ -126,7 +149,7 @@ function TaskHistory({ events }) {
 
 export default function AdminTaskSections({ task, tab, onTabChange, resources, onRetry, onVersions, onDownload, downloading, downloadError }) {
     const resourceProps = { resources, onRetry };
-    return <section className="task-panel task-enter min-w-0 overflow-hidden" style={{ "--task-delay": "100ms" }}>
+    return <section className="task-panel task-enter min-w-0" style={{ "--task-delay": "100ms" }}>
         <nav aria-label="Task detail sections" className="flex gap-1 overflow-x-auto border-b border-[#E7DED2] bg-[#F8F5F0] p-3 sm:px-5">{taskTabs.map(([id, label]) => {
             const Icon = tabIcons[id];
             return <button key={id} type="button" aria-pressed={tab === id} aria-controls="task-section" onClick={() => onTabChange(id)}
@@ -137,7 +160,7 @@ export default function AdminTaskSections({ task, tab, onTabChange, resources, o
         <div id="task-section" key={tab} className="task-enter space-y-6 p-4 sm:p-7" style={{ "--task-delay": "0ms" }} aria-label={taskTabs.find(([id]) => id === tab)?.[1]}>
             {tab === "overview" && <AdminTaskOverview task={task} />}
             {tab === "timeline" && <Resource name="timeline" {...resourceProps}>{(data) => <Timeline task={task} data={data} />}</Resource>}
-            {tab === "documents" && <Resource name="documents" {...resourceProps}>{(documents) => <Documents documents={documents} {...resourceProps} onVersions={onVersions} onDownload={onDownload} downloading={downloading} downloadError={downloadError} />}</Resource>}
+            {tab === "documents" && <Documents taskId={task.id} {...resourceProps} onVersions={onVersions} onDownload={onDownload} downloading={downloading} downloadError={downloadError} />}
             {tab === "work" && <>
                 <div>
                     <h3 className="mb-4 font-bold">Verified progress</h3>

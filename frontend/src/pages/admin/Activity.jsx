@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Activity, ArrowLeft, ChevronLeft, ChevronRight, History, RefreshCw, Search, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { Activity, ArrowLeft, ChevronLeft, ChevronRight, History, RefreshCw, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { activityApi, activityPage } from "../../api/activityApi";
 import ActivityEntry from "../../components/activity/ActivityEntry";
 import LoadingScreen from "../../components/LoadingScreen";
 import { formatText, getError } from "../../components/approvals/approvalUtils";
+
+import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
 
 const entityTypes = ["USER", "CATEGORY", "PROJECT", "TASK", "TASK_BATCH", "TASK_CHANGE_REQUEST", "DAILY_REPORT", "DAILY_TASK_WORK", "DAILY_MANPOWER", "DAILY_MATERIAL", "DAILY_REPORT_ATTACHMENT", "DELAY_REPORT", "PROJECT_DOCUMENT", "TASK_DOCUMENT"];
 const filterKeys = ["search", "entity_type", "action", "actor", "entity_id", "date_from", "date_to"];
@@ -14,8 +16,20 @@ const uuidPattern = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}
 
 function ActivityFilters({ filters, onApply, onReset }) {
     const [draft, setDraft] = useState(filters);
+    const appliedKey = JSON.stringify(filters);
+    const [previousAppliedKey, setPreviousAppliedKey] = useState(appliedKey);
+    if (appliedKey !== previousAppliedKey) { setPreviousAppliedKey(appliedKey); setDraft(JSON.parse(appliedKey)); }
+    const [searchReset, setSearchReset] = useState(0);
     const [error, setError] = useState("");
-    function change(key, value) { setDraft((current) => ({ ...current, [key]: value })); setError(""); }
+    function change(key, value) {
+        const next = { ...draft, [key]: value };
+        setDraft(next); setError("");
+        if (next.date_from && next.date_to && next.date_from > next.date_to) { setError("End date must be on or after start date."); return; }
+        for (const field of ["actor", "entity_id"]) {
+            if (next[field] && !new RegExp(`^${uuidPattern}$`).test(next[field])) { setError("Enter a complete UUID reference."); return; }
+        }
+        onApply(next);
+    }
     function submit(event) {
         event.preventDefault();
         if (draft.date_from && draft.date_to && draft.date_from > draft.date_to) { setError("End date must be on or after start date."); return; }
@@ -24,7 +38,7 @@ function ActivityFilters({ filters, onApply, onReset }) {
     return <form onSubmit={submit} className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-4 shadow-[0_4px_24px_#422F1605] sm:p-6">
         <div className="mb-5 flex items-center gap-2.5 border-b border-[#EEE6DC] pb-4"><SlidersHorizontal size={17} className="text-[#A38D72]" aria-hidden="true" /><h2 className="text-sm font-semibold">Explore the audit trail</h2></div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <label className="text-xs font-medium text-[#716658] sm:col-span-2">Search all activity<span className="relative block"><Search size={16} className="pointer-events-none absolute left-3 top-6 text-[#A38D72]" aria-hidden="true" /><input type="search" maxLength={200} value={draft.search} onChange={(e) => change("search", e.target.value)} className={`${input} pl-10`} placeholder="Person, project, action or description" /></span></label>
+            <div className="sm:col-span-2"><ProjectSearch key={searchReset} query={filters.search} onSearch={(value) => change("search", value)} label="Search all activity" placeholder="Person, project, action or description" /></div>
         </div><details className="rare-filter-disclosure"><summary>Filters and date range</summary>
             <div className="grid gap-4 pt-3 sm:grid-cols-2">
             <label className="text-xs font-medium text-[#716658]">Area<select value={draft.entity_type} onChange={(e) => change("entity_type", e.target.value)} className={input}><option value="">All areas</option>{entityTypes.map((type) => <option key={type} value={type}>{formatText(type)}</option>)}</select></label>
@@ -33,7 +47,7 @@ function ActivityFilters({ filters, onApply, onReset }) {
             <label className="text-xs font-medium text-[#716658]">To date (UTC)<input type="date" min={draft.date_from || undefined} value={draft.date_to} onChange={(e) => change("date_to", e.target.value)} className={input} /></label>
             </div></details>
         <div>
-            <div className="flex flex-wrap items-end gap-2 sm:col-span-2"><button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-black px-5 py-3 text-xs font-semibold text-[#FFFDFA] transition-colors hover:bg-[#44382B] focus-visible:outline-2 focus-visible:outline-[#A58A67] motion-reduce:transition-none"><Search size={15} aria-hidden="true" />Apply filters</button><button type="button" onClick={onReset} className={secondary}>Reset</button></div>
+            <div className="flex flex-wrap items-end gap-2 sm:col-span-2"><button type="button" onClick={() => { setSearchReset((value) => value + 1); onReset(); }} className={secondary}>Reset</button></div>
         </div>
         <details className="mt-5 border-t border-[#EEE6DC] pt-4" open={Boolean(filters.actor || filters.entity_id)}>
             <summary className="w-fit cursor-pointer rounded-lg text-xs font-medium text-[#8B6944] focus-visible:outline-2 focus-visible:outline-[#A58A67]">Filter by record references</summary>
@@ -82,7 +96,7 @@ export default function AdminActivity() {
         const query = new URLSearchParams();
         for (const key of filterKeys) if (next[key]?.trim()) query.set(key, next[key].trim());
         if (pageSize !== 25) query.set("page_size", String(pageSize));
-        setParams(query);
+        setParams(query, { replace: true });
     }
     function changePage(next) {
         const query = new URLSearchParams(params);
@@ -106,11 +120,11 @@ export default function AdminActivity() {
             </div>
             <p className="mt-4 flex items-center gap-2 border-t border-[#E7DED2] pt-3 text-xs text-[#716658]"><ShieldCheck size={15} aria-hidden="true" />Admin access · Read-only audit trail</p>
         </header>
-        <ActivityFilters key={filterKey} filters={filters} onApply={applyFilters} onReset={() => setParams({})} />
+        <ActivityFilters filters={filters} onApply={applyFilters} onReset={() => setParams({})} />
         <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold tracking-tight">Recorded activity</h2><p role="status" className="mt-1 text-xs text-[#716658]">{loading ? "Loading events…" : data ? `${data.count.toLocaleString("en-IN")} matching events · Newest first` : "Activity unavailable"}</p></div>
             <label className="flex items-center gap-2 text-xs text-[#716658]">Per page<select value={pageSize} onChange={(e) => { const query = new URLSearchParams(params); query.set("page_size", e.target.value); query.delete("page"); setParams(query); }} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] px-3 py-2 text-[#211E1A]">{[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}</select></label>
         </div>
-        {loading && <LoadingScreen message="Loading activity logs..." />}
+        {!result && loading && <LoadingScreen message="Loading activity logs..." />}
         {visible?.error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700"><p>{visible.error}</p><div className="mt-4 flex flex-wrap gap-2"><button type="button" className={secondary} onClick={() => setRevision((value) => value + 1)}>Try again</button>{page > 1 && <button type="button" className={secondary} onClick={() => changePage(1)}>Return to first page</button>}</div></div>}
         {data && <>
             <div className="space-y-3" aria-label="Activity events">{data.rows.map((entry) => <ActivityEntry key={entry.id} entry={entry} />)}</div>

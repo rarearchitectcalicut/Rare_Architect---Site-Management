@@ -26,9 +26,10 @@ export const projectApi = {
         return data;
     },
 
-    getCategory: async (categoryId) => {
+    getCategory: async (categoryId, signal) => {
         const { data } = await api.get(
-            `project-categories/${categoryId}/`
+            `project-categories/${categoryId}/`,
+            { signal }
         );
 
         return data;

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useId, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowUpRight, FolderOpen, RefreshCw } from "lucide-react";
 import { projectApi } from "../../api/projectApi";
 import { validationMessage } from "../../hooks/useApprovalReview";
@@ -17,19 +17,76 @@ function projectPage(data, page) {
     return { ...data, next: Boolean(data.next), previous: Boolean(data.previous) };
 }
 
-function ProjectSearch({ query, onSearch, onRefresh, loading }) {
+// Reused by listing toolbars. Suggestions use only records already loaded by the
+// authorized listing; searching never starts a separate, unbounded name fetch.
+export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false, suggestions, delay = 300, label = "Search projects", placeholder = "Project name", className = "" }) {
     const [search, setSearch] = useState(query);
-    return (
-        <form className="flex flex-wrap gap-3 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4" onSubmit={(event) => { event.preventDefault(); onSearch(search.trim()); }}>
-            <label className="min-w-0 flex-1 basis-52 text-sm font-semibold text-[#716658]">
-                Search projects
-                <input type="search" maxLength={200} value={search} onChange={(event) => setSearch(event.target.value)} className="mt-2 w-full rounded-xl border border-[#E7DED2] bg-[#FFFDFA] px-3 py-3 text-sm outline-none focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]" />
-            </label>
-            <button type="submit" className={`${button} self-end`}>Search</button>
-            <button type="button" className={`${button} self-end`} onClick={() => { setSearch(""); onSearch(""); }}>Clear</button>
-            <button type="button" className={`${button} self-end`} disabled={loading} onClick={onRefresh}><RefreshCw size={18} aria-hidden="true" />Refresh</button>
-        </form>
-    );
+    const [open, setOpen] = useState(false);
+    const [active, setActive] = useState(-1);
+    const timer = useRef(null);
+    const committed = useRef(query);
+    const callback = useRef(onSearch);
+    const id = useId();
+    const navigate = useNavigate();
+    useEffect(() => { callback.current = onSearch; }, [onSearch]);
+    useEffect(() => {
+        if (query !== committed.current) {
+            clearTimeout(timer.current);
+            committed.current = query;
+            setSearch(query);
+            setActive(-1);
+        }
+    }, [query]);
+    useEffect(() => () => clearTimeout(timer.current), []);
+    const pending = search.trim() !== query;
+    const matches = !pending && !loading ? [...new Map((suggestions || []).filter((item) => item.name?.toLowerCase().includes(search.trim().toLowerCase())).map((item) => [item.id ?? item.name, item])).values()].slice(0, 6) : [];
+    const expanded = open && search.trim().length > 0 && suggestions !== undefined;
+    function commit(value) {
+        clearTimeout(timer.current);
+        if (value !== committed.current) {
+            committed.current = value;
+            callback.current(value);
+        }
+    }
+    function change(value) {
+        setSearch(value); setActive(-1); setOpen(true);
+        clearTimeout(timer.current);
+        if (!delay || !value.trim()) commit(value.trim());
+        else timer.current = setTimeout(() => commit(value.trim()), delay);
+    }
+    function select(item) {
+        clearTimeout(timer.current);
+        setSearch(item.name); setOpen(false); setActive(-1);
+        if (item.to) navigate(item.to);
+        else commit(item.name);
+    }
+    return <div className={`flex min-w-0 flex-wrap items-end gap-3 ${className}`}>
+        <div className="relative min-w-0 flex-1 basis-52" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) { setOpen(false); setActive(-1); } }}>
+            <label htmlFor={id} className="mb-2 block text-sm font-semibold text-[#817669]">{label}</label>
+            <div className="relative">
+                <input id={id} type="search" maxLength={200} value={search} placeholder={placeholder} autoComplete="off"
+                    role={suggestions !== undefined ? "combobox" : undefined} aria-autocomplete={suggestions !== undefined ? "list" : undefined}
+                    aria-expanded={suggestions !== undefined ? expanded : undefined} aria-controls={expanded ? `${id}-list` : undefined}
+                    aria-activedescendant={expanded && matches[active] ? `${id}-${active}` : undefined}
+                    onFocus={() => setOpen(true)} onChange={(event) => change(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === "Escape") { event.preventDefault(); setOpen(false); setActive(-1); }
+                        if (["ArrowDown", "ArrowUp"].includes(event.key) && suggestions !== undefined) {
+                            event.preventDefault(); setOpen(true);
+                            if (matches.length) setActive((index) => index < 0 ? (event.key === "ArrowDown" ? 0 : matches.length - 1) : (index + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length);
+                        }
+                        if (event.key === "Enter") { event.preventDefault(); if (expanded && matches[active]) select(matches[active]); else commit(search.trim()); }
+                    }}
+                    className="min-h-12 w-full min-w-0 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] py-3 pl-3 pr-14 text-base text-[#211E1A] outline-none placeholder:text-[#817669] focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]" />
+                {search && <button type="button" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => { change(""); setOpen(false); }} className="absolute right-0 top-0 flex h-12 w-12 items-center justify-center rounded-xl text-lg text-[#817669] focus-visible:outline-2 focus-visible:outline-[#A58A67]">×</button>}
+            </div>
+            {expanded && <ul id={`${id}-list`} role="listbox" aria-label={`${label} suggestions`} className="absolute left-0 right-0 z-40 mt-1 max-h-64 overflow-y-auto rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-1 shadow-lg">
+                {matches.map((item, index) => <li id={`${id}-${index}`} key={item.id ?? item.name} role="option" aria-selected={active === index} onPointerDown={(event) => event.preventDefault()} onClick={() => select(item)} onMouseEnter={() => setActive(index)} className={`min-h-12 cursor-pointer rounded-lg px-3 py-3 text-sm text-[#211E1A] ${active === index ? "bg-[#F1EADF]" : "hover:bg-[#F1EADF]"}`}><strong className="block break-words">{item.name}</strong>{item.context && <span className="block break-words text-xs text-[#817669]">{item.context}</span>}</li>)}
+                {!matches.length && <li role="presentation" className="px-3 py-3 text-sm text-[#817669]"><span role="status">{loading || pending ? "Finding matches…" : "No matching names in these results"}</span></li>}
+            </ul>}
+        </div>
+        {onRefresh && <button type="button" className={button} disabled={loading} onClick={onRefresh}><RefreshCw size={18} aria-hidden="true" />Refresh</button>}
+    </div>;
 }
 
 export default function ReportProjectPicker({ role = "ADMIN" }) {
@@ -81,7 +138,7 @@ export default function ReportProjectPicker({ role = "ADMIN" }) {
             {admin && <Link className={button} to="/admin/approvals?tab=work">Open Daily Work Verification</Link>}
         </header>
 
-        <ProjectSearch key={query} query={query} onSearch={applySearch} onRefresh={() => setRevision((value) => value + 1)} loading={!current} />
+        <ProjectSearch query={query} onSearch={applySearch} onRefresh={() => setRevision((value) => value + 1)} loading={!current} suggestions={(data?.results || []).map((project) => ({ id: project.id, name: project.name, to: `${prefix}/projects/${project.id}/daily-reports` }))} className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4" />
 
         <section aria-label="Daily report projects" aria-busy={!current} className="space-y-4">
             {!current && <p role="status" className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-6 text-sm text-[#716658]">Loading projects...</p>}

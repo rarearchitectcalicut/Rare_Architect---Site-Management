@@ -44,8 +44,8 @@ export default function ProjectDelays({ role = "SUPERVISOR" }) {
         <DelaySummary summary={data.summary} loading={data.loading} />
         {notice && <p role="status" className="rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
         {data.error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{data.error}</p>}
-        <section className="overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
-            <ApprovalFilters mode="delays" filters={data.filters} onChange={data.updateFilter} onClear={data.clear} projects={data.projects} />
+        <section className="rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
+            <ApprovalFilters suggestions={items.map((item) => ({ id: item.id, name: item.title, context: item.projectName }))} loading={data.loading} mode="delays" filters={data.filters} onChange={data.updateFilter} onClear={data.clear} projects={data.projects} />
             <RequestList list={list} loading={data.loading} onOpen={select} />
         </section>
         {data.initialLoading && <LoadingScreen message="Loading delay reports..." />}

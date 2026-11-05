@@ -2,7 +2,7 @@
 import { api } from "./client";
 
 export const approvalApi = {
-    taskDecisions: async (params = {}) => (await api.get("task-decisions/", { params })).data,
+    taskDecisions: async (params = {}, signal) => (await api.get("task-decisions/", { params, signal })).data,
     getTaskApprovals: async (params = {}) => {
         const { data } = await api.get("task-approvals/", {
             params,

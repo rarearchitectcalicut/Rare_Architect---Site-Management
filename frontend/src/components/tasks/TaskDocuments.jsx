@@ -12,6 +12,7 @@ import {
     X,
 } from "lucide-react";
 
+import { ProjectSearch } from "../daily-reports/ReportProjectPicker";
 import { taskApi } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
 import { useConfirmation } from "../../hooks/useConfirmation";
@@ -509,69 +510,37 @@ function DocumentRow({
 // =====================================================
 
 export default function TaskDocuments({ taskId, readOnly = false }) {
-    const [documents, setDocuments] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [state, setState] = useState(null);
+    const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
     const [busy, setBusy] = useState(false);
 
     const [showUpload, setShowUpload] = useState(false);
-    const [error, setError] = useState("");
     const [refreshKey, setRefreshKey] = useState(0);
 
+    const requestKey = `${taskId}:${search}:${page}:${refreshKey}`;
+    const current = state?.key === requestKey ? state : null;
+    const loading = !current;
+    const documents = current?.data?.results || [];
+    const count = current?.data?.count || 0;
+    const error = current?.error || "";
     const load = useCallback(() => {
         setRefreshKey((value) => value + 1);
     }, []);
 
     useEffect(() => {
-        let cancelled = false;
-
-        async function fetchDocuments() {
-            setLoading(true);
-            setError("");
-
-            try {
-                const all = [];
-                let page = 1;
-                let more = true;
-
-                while (more) {
-                    if (page > 500) {
-                        throw new Error("Document pagination limit reached.");
-                    }
-
-                    // Extend documents(taskId, params) to accept page.
-                    const response = await taskApi.documents(taskId, {
-                        page,
-                    });
-
-                    all.push(...getItems(response));
-
-                    more =
-                        !Array.isArray(response) &&
-                        Boolean(response.next);
-
-                    page += 1;
-                }
-
-                if (!cancelled) setDocuments(all);
-            } catch (err) {
-                if (!cancelled) {
-                    setError(getError(err));
-                }
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        }
-
-        fetchDocuments();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [taskId, refreshKey]);
+        const controller = new AbortController();
+        taskApi.documents(taskId, { search, page, page_size: 8 }, controller.signal).then((response) => {
+            if (controller.signal.aborted) return;
+            if (!Array.isArray(response?.results) || !Number.isInteger(response.count)) throw new Error("Unexpected document response.");
+            setState({ key: requestKey, data: response });
+        }).catch((err) => { if (!controller.signal.aborted) setState({ key: requestKey, error: getError(err) }); });
+        return () => controller.abort();
+    }, [taskId, search, page, refreshKey, requestKey]);
 
     return (
         <section className="mt-4 rounded-[20px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
-            {(loading || busy) && (
+            {busy && (
                 <LoadingScreen
                     message={
                         busy
@@ -614,6 +583,9 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
                 </div>
             </div>
 
+            <ProjectSearch query={search} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search task documents" placeholder="Title, description or filename" loading={loading} suggestions={(loading ? [] : documents).map((doc) => ({ id: doc.id, name: doc.title, context: doc.current_version?.original_filename }))} className="mt-4" />
+            {loading && <p role="status" className="mt-3 text-sm text-[#817669]">Updating documents...</p>}
+            {!loading && !error && <nav aria-label="Task document pages" className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-[#817669]"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className="min-h-12 rounded-xl border border-[#E7DED2] px-3 disabled:opacity-40">Previous</button><span>{count} documents / {page} / {Math.max(1, Math.ceil(count / 8))}</span><button type="button" disabled={page * 8 >= count} onClick={() => setPage(page + 1)} className="min-h-12 rounded-xl border border-[#E7DED2] px-3 disabled:opacity-40">Next</button></nav>}
             {showUpload && !readOnly && (
                 <div className="mt-5">
                     <DocumentUploadForm
@@ -622,6 +594,7 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
                         onCancel={() => setShowUpload(false)}
                         onSaved={() => {
                             setShowUpload(false);
+                            setPage(1);
                             load();
                         }}
                     />
@@ -658,7 +631,7 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
                             />
 
                             <p className="mt-3 text-sm font-semibold text-[#211E1A]">
-                                No documents uploaded yet
+                                {search ? "No matching documents" : "No documents uploaded yet"}
                             </p>
 
                             <p className="mt-2 text-xs text-[#716658]">
