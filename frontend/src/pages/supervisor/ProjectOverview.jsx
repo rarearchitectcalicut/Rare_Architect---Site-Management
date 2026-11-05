@@ -398,7 +398,7 @@ export default function SupervisorProjectOverview() {
                             <DetailCard
                                 icon={FolderKanban}
                                 label="Category"
-                                value={project.category_name}
+                                value={`${project.category_name || "Not specified"}${project.category_is_active === false ? " (inactive)" : ""}`}
                                 tone="bg-[#F0EAF8] text-[#7C5BA4]"
                             />
 

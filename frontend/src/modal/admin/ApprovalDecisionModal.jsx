@@ -15,9 +15,9 @@ export default function ApprovalDecisionModal({ action, label, busy, error, onCl
             <label className="block text-sm font-semibold">{rejecting ? "Rejection reason (required)" : "Admin comment (optional)"}
                 <textarea autoFocus required={rejecting} maxLength={1000} rows={4} value={comment} onChange={(event) => setComment(event.target.value)} className="mt-2 w-full rounded-xl border border-[#E4DCCD] p-3 text-sm outline-none focus:border-[#3565A5]" />
             </label>
-            <div className="flex flex-wrap justify-end gap-3">
-                <button type="button" disabled={Boolean(busy)} onClick={onClose} className="rounded-xl border border-[#E4DCCD] px-5 py-3 text-sm font-semibold">Cancel</button>
-                <button type="submit" disabled={Boolean(busy) || (rejecting && !comment.trim())} className={`rounded-xl px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 ${rejecting ? "bg-[#B5473E]" : "bg-[#296F40]"}`}>{rejecting ? "Confirm Rejection" : "Confirm Approval"}</button>
+            <div className="rare-action-footer flex flex-wrap justify-end gap-3">
+                <button type="button" disabled={Boolean(busy)} onClick={onClose} className="rare-button rare-button-secondary">Cancel</button>
+                <button type="submit" disabled={Boolean(busy) || (rejecting && !comment.trim())} className={`rare-button ${rejecting ? "rare-button-danger" : "rare-button-success"}`}>{rejecting ? "Confirm Rejection" : "Confirm Approval"}</button>
             </div>
         </form>
     </ApprovalModal>;

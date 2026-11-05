@@ -1147,6 +1147,7 @@ class DelayReportQuerySerializer(serializers.Serializer):
 
 
 class DelayReportDetailSerializer(serializers.ModelSerializer):
+    project_status = serializers.CharField(source="task.project.status", read_only=True)
     deadline_history = serializers.SerializerMethodField()
 
     def get_deadline_history(self, obj):
@@ -1201,6 +1202,7 @@ class DelayReportDetailSerializer(serializers.ModelSerializer):
             "project_id",
             "project_name",
             "current_end_date",
+            "project_status",
             "deadline_history",
             "reported_by",
             "reported_by_name",

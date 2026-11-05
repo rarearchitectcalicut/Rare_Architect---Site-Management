@@ -125,7 +125,7 @@ export default function EditProject({
     // --------------------------------------------
 
     useEffect(() => {
-        if (!open || !project?.id) return;
+        if (!open || !project?.id || project.status === "CANCELLED") return;
 
         let cancelled = false;
 
@@ -155,7 +155,7 @@ export default function EditProject({
             setBusyMessage("Loading project categories...");
 
             try {
-                let response = await projectApi.getCategories();
+                let response = await projectApi.getCategories({ is_active: true });
                 const all = [...listItems(response)];
                 let page = 1;
 
@@ -168,13 +168,13 @@ export default function EditProject({
                     }
 
                     response = await projectApi.getCategories({
-                        page,
+                        is_active: true, page,
                     });
 
                     all.push(...listItems(response));
                 }
 
-                if (!cancelled) setCategories(all);
+                if (!cancelled) setCategories(all.filter((item) => item.is_active !== false));
             } catch {
                 if (!cancelled) {
                     setErrors((previous) => ({
@@ -273,7 +273,7 @@ export default function EditProject({
         };
     }, [open, onClose]);
 
-    if (!open || !project?.id) return null;
+    if (!open || !project?.id || project.status === "CANCELLED") return null;
 
     const updateField = (field, value) => {
         setForm((previous) => ({
@@ -394,7 +394,7 @@ export default function EditProject({
         }
 
         // The existing project frontend uses "category".
-        data.append("category", form.category);
+        if (String(form.category) !== getCategoryId(project)) data.append("category", form.category);
 
         if (coverFile) {
             data.append("cover_image", coverFile);
@@ -434,6 +434,7 @@ export default function EditProject({
             }
 
             nextErrors.general =
+                fieldError(response.project) ||
                 fieldError(response.detail) ||
                 fieldError(response.non_field_errors) ||
                 (
@@ -674,9 +675,9 @@ export default function EditProject({
                                                     String(item.id) ===
                                                     String(form.category)
                                             ) && (
-                                                <option value={form.category}>
+                                                <option value={form.category} disabled={project.category_is_active === false}>
                                                     {project.category_name ||
-                                                        "Current category"}
+                                                        "Current category"}{project.category_is_active === false ? " (inactive; current category)" : ""}
                                                 </option>
                                             )}
                                     </select>

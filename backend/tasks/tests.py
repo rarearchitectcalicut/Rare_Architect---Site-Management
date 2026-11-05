@@ -600,8 +600,10 @@ class TaskScheduleTests(TaskStartFixture, TestCase):
         self.assertEqual(self.client.get(reverse("tasks:task-detail", args=[self.task.id])).status_code, 200)
 
     def test_overdue_active_project_can_record_actual_work(self):
-        from reports.services import create_daily_report
+        from reports.services import create_daily_report, submit_daily_report
         Project.objects.filter(pk=self.project.pk).update(start_date=None, end_date=timezone.localdate() - timedelta(days=1))
         self.project.refresh_from_db()
         report = create_daily_report(project=self.project, supervisor=self.supervisor, validated_data={"report_date": timezone.localdate(), "work_summary": "Actual site work"})
         self.assertEqual(report.project_id, self.project.id)
+        submitted = submit_daily_report(report_id=report.pk, supervisor=self.supervisor)
+        self.assertEqual(submitted.status, "SUBMITTED")

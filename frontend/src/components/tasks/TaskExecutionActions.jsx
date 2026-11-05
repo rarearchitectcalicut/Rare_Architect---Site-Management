@@ -82,7 +82,7 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
         await onSuccess?.(action, response.task);
     }
 
-    const secondary = "rounded-xl border border-[#E4DCCD] px-4 py-3 text-xs font-semibold text-[#665C50] hover:bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-[#A58A67] disabled:opacity-50";
+    const secondary = "rare-button rare-button-secondary";
     return <section aria-label="Task execution" className="mt-5 rounded-[20px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
             <div><h4 className="text-sm font-bold text-[#211E1A]">{role === "ADMIN" ? "Task lifecycle" : "Task execution"}</h4>
@@ -90,8 +90,8 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
             </div>
             <div className="flex flex-wrap gap-2">
                 {supervisor && (finished || cancelled) && <span className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold ${cancelled ? "bg-[#EEE8E0] text-[#74695D]" : "bg-[#E7F2E8] text-[#296F40]"}`}>{cancelled ? <Ban size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}{cancelled ? "Cancelled" : "Completed"}</span>}
-                {(canStart || canComplete) && <button type="button" disabled={Boolean(busy)} onClick={() => run(canStart ? "start" : "complete")} className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-xs font-semibold text-white hover:bg-[#39332B] disabled:opacity-50">{canStart ? <Play size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}{busy ? "Updating..." : canStart ? "Start Task" : "Complete Task"}</button>}
-                {canCancel && <button type="button" disabled={Boolean(busy)} onClick={() => openDialog("cancel")} className={`${secondary} inline-flex items-center gap-2`}><Ban size={16} aria-hidden="true" />Cancel Task</button>}
+                {(canStart || canComplete) && <button type="button" disabled={Boolean(busy)} onClick={() => run(canStart ? "start" : "complete")} className={`rare-button ${canComplete ? "rare-button-success" : "rare-button-primary"}`}>{canStart ? <Play size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}{busy ? "Updating..." : canStart ? "Start Task" : "Complete Task"}</button>}
+                {canCancel && <button type="button" disabled={Boolean(busy)} onClick={() => openDialog("cancel")} className="rare-button rare-button-danger-outline"><Ban size={16} aria-hidden="true" />Cancel Task</button>}
                 {canReopen && <button type="button" disabled={Boolean(busy)} onClick={() => openDialog("reopen")} className={`${secondary} inline-flex items-center gap-2`}><RotateCcw size={16} aria-hidden="true" />Reopen Task</button>}
             </div>
         </div>
@@ -106,7 +106,7 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
                 <label htmlFor={reasonId} className="mt-5 block text-xs font-semibold text-[#665C50]">Required explanation</label>
                 <textarea id={reasonId} autoFocus required maxLength={1000} rows={4} value={reason} disabled={Boolean(busy)} onChange={(event) => { setReason(event.target.value); setError(""); }} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} className="mt-2 w-full rounded-xl border border-[#E4DCCD] bg-[#F8F4EE] px-4 py-3 text-sm outline-none focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]" />
                 {error && <p id={errorId} role="alert" className="mt-3 text-xs leading-5 text-red-700">{error}</p>}
-                <div className="mt-6 flex flex-wrap justify-end gap-2"><button type="button" disabled={Boolean(busy)} onClick={closeDialog} className={secondary}>Back</button><button type="submit" disabled={Boolean(busy) || !reason.trim()} className="rounded-xl bg-[#211E1A] px-4 py-3 text-xs font-semibold text-white hover:bg-[#39332B] disabled:opacity-50">{busy ? "Saving..." : dialogAction === "cancel" ? "Confirm Cancellation" : "Confirm Reopen"}</button></div>
+                <div className="rare-action-footer mt-6 flex flex-wrap justify-end gap-3"><button type="button" disabled={Boolean(busy)} onClick={closeDialog} className={secondary}>Back</button><button type="submit" disabled={Boolean(busy) || !reason.trim()} className={`rare-button ${dialogAction === "cancel" ? "rare-button-danger" : "rare-button-primary"}`}>{busy ? "Saving..." : dialogAction === "cancel" ? "Confirm Cancellation" : "Confirm Reopen"}</button></div>
             </form>
         </dialog>, document.body)}
     </section>;
@@ -124,9 +124,9 @@ export function TaskProgress({ progress }) {
     if (!valid) return <span className="my-3 block text-xs text-[#716658]">Progress unavailable / Awaiting approval/baseline</span>;
     const width = Math.min(100, Math.max(0, percent));
     return <span className="my-3 block min-w-0 space-y-2 text-xs text-[#211E1A]">
-        <span className="flex flex-wrap justify-between gap-2"><span>Admin-verified progress</span><strong>{percent}%</strong></span>
-        <span role="progressbar" aria-label="Admin-verified task progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={width} className="block h-2 overflow-hidden rounded-full bg-[#E7DED2]">
-            <span className="block h-full rounded-full bg-[#817669]" style={{ width: `${width}%` }} />
+        <span className="flex flex-wrap justify-between gap-2"><span>Admin-verified progress</span><strong className="text-[#166534]">{percent}%</strong></span>
+        <span role="progressbar" aria-label="Admin-verified task progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={width} className="block h-2.5 overflow-hidden rounded-full bg-[#DCECE0]">
+            <span className="block h-full rounded-full bg-[#15803D]" style={{ width: `${width}%` }} />
         </span>
         <span className="block break-words leading-5 text-[#716658]">{quantity
             ? `${progress.verified_quantity} / ${progress.planned_quantity} ${progress.measurement_unit} verified`

@@ -666,15 +666,18 @@ test("delay details distinguish original, current and approved deadlines with se
     assert.ok(!html.includes("Extension rejection is available independently"));
 });
 
-test("Admin project delay register is read-only and links to the existing approval engine", async () => {
+test("Admin delay register reviews pending reports in place and Supervisors stay read-only", async () => {
     const { exports } = await loadSource("pages/supervisor/ProjectDelays.jsx", { overrides: {
         "hooks/useDelayReports.js": { useDelayReports: () => ({ reports: [{ id: "report", status: "PENDING", project_id: "project", task_title: "Wall work" }], projects: [{ id: "project", name: "Site Alpha" }], project: { id: "project", name: "Site Alpha", status: "ACTIVE" }, summary: { total: 1, pending: 1, approved: 0, rejected: 0, pending_extensions: 0 }, count: 1, page: 1, pageCount: 1, filters: { search: "", status: "", sort: "newest", project: "", extension: "", delayType: "" }, loading: false, error: "", refresh() {}, setPage() {}, updateFilter() {}, clear() {} }) },
         "hooks/useApprovalReview.js": { useApprovalReview: () => ({ record: { id: "report", project_id: "project", task: "task", status: "PENDING" }, loading: false, error: "", busy: "", decide() {}, retry() {} }), validationMessage: () => "Failed" },
     } });
     const html = render(exports.default, { role: "ADMIN" }, "/admin/delays?project=project&request=report");
     assert.ok(html.includes("Site Alpha")); assert.ok(html.includes("/admin/approvals?tab=delays"));
-    assert.ok(!/>Approve<\/button>/.test(html)); assert.ok(!/>Reject<\/button>/.test(html));
+    assert.ok(/>Approve<\/button>/.test(html)); assert.ok(/>Reject<\/button>/.test(html));
+    assert.ok(!html.includes("Review delay in Approval Center"));
     assert.ok(!html.includes("Report delay</button>"));
+    const supervisor = render(exports.default, { role: "SUPERVISOR" }, "/supervisor/delays?project=project&request=report");
+    assert.ok(!/>Approve<\/button>/.test(supervisor)); assert.ok(!/>Reject<\/button>/.test(supervisor));
 });
 
 
@@ -873,5 +876,87 @@ test("Admin task document version history keeps its resource scope after paginat
     await tree.props.onVersions("document"); draw();
     assert.equal(calls.length, 1);
     assert.equal(tree.props.resources["versions:document"].data[0].id, "version");
+    state.cleanup();
+});
+
+test("date-only schedule values keep their calendar day in western and eastern timezones", async () => {
+    const { exports } = await loadSource("components/approvals/approvalUtils.js");
+    const previous = process.env.TZ;
+    try {
+        for (const zone of ["America/Los_Angeles", "Pacific/Kiritimati", "Asia/Kolkata"]) {
+            process.env.TZ = zone;
+            assert.match(exports.formatDate("2026-11-02"), /^02 Nov 2026$/);
+        }
+    } finally { if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous; }
+});
+
+test("delay feedback reflects the independent extension decision and never repeats review navigation", async () => {
+    const { exports } = await loadSource("components/approvals/review/DelayReportReview.jsx");
+    for (const extension_status of ["PENDING", "APPROVED", "REJECTED"]) {
+        const html = render(exports.default, { record: { id: "delay", task: "task", project_id: "project", status: "APPROVED", extension_requested: true, extension_status, expected_completion_date: "2026-11-02", current_end_date: "2026-10-30", requested_end_date: "2026-11-10" } });
+        assert.ok(!html.includes("Review delay in Approval Center"));
+        assert.ok(html.includes("View affected task"));
+        if (extension_status === "APPROVED") { assert.ok(html.includes("was approved separately")); assert.ok(!html.includes("pending extension requires")); }
+        if (extension_status === "REJECTED") assert.ok(html.includes("extension was rejected"));
+        if (extension_status === "PENDING") assert.ok(html.includes("pending extension requires a separate decision"));
+    }
+});
+
+test("cancelled projects disable operational approval while keeping the request readable", async () => {
+    const { exports } = await loadSource("components/approvals/RequestReview.jsx", { overrides: {
+        "hooks/useApprovalReview.js": { useApprovalReview: () => ({ record: { id: "delay", task: "task", project_id: "project", project_status: "CANCELLED", status: "APPROVED", extension_status: "PENDING", extension_requested: true }, loading: false, error: "", busy: "", decide() {}, retry() {} }), validationMessage: (error) => error.message },
+    } });
+    const html = render(exports.default, { item: { id: "delay", requestType: "extension" } });
+    assert.match(html, /Operational changes cannot be approved/);
+    assert.match(html, /disabled=""[^>]*>[\s\S]*?>Approve<\/button>/);
+    assert.ok(html.includes("Requested new deadline"));
+});
+
+test("Admin delay review success closes the selected report and refreshes the register", async () => {
+    const state = delayHooks(); let refreshes = 0, query = new URLSearchParams({ request: "report" });
+    const Router = await import("react-router-dom");
+    const { exports } = await loadSource("pages/supervisor/ProjectDelays.jsx", { overrides: {
+        react: { ...React, ...state.hooks, useMemo: (compute) => compute() },
+        "react-router-dom": { ...Router, useParams: () => ({ projectId: "project" }), useSearchParams: () => [query, (value) => { query = new URLSearchParams(value); }] },
+        "hooks/useDelayReports.js": { useDelayReports: () => ({ reports: [{ id: "report", status: "PENDING" }], projects: [], project: { id: "project", status: "ACTIVE" }, filters: {}, loading: false, refresh() { refreshes++; } }) },
+    } });
+    let tree;
+    const draw = () => { tree = state.render(() => exports.default({ role: "ADMIN" })); };
+    draw();
+    const review = documentWalk((node) => node.props?.item?.id === "report" && node.props.onSuccess, tree);
+    assert.equal(review.props.readOnly, false);
+    review.props.onSuccess({ requestType: "delay" }, "approve"); draw();
+    assert.equal(query.has("request"), false); assert.equal(refreshes, 1);
+    assert.ok(documentWalk((node) => node.props?.role === "status" && String(node.props.children).includes("deadline was not changed"), tree));
+    state.cleanup();
+});
+
+test("project editing offers active categories and preserves an unchanged inactive relationship", async () => {
+    const state = delayHooks(), categoryCalls = [], updates = [];
+    const project = { id: "project", name: "Kept project", category: "retired", category_name: "Retired category", category_is_active: false, status: "ACTIVE" };
+    const onClose = () => {};
+    const confirmation = { confirm: async () => true, cancelConfirmation() {}, confirmationModal: null };
+    const { exports } = await loadSource("modal/admin/EditProject.jsx", { overrides: {
+        react: { ...React, ...state.hooks },
+        "api/projectApi.js": { projectApi: {
+            getCategories: async (params) => { categoryCalls.push(params); return { results: [{ id: "active", name: "Active category", is_active: true }, { id: "other-retired", name: "Other retired", is_active: false }], next: null }; },
+            updateProject: async (id, payload) => { updates.push({ id, payload }); return project; },
+        } },
+        "hooks/useConfirmation.js": { useConfirmation: () => confirmation },
+    }, append: '\ndocument.addEventListener = () => {}; document.removeEventListener = () => {}; const FormData = class { values = new Map(); append(key, value) { this.values.set(key, value); } get(key) { return this.values.get(key) ?? null; } };' });
+    let tree;
+    const draw = (value = project) => { tree = state.render(() => exports.default({ open: true, project: value, onClose })); };
+    draw(); await flushDelay(); draw();
+    assert.equal(categoryCalls[0].is_active, true);
+    const find = (predicate) => documentWalk(predicate, tree);
+    assert.equal(find((node) => node.type === "option" && node.props.value === "other-retired"), undefined);
+    assert.equal(find((node) => node.type === "option" && node.props.value === "retired").props.disabled, true);
+    await find((node) => node.type === "form").props.onSubmit({ preventDefault() {} }); draw();
+    assert.equal(updates[0].payload.get("category"), null);
+    find((node) => node.type === "select" && node.props.id === "edit-project-category").props.onChange({ target: { value: "active" } }); draw();
+    await find((node) => node.type === "form").props.onSubmit({ preventDefault() {} });
+    assert.equal(updates[1].payload.get("category"), "active");
+    draw({ ...project, status: "CANCELLED" });
+    assert.equal(tree, null); assert.equal(updates.length, 2);
     state.cleanup();
 });

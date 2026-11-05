@@ -49,7 +49,12 @@ export default function ProjectDelays({ role = "SUPERVISOR" }) {
             <RequestList list={list} loading={data.loading} onOpen={select} />
         </section>
         {data.initialLoading && <LoadingScreen message="Loading delay reports..." />}
-        {selected && <RequestReview key={selected.queueKey} item={selected} onClose={() => select(null)} readOnly role={role} />}
+        {selected && <RequestReview key={selected.queueKey} item={selected} onClose={() => select(null)} readOnly={!admin} role={role} onSuccess={(reviewed, action) => {
+            select(null);
+            const extension = reviewed.requestType === "extension";
+            setNotice(`${extension ? "Deadline extension" : "Delay report"} ${action === "approve" ? "approved" : "rejected"}. ${extension && action === "approve" ? "The task deadline was updated." : "The task deadline was not changed by this decision."}`);
+            data.refresh();
+        }} />}
         {formOpen && !admin && <DelayReportForm key={projectId} tasks={data.tasks} taskOptions={data.taskOptions} onClose={() => setFormOpen(false)} onSaved={(report) => { setFormOpen(false); setNotice(`Delay report submitted: ${report.status === "PENDING" ? "Pending Admin review" : report.status}.`); data.refresh(); }} />}
     </div>;
 }

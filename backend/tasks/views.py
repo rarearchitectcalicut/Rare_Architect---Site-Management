@@ -756,7 +756,7 @@ class TaskChangeRequestCreateView(generics.GenericAPIView):
 
 def accessible_change_requests(user):
     queryset = TaskChangeRequest.objects.select_related(
-        "task",
+        "task__project",
         "requested_by",
         "reviewed_by",
     )

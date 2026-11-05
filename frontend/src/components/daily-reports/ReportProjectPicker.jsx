@@ -5,7 +5,7 @@ import { projectApi } from "../../api/projectApi";
 import { validationMessage } from "../../hooks/useApprovalReview";
 
 const pageSize = 25;
-const button = "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#C5AE8F] bg-[#F1EADF] px-5 py-3 text-sm font-bold text-[#4F3D27] hover:bg-[#E8DAC6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#94651D] disabled:cursor-not-allowed disabled:opacity-50";
+const button = "rare-button rare-button-secondary";
 
 function projectPage(data, page) {
     if (Array.isArray(data)) {

@@ -17,9 +17,9 @@ export function TaskPageStyles() {
         .rare-tasks :is(button,a,input,select) { transition: color 200ms, background-color 200ms, border-color 200ms, box-shadow 200ms, transform 200ms; }
         .rare-tasks :is(button,a,input,select):focus-visible { outline: 2px solid #A58A67; outline-offset: 4px; }
         .rare-tasks button:disabled { cursor: not-allowed; }
-        .rare-tasks .task-secondary { border: 1px solid #E7DED2; border-radius: 14px; background: #FFFDFA; box-shadow: 0 2px 4px #211E1A03; }
+        .rare-tasks .task-secondary { min-height: 44px; border: 1px solid #9A8872; border-radius: 14px; background: #FFFDFA; box-shadow: 0 2px 4px #211E1A03; }
         .rare-tasks .task-secondary:hover:not(:disabled) { border-color: #C9B9A4; background: #F8F4EE; box-shadow: 0 5px 14px #211E1A08; }
-        .rare-tasks .task-primary { background: #211E1A; color: #FFFDFA; box-shadow: 0 4px 12px #211E1A12; }
+        .rare-tasks .task-primary { min-height: 48px; border: 1px solid #211E1A; background: #211E1A; color: #FFFDFA; box-shadow: 0 4px 12px #211E1A12; }
         .rare-tasks .task-primary:hover { background: #44382B; box-shadow: 0 6px 18px #211E1A20; }
         @media (hover:hover) and (prefers-reduced-motion:no-preference) {
             .rare-tasks .task-lift:hover { transform: translateY(-3px); box-shadow: 0 14px 30px #422F160C; }

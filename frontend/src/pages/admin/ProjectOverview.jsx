@@ -463,6 +463,10 @@ export default function ProjectOverview() {
   const [cancelling, setCancelling] = useState(false);
   const [cancellationError, setCancellationError] = useState("");
   const [notice, setNotice] = useState("");
+  const [nextStatus, setNextStatus] = useState("ACTIVE");
+  const [changingStatus, setChangingStatus] = useState(false);
+  const [statusError, setStatusError] = useState("");
+  const statusInFlight = useRef(false);
   const cancellationInFlight = useRef(false);
   const cancelDialog = useRef(null);
   const cancelTitleId = useId();
@@ -533,6 +537,24 @@ export default function ProjectOverview() {
     }
   }
 
+  async function changeCancelledStatus(event) {
+    event.preventDefault();
+    if (statusInFlight.current || project?.status !== "CANCELLED") return;
+    statusInFlight.current = true;
+    setChangingStatus(true);
+    setStatusError("");
+    try {
+      const updated = await projectApi.updateProject(projectId, { status: nextStatus });
+      setProject((previous) => ({ ...previous, status: updated.status, cancellation: null }));
+      setNotice(`Project status changed to ${updated.status.replaceAll("_", " ").toLowerCase()}. All existing records have been preserved.`);
+    } catch (failure) {
+      setStatusError(validationMessage(failure, "Unable to change project status. Please try again."));
+    } finally {
+      statusInFlight.current = false;
+      setChangingStatus(false);
+    }
+  }
+
   const assignSupervisors = async (ids) => {
     setLoadingMessage("Assigning supervisors...");
 
@@ -582,6 +604,15 @@ export default function ProjectOverview() {
       {notice && <p role="status" className="rounded-xl border border-[#B8D5C1] bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
       {project?.status === "CANCELLED" && <section className="space-y-2 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5 text-sm text-[#716658]">
         <p className="font-semibold text-[#211E1A]">This project has been cancelled. Existing records remain available for reference.</p>
+        <form onSubmit={changeCancelledStatus} className="flex flex-wrap items-end gap-3 pt-2">
+          <label className="min-w-0 flex-1 basis-48 font-semibold">Change project status
+            <select aria-label="New project status" value={nextStatus} disabled={changingStatus} onChange={(event) => { setNextStatus(event.target.value); setStatusError(""); }} className="mt-2 min-h-12 w-full rounded-xl border border-[#E7DED2] bg-[#FFFDFA] px-3 text-sm text-[#211E1A] outline-none focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0] disabled:opacity-50">
+              <option value="ACTIVE">Active</option><option value="MAINTENANCE">Maintenance</option><option value="ON_HOLD">On hold</option><option value="COMPLETED">Completed</option>
+            </select>
+          </label>
+          <button type="submit" disabled={changingStatus} className="min-h-12 rounded-xl bg-[#211E1A] px-5 py-3 font-semibold text-[#FFFDFA] disabled:opacity-50">{changingStatus ? "Updating status..." : "Update status"}</button>
+        </form>
+        {statusError && <p role="alert" className="text-sm text-red-700">{statusError}</p>}
         <p>Pending approvals remain available for separate Admin review; cancellation does not decide them.</p>
         {project.cancellation && <><p>Cancelled by {project.cancellation.cancelled_by} on {new Date(project.cancellation.cancelled_at).toLocaleString("en-IN")}</p><p className="whitespace-pre-wrap break-words">Reason: {project.cancellation.reason || "No reason recorded in the existing history."}</p></>}
       </section>}
@@ -678,7 +709,7 @@ export default function ProjectOverview() {
 
                 <div className="flex w-full flex-col items-start gap-3 lg:w-auto lg:shrink-0 lg:items-end">
                   {/* PROJECT STATUS */}
-                  <span className="inline-flex items-center justify-center rounded-full bg-[#E7F2E8] px-4 py-2 text-xs font-bold text-[#296F40]">
+                  <span className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-bold ${project.status === "CANCELLED" ? "bg-[#FCE9E6] text-[#B5473E]" : "bg-[#E7F2E8] text-[#296F40]"}`}>
                     {(project.status || "").replaceAll("_", " ")}
                   </span>
 
@@ -686,6 +717,7 @@ export default function ProjectOverview() {
                   {/* EDIT PROJECT - YELLOW */}
                   <button
                     type="button"
+                    disabled={project.status === "CANCELLED"}
                     onClick={() => setShowEditProject(true)}
                     className="
       group inline-flex w-full items-center justify-center gap-2 sm:w-auto
@@ -765,7 +797,7 @@ export default function ProjectOverview() {
                 icon={FolderKanban}
                 tone="violet"
                 label="Category"
-                value={project.category_name}
+                value={`${project.category_name || "Not specified"}${project.category_is_active === false ? " (inactive)" : ""}`}
               />
               <InfoItem
                 icon={CalendarDays}
@@ -899,6 +931,7 @@ export default function ProjectOverview() {
 
               <button
                 type="button"
+                disabled={project.status === "CANCELLED"}
                 onClick={() => setShowAssign(true)}
                 className="
                                     group flex items-center gap-2 rounded-xl bg-[#211E1A]
@@ -1026,6 +1059,7 @@ export default function ProjectOverview() {
 
                         <button
                           type="button"
+                          disabled={project.status === "CANCELLED"}
                           onClick={() => setRemoveTarget(item)}
                           aria-label={`Remove ${name}`}
                           className="
@@ -1060,7 +1094,7 @@ export default function ProjectOverview() {
 
       {/* ADD SUPERVISOR */}
       <AddSupervisorDialog
-        open={showAssign}
+        open={showAssign && project?.status !== "CANCELLED"}
         onClose={() => setShowAssign(false)}
         assignedIds={assignedIds}
         onAssign={assignSupervisors}
@@ -1068,7 +1102,7 @@ export default function ProjectOverview() {
       />
 
       {/* REMOVE CONFIRMATION */}
-      {removeTarget && (
+      {removeTarget && project?.status !== "CANCELLED" && (
         <div className="rare-fade fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/45 p-3 backdrop-blur-sm sm:p-4">
           <div
             role="alertdialog"
@@ -1137,7 +1171,7 @@ export default function ProjectOverview() {
         </div>
       )}
       <EditProject
-        open={showEditProject}
+        open={showEditProject && project?.status !== "CANCELLED"}
         project={project}
         onClose={() => setShowEditProject(false)}
         onUpdated={loadProject}

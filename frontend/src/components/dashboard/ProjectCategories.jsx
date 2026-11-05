@@ -90,6 +90,7 @@ function CategoryCard({ category }) {
                 <h3 className="text-lg font-bold tracking-tight text-[#211e1a] sm:text-xl">
                     {category.name}
                 </h3>
+                <span className="mt-2 inline-block rounded-full bg-[#F1EADF] px-3 py-1 text-xs text-[#716658]">{category.is_active === false ? "Inactive" : "Active"}</span>
 
                 <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-[#716658]">
                     {category.description ||
@@ -124,7 +125,7 @@ export default function ProjectCategories() {
             setError("");
 
             try {
-                const response = await projectApi.getCategories();
+                const response = await projectApi.getCategories({ is_active: true });
 
                 // Supports plain DRF lists and paginated results.
                 const items = Array.isArray(response)
@@ -138,7 +139,7 @@ export default function ProjectCategories() {
                 }
 
                 if (!cancelled) {
-                    setCategories(items);
+                    setCategories(items.filter((category) => category.is_active !== false));
                 }
             } catch (err) {
                 if (!cancelled) {
@@ -214,11 +215,11 @@ export default function ProjectCategories() {
                     />
 
                     <h3 className="mt-4 text-lg font-semibold text-[#211e1a]">
-                        No project categories yet
+                        No active project categories
                     </h3>
 
                     <p className="mt-2 text-sm text-[#716658]">
-                        Categories created in Django will appear here.
+                        Active categories will appear here. Manage inactive categories in Settings.
                     </p>
                 </div>
             )}
