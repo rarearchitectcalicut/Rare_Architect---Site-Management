@@ -30,3 +30,6 @@ Thumbs.db
 
 backend/private_media/
 private_media/
+
+
+/staticfiles/
