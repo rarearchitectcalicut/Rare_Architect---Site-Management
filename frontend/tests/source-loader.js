@@ -14,7 +14,7 @@ export const sourceRoot = fileURLToPath(new URL("../src/", import.meta.url));
 export async function loadSource(entry, { overrides = {}, append = "" } = {}) {
     const entryPath = resolve(sourceRoot, entry);
     const context = vm.createContext({
-        document: { body: { style: {} } }, URLSearchParams,
+        document: { body: { style: {} } }, URLSearchParams, AbortController, setTimeout, clearTimeout,
         sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     });
     const packages = { react: React, "react/jsx-runtime": jsxRuntime, "react-dom": { createPortal: (children) => children }, "react-router-dom": Router, "lucide-react": icons, axios: { default: axios } };
@@ -28,7 +28,7 @@ export async function loadSource(entry, { overrides = {}, append = "" } = {}) {
         if (cache.has(filename)) return cache.get(filename);
         const pending = (async () => {
             const relative = filename.startsWith(sourceRoot) ? filename.slice(sourceRoot.length).replaceAll("\\", "/") : filename;
-            if (overrides[relative]) return synthetic(overrides[relative]);
+            if (overrides[relative]) return synthetic({ ...packages[relative], ...overrides[relative] });
             if (packages[filename]) return synthetic(packages[filename]);
             if (/\.(jpg|png)$/.test(filename)) return synthetic({ default: "test-image" });
             const source = await readFile(filename, "utf8");

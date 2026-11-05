@@ -19,12 +19,12 @@ export function useRequestList(items, projects = [], { server = false, serverKin
     const key = `${serverKind}:${query}:${page}:${revision}`;
     useEffect(() => {
         if (!server) return;
-        let cancelled = false;
+        const controller = new AbortController();
         const request = serverKind === "delays"
-            ? delayApi.list({ ...JSON.parse(query), pending_only: true, page, page_size: 8 })
-            : approvalApi.taskDecisions({ ...JSON.parse(query), scope: "all", page, page_size: 8 });
+            ? delayApi.list({ ...JSON.parse(query), pending_only: true, page, page_size: 8 }, controller.signal)
+            : approvalApi.taskDecisions({ ...JSON.parse(query), scope: "all", page, page_size: 8 }, controller.signal);
         request.then((data) => {
-            if (cancelled) return;
+            if (controller.signal.aborted) return;
             if (!Array.isArray(data.results) || !Number.isInteger(data.count)) throw new Error("Unexpected paginated request response.");
             const rows = serverKind === "delays" ? data.results.map((entry) => normalizeRequest(entry.status === "PENDING" ? "delay" : "extension", entry)) : data.results.map((entry) => ({
                 id: entry.decision_type === "tasks" ? entry.task_ref : entry.decision_id,
@@ -36,9 +36,9 @@ export function useRequestList(items, projects = [], { server = false, serverKin
             }));
             setHistory({ key, rows, count: data.count, error: "" });
         }).catch((error) => {
-            if (!cancelled) setHistory({ key, rows: [], count: 0, error: getError(error, serverKind === "delays" ? "Unable to load pending delay requests. Check filters and refresh to retry." : "Unable to load decision history. Check filters and refresh to retry.") });
+            if (!controller.signal.aborted) setHistory({ key, rows: [], count: 0, error: getError(error, serverKind === "delays" ? "Unable to load pending delay requests. Check filters and refresh to retry." : "Unable to load decision history. Check filters and refresh to retry.") });
         });
-        return () => { cancelled = true; };
+        return () => controller.abort();
     }, [query, page, revision, server, serverKind, key]);
     const projectMap = new Map(projects.map((project) => [String(project.id), project]));
     const rows = items.map((item) => {

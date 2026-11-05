@@ -1,3 +1,4 @@
+import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
 
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -14,7 +15,6 @@ import {
     Pencil,
     Plus,
     RefreshCw,
-    Search,
     SlidersHorizontal,
     UserRound,
     X,
@@ -960,23 +960,7 @@ export default function SupervisorProjectTasks() {
                 </h2>
 
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_145px_140px_155px_150px]">
-                    <div className="relative">
-                        <Search
-                            size={17}
-                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
-                        />
-
-                        <input
-                            type="search"
-                            value={search}
-                            onChange={(event) =>
-                                updateFilter(setSearch, event.target.value)
-                            }
-                            placeholder="Search task, worker, description..."
-                            aria-label="Search tasks"
-                            className={`${inputClass} pl-11`}
-                        />
-                    </div>
+                    <ProjectSearch query={search} delay={0} onSearch={(value) => updateFilter(setSearch, value)} label="Search tasks" placeholder="Task, worker or description" suggestions={filteredTasks.map((task) => ({ id: task.id, name: task.title, context: task.worker_name, to: `/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}` }))} />
 
                     <select
                         value={approval}

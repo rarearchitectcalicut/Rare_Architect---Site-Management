@@ -790,7 +790,7 @@ test("project library uses server filters and pages, discards stale data and hid
     const find = (predicate) => documentWalk(predicate, tree);
     draw(); await flushDelay(); draw();
     assert.equal(calls[0].id, "project"); assert.equal(calls[0].params.page_size, 8);
-    find((node) => node.type === "input" && node.props.type === "search").props.onChange({ target: { value: "plan" } }); draw();
+    find((node) => node.props?.label === "Search documents").props.onSearch("plan"); draw();
     assert.equal(calls[0].signal.aborted, true);
     calls[0].resolve({ results: [{ id: "stale" }], count: 1000, upload_rules: documentRules }); await flushDelay(); draw();
     assert.ok(find((node) => node.props?.role === "status"));
@@ -836,5 +836,42 @@ test("project version history pages retained files with current labels and handl
     assert.equal(calls[1].params.page, 2); assert.equal(calls[0].signal.aborted, true);
     calls[1].reject(new Error("Offline")); await flushDelay(); draw();
     assert.ok(find((node) => node.type === "button" && node.props.children === "Retry"));
+    state.cleanup();
+});
+
+test("task documents use one authorized page, reset search pagination and ignore late results", async () => {
+    const state = delayHooks(), calls = [];
+    let tree;
+    const { exports } = await loadSource("components/tasks/TaskDocuments.jsx", { overrides: {
+        react: { ...React, ...state.hooks },
+        "api/taskApi.js": { taskApi: { documents: (id, params, signal) => new Promise((resolve, reject) => calls.push({ id, params, signal, resolve, reject })) } },
+    } });
+    const draw = () => { tree = state.render(() => exports.default({ taskId: "task", readOnly: false })); };
+    const find = (predicate) => documentWalk(predicate, tree);
+    draw(); assert.equal(calls.length, 1); assert.equal(calls[0].params.page_size, 8);
+    calls[0].resolve({ results: [{ id: "first", title: "Plan" }], count: 17 }); await flushDelay(); draw();
+    find((node) => node.type === "button" && node.props.children === "Next").props.onClick(); draw();
+    assert.equal(calls[1].params.page, 2);
+    find((node) => node.props?.label === "Search task documents").props.onSearch("footing"); draw();
+    assert.equal(calls[1].signal.aborted, true); assert.equal(calls[2].params.page, 1); assert.equal(calls[2].params.search, "footing");
+    calls[2].resolve({ results: [{ id: "match", title: "Footing" }], count: 1 }); await flushDelay(); draw();
+    calls[1].resolve({ results: [{ id: "stale", title: "Wrong" }], count: 17 }); await flushDelay(); draw();
+    assert.equal(find((node) => node.props?.record)?.props.record.id, "match");
+    assert.equal(calls.length, 3); state.cleanup();
+});
+
+test("Admin task document version history keeps its resource scope after paginated loading", async () => {
+    const state = delayHooks(), calls = [];
+    const { exports: taskExports } = await loadSource("api/taskApi.js", { overrides: { "api/client.js": { api: {} } } });
+    const { exports } = await loadSource("pages/admin/TaskDetails.jsx", { overrides: {
+        react: { ...React, ...state.hooks },
+        "api/taskApi.js": { ...taskExports, taskApi: { documentVersions: async (id, params) => { calls.push({ id, params }); return { results: [{ id: "version" }], count: 1, next: null }; } } },
+    }, append: "\nexport { TaskWorkspace };" });
+    const task = { id: "task", project: "project" }; let tree;
+    const draw = () => { tree = state.render(() => exports.TaskWorkspace({ task })); };
+    draw(); tree.props.onTabChange("documents"); draw();
+    await tree.props.onVersions("document"); draw();
+    assert.equal(calls.length, 1);
+    assert.equal(tree.props.resources["versions:document"].data[0].id, "version");
     state.cleanup();
 });

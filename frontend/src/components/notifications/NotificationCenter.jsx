@@ -1,3 +1,4 @@
+import { ProjectSearch } from "../daily-reports/ReportProjectPicker";
 import ApprovalModal from "../approvals/ApprovalModal";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +14,6 @@ import {
     FileText,
     Inbox,
     RefreshCw,
-    Search,
     UserRoundCheck,
     X,
 } from "lucide-react";
@@ -713,22 +713,7 @@ export default function NotificationCenter({
             {/* TOOLBAR */}
             <section aria-label="Find notifications" className="space-y-3">
                 <div className="relative">
-                    <Search
-                        size={18}
-                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#716658]"
-                    />
-
-                    <input
-                        type="search"
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setPage(1);
-                        }}
-                        placeholder="Search notifications"
-                        aria-label="Search notifications"
-                        className="h-12 w-full rounded-xl border border-[#E4DCCD] bg-white pl-11 pr-4 text-sm text-[#211E1A] outline-none transition-all placeholder:text-[#B7AC9C] hover:border-[#CFC3B1] focus:border-[#3565A5] focus:ring-4 focus:ring-[#3565A5]/15"
-                    />
+                    <ProjectSearch query={search} delay={0} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search notifications" placeholder="Title or message" />
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

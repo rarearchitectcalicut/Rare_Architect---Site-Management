@@ -22,7 +22,6 @@ function taskSectionLoaders(task, signal) {
             if (data.project_id !== task.project || !Array.isArray(data.tasks) || data.tasks.some((item) => item.project !== task.project)) throw new Error("Unexpected project timeline response.");
             return data;
         },
-        documents: () => all((params) => taskApi.documents(task.id, params, signal)),
         history: async () => (await all((params) => taskApi.history(task.id, params, signal)))
             .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id.localeCompare(b.id)),
         progress: async () => {
@@ -39,7 +38,7 @@ function taskSectionLoaders(task, signal) {
     };
 }
 
-const sectionResources = { overview: [], timeline: ["timeline"], documents: ["documents"], work: ["progress", "entries"], changes: ["changes", "orders", "delays"], history: ["history"] };
+const sectionResources = { overview: [], timeline: ["timeline"], documents: [], work: ["progress", "entries"], changes: ["changes", "orders", "delays"], history: ["history"] };
 
 function TaskWorkspace({ task }) {
     const [tab, setTab] = useState("overview");
@@ -80,7 +79,7 @@ function TaskWorkspace({ task }) {
         if (!controller || controller.signal.aborted || versionRequests.current.has(documentId)) return;
         versionRequests.current.add(documentId);
         const name = `versions:${documentId}`;
-        setResources((current) => ({ ...current, [name]: { loading: true } }));
+        setResources((current) => ({ ...(current.scope === scope ? current : { scope }), [name]: { loading: true } }));
         try {
             const data = await loadTaskPages((params) => taskApi.documentVersions(documentId, params, controller.signal), controller.signal);
             if (!controller.signal.aborted) setResources((current) => ({ ...current, [name]: { data } }));

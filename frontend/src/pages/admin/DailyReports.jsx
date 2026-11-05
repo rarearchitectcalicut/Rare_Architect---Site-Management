@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CloudSun, FileText, FolderOpen, ListFilter, Plus, RefreshCw, UserRound } from "lucide-react";
 import DailyReportSummary, { ReportAttachmentForm, ReportDiaryForm, ReportRowForm, ReportWorkEntry, ReportWorkForm, ReportStatusBadge } from "../../components/daily-reports/DailyReportSummary";
@@ -71,20 +72,32 @@ function correctionClientId() {
 
 function ReportFilters({ filters, reporters, onApply, onClear, role }) {
     const [draft, setDraft] = useState(filters);
+    const appliedKey = JSON.stringify(filters);
+    const [previousAppliedKey, setPreviousAppliedKey] = useState(appliedKey);
+    if (appliedKey !== previousAppliedKey) { setPreviousAppliedKey(appliedKey); setDraft(JSON.parse(appliedKey)); }
+    const [searchReset, setSearchReset] = useState(0);
+    const [error, setError] = useState("");
+    function change(field, value) {
+        const next = { ...draft, [field]: value };
+        setDraft(next); setError("");
+        if (next.date_from && next.date_to && next.date_from > next.date_to) { setError("End date must be on or after start date."); return; }
+        onApply(next);
+    }
     return <form onSubmit={(event) => { event.preventDefault(); onApply(draft); }} className="grid gap-4 rounded-[24px] border border-[#E2D6C6] bg-[#FFFDFA] p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
         <div className="flex items-start gap-3 border-b border-[#EDE5DA] pb-4 sm:col-span-2 xl:col-span-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F1EADF] text-[#745532]"><ListFilter size={20} aria-hidden="true" /></span><div><h2 className="text-base font-bold text-[#352D24]">Find a report</h2><p className="mt-1 text-sm leading-6 text-[#716658]">Search the site diary or narrow reports by date and supervisor.</p></div></div>
-        <label className="text-sm font-semibold text-[#665C50]">Search report content<input type="search" maxLength={200} value={draft.search} onChange={(e) => setDraft((v) => ({ ...v, search: e.target.value }))} className={control} /></label>
+        <div className="text-sm font-semibold text-[#665C50]"><ProjectSearch key={searchReset} query={filters.search} onSearch={(value) => change("search", value)} label="Report content" placeholder="Search the site diary" /></div>
         <details className="rare-filter-disclosure sm:col-span-2 xl:col-span-3">
             <summary>Filters and sorting</summary>
             <div className="grid gap-4 pt-3 sm:grid-cols-2 xl:grid-cols-3">
-        {role !== "ADMIN" && <label className="text-sm font-semibold text-[#665C50]">Status<select value={draft.status} onChange={(e) => setDraft((v) => ({ ...v, status: e.target.value }))} className={control}><option value="">All reports</option><option value="DRAFT">Draft</option><option value="SUBMITTED">Submitted</option></select></label>}
-        <label className="text-sm font-semibold text-[#665C50]">Reporter<select value={draft.reported_by} onChange={(e) => setDraft((v) => ({ ...v, reported_by: e.target.value }))} className={control}><option value="">All reporters</option>{reporters.map((reporter) => <option key={reporter.reported_by} value={reporter.reported_by}>{reporter.reported_by__username}</option>)}</select></label>
-        <label className="text-sm font-semibold text-[#665C50]">From report date<input type="date" value={draft.date_from} onChange={(e) => setDraft((v) => ({ ...v, date_from: e.target.value }))} className={control} /></label>
-        <label className="text-sm font-semibold text-[#665C50]">To report date<input type="date" min={draft.date_from || undefined} value={draft.date_to} onChange={(e) => setDraft((v) => ({ ...v, date_to: e.target.value }))} className={control} /></label>
-        <label className="text-sm font-semibold text-[#665C50]">Sort<select value={draft.sort} onChange={(e) => setDraft((v) => ({ ...v, sort: e.target.value }))} className={control}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+        {role !== "ADMIN" && <label className="text-sm font-semibold text-[#665C50]">Status<select value={draft.status} onChange={(e) => change("status", e.target.value)} className={control}><option value="">All reports</option><option value="DRAFT">Draft</option><option value="SUBMITTED">Submitted</option></select></label>}
+        <label className="text-sm font-semibold text-[#665C50]">Reporter<select value={draft.reported_by} onChange={(e) => change("reported_by", e.target.value)} className={control}><option value="">All reporters</option>{reporters.map((reporter) => <option key={reporter.reported_by} value={reporter.reported_by}>{reporter.reported_by__username}</option>)}</select></label>
+        <label className="text-sm font-semibold text-[#665C50]">From report date<input type="date" value={draft.date_from} onChange={(e) => change("date_from", e.target.value)} className={control} /></label>
+        <label className="text-sm font-semibold text-[#665C50]">To report date<input type="date" min={draft.date_from || undefined} value={draft.date_to} onChange={(e) => change("date_to", e.target.value)} className={control} /></label>
+        <label className="text-sm font-semibold text-[#665C50]">Sort<select value={draft.sort} onChange={(e) => change("sort", e.target.value)} className={control}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
             </div>
         </details>
-        <div className="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-3"><button type="submit" className={action}>Apply filters</button><button type="button" className={action} onClick={() => { setDraft(Object.fromEntries(Object.keys(filters).map((key) => [key, key === "sort" ? "newest" : ""]))); onClear(); }}>Clear filters</button></div>
+        <div className="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-3"><button type="button" className={action} onClick={() => { setDraft(Object.fromEntries(Object.keys(filters).map((key) => [key, key === "sort" ? "newest" : ""]))); setSearchReset((value) => value + 1); onClear(); }}>Clear filters</button></div>
+        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
     </form>;
 }
 
@@ -154,7 +167,7 @@ function ProjectReportWorkspace({ projectId, role, user }) {
     }
     const prefix = role === "ADMIN" ? "/admin" : "/supervisor";
     return <div className="mx-auto min-w-0 max-w-[1500px] space-y-6 pb-8 text-[#211E1A]">
-        {loading && <LoadingScreen message="Loading daily reports..." />}
+        {!result && loading && <LoadingScreen message="Loading daily reports..." />}
         <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-xs text-[#716658]"><Link to={`${prefix}/projects`}>Projects</Link><span>/</span><Link to={`${prefix}/projects/${projectId}`}>{project?.name || "Project Overview"}</Link><span>/</span><span aria-current="page">Daily Reports</span></nav>
         <header className="rare-page-header relative flex flex-wrap items-center justify-between gap-6 overflow-hidden rounded-[28px] border border-[#E7DED2] bg-[#FFFDFA] p-6 text-[#211E1A] shadow-[0_12px_36px_-24px_rgba(0,0,0,0.6)] sm:p-8"><div className="min-w-0 border-l-2 border-[#E7DED2] pl-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#716658]">{project?.name || "Project workspace"}</p><h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Daily Reports</h1><p className="mt-3 max-w-xl text-base leading-7 text-[#716658]">A clear record of every day on site. Review the diary, measured work and supporting evidence in one place.</p></div><div className="flex flex-wrap gap-2"><button type="button" disabled={loading || busy} className={`${actionBase} border-[#E7DED2] bg-[#F1EADF] text-[#211E1A] hover:bg-[#E7DED2]`} onClick={() => setRevision((v) => v + 1)}><RefreshCw size={18} aria-hidden="true" />Refresh</button>{role === "SUPERVISOR" && project && project.status !== "CANCELLED" && !selectedId && <button type="button" disabled={busy} className={primaryAction} onClick={() => { setCreating(true); setMutationError(""); }}><Plus size={20} aria-hidden="true" />Create Daily Report</button>}</div></header>
         {error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700"><p>{error}</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className={action} onClick={() => setRevision((v) => v + 1)}>Retry</button><button type="button" className={action} onClick={() => setParams({})}>Clear filters</button></div></div>}
@@ -162,10 +175,11 @@ function ProjectReportWorkspace({ projectId, role, user }) {
         {mutationError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{mutationError}</p>}
         {selectedId && !projectError ? <ReportDetail key={`${selectedId}:${Boolean(correctionId)}`} reportId={selectedId} projectId={projectId} role={role} user={user} externalRevision={revision} onSelect={selectReport} correctionMode={Boolean(correctionId)} onCorrectReport={startCorrection} sourceHint={params.get("source")} /> : <>
             {creating && project?.status !== "CANCELLED" && <ReportDiaryForm onSave={create} onCancel={() => setCreating(false)} busy={busy} />}
+            <ReportFilters role={role} filters={filters} reporters={result?.data?.reporters || []} onApply={(next) => { const query = new URLSearchParams(Object.entries(next).filter(([, value]) => value)); setParams(query, { replace: true }); }} onClear={() => setParams({})} />
+            {loading && result && <p role="status" className="text-sm text-[#817669]">Updating reports...</p>}
             {data && <>
                 <ReportMetrics summary={data.summary} role={role} />
                 <p className="text-sm leading-6 text-[#716658]">Project-wide totals. Pending verification counts individual work entries in submitted reports.</p>
-                <ReportFilters key={filterKey} role={role} filters={filters} reporters={data.reporters || []} onApply={(next) => { const query = new URLSearchParams(Object.entries(next).filter(([, value]) => value)); setParams(query); }} onClear={() => setParams({})} />
                 <div className="flex flex-wrap items-end justify-between gap-3 pt-2"><div><h2 className="text-2xl font-semibold tracking-tight text-[#2E271F]">Report register</h2><p role="status" className="mt-2 text-sm text-[#665C50]">{data.count} matching reports</p></div><p className="text-sm text-[#716658]">{filters.sort === "oldest" ? "Oldest first" : "Newest first"}</p></div>
                 <div className="grid items-stretch gap-5 2xl:grid-cols-2">{data.results.map((report) => <ReportRegisterCard key={report.id} report={report} onSelect={selectReport} onCorrect={role === "SUPERVISOR" ? startCorrection : undefined} />)}</div>
                 {!data.count && <div className="rounded-[24px] border border-dashed border-[#CCB99F] bg-[#FFFDFA] px-6 py-14 text-center"><FolderOpen size={36} aria-hidden="true" className="mx-auto text-[#99754B]" /><h3 className="mt-4 text-lg font-bold text-[#352D24]">No reports match this selection.</h3><p className="mx-auto mt-2 max-w-md text-base leading-7 text-[#716658]">Try another date range or clear your filters to see available reports.</p></div>}

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { ProjectSearch } from "../components/daily-reports/ReportProjectPicker";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import {
@@ -8,7 +9,6 @@ import {
   ImageOff,
   Plus,
   RefreshCw,
-  Search,
   SlidersHorizontal,
 } from "lucide-react";
 
@@ -29,13 +29,13 @@ export default function CategoryProjectList() {
   const { user } = useAuth();
 
   const [category, setCategory] = useState(null);
+  const categoryCache = useRef(null);
   const [projects, setProjects] = useState([]);
 
   const [totalCount, setTotalCount] = useState(null);
   const [hasNext, setHasNext] = useState(false);
   const [hasPrevious, setHasPrevious] = useState(false);
 
-  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [ordering, setOrdering] = useState("-created_at");
@@ -59,24 +59,11 @@ export default function CategoryProjectList() {
   };
 
   // ---------------------------------------------
-  // DEBOUNCE PROJECT SEARCH
-  // ---------------------------------------------
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  // ---------------------------------------------
   // LOAD CATEGORY AND PROJECTS
   // ---------------------------------------------
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     async function fetchProjects() {
       setLoading(true);
@@ -84,17 +71,19 @@ export default function CategoryProjectList() {
 
       try {
         const [categoryData, projectData] = await Promise.all([
-          projectApi.getCategory(categoryId),
+          categoryCache.current?.id === categoryId
+            ? Promise.resolve(categoryCache.current.data)
+            : projectApi.getCategory(categoryId, controller.signal),
           projectApi.getProjects({
             category: categoryId,
             page,
             ordering,
             ...(search ? { search } : {}),
             ...(statusFilter ? { status: statusFilter } : {}),
-          }),
+          }, controller.signal),
         ]);
 
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
 
         const isArray = Array.isArray(projectData);
 
@@ -112,6 +101,7 @@ export default function CategoryProjectList() {
         );
 
         setCategory(categoryData);
+        categoryCache.current = { id: categoryId, data: categoryData };
         setProjects(scopedItems);
 
         setTotalCount(
@@ -128,7 +118,7 @@ export default function CategoryProjectList() {
 
         setImageFailed(false);
       } catch (err) {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
 
         setProjects([]);
         setTotalCount(null);
@@ -143,7 +133,7 @@ export default function CategoryProjectList() {
           setError("Unable to load category projects. Please try again.");
         }
       } finally {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setLoading(false);
         }
       }
@@ -152,7 +142,7 @@ export default function CategoryProjectList() {
     fetchProjects();
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [categoryId, page, ordering, search, statusFilter, retryKey]);
 
@@ -179,7 +169,7 @@ export default function CategoryProjectList() {
   return (
     <div className="space-y-7">
       {/* GLOBAL RARE LOADER */}
-      {loading && <LoadingScreen message="Loading projects..." />}
+      {loading && !category && <LoadingScreen message="Loading projects..." />}
 
       {/* BREADCRUMB */}
       <nav
@@ -343,29 +333,7 @@ export default function CategoryProjectList() {
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_170px_190px]">
               {/* SEARCH */}
               <div className="relative">
-                <Search
-                  size={18}
-                  className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[#716658]"
-                />
-
-                <input
-                  type="search"
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Search project, client, location..."
-                  aria-label="Search projects"
-                  className="
-                    h-12 w-full rounded-xl
-                    border border-[#E4DCCD]
-                    bg-[#FFFDFA]
-                    pr-4 pl-11
-                    text-sm text-[#211E1A]
-                    outline-none
-                    placeholder:text-[#AAA196]
-                    focus:border-[#211E1A]
-                    focus:ring-2 focus:ring-[#211E1A]/10
-                  "
-                />
+                <ProjectSearch query={search} onSearch={(value) => { setSearch(value); setPage(1); }} loading={loading} label="Search projects" placeholder="Project, client or location" suggestions={loading ? [] : projects.map((project) => ({ id: project.id, name: project.name, context: project.location, to: `/${isAdmin ? "admin" : "supervisor"}/projects/${project.id}` }))} />
               </div>
 
               {/* STATUS */}

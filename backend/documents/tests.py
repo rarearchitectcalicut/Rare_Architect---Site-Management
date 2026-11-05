@@ -212,6 +212,33 @@ class ProjectDocumentTests(ProjectDocumentFixture, TestCase):
         self.assertEqual(document.uploaded_by, self.supervisor)
         self.assertEqual(first.version_number, 1)
 
+    def test_task_document_search_is_paginated_and_task_scoped(self):
+        task = Task.objects.create(project=self.project, created_by=self.supervisor, title="Task")
+        other_task = Task.objects.create(project=self.other_project, created_by=self.other, title="Other task")
+        for target, owner in [(task, self.supervisor), (other_task, self.other)]:
+            for index in range(3):
+                create_task_document(
+                    task_id=target.pk, user=owner, title=f"Foundation drawing {index}",
+                    description="Approved site instructions", document_type="DRAWING",
+                    uploaded_file=pdf_upload(f"footing-{index}.pdf"),
+                )
+        self.client.force_authenticate(self.supervisor)
+        url = reverse("documents:task-document-list-create", args=[task.pk])
+        for term in ["foundation", "site instructions", "footing"]:
+            with self.subTest(term=term):
+                response = self.client.get(url, {"search": term, "page_size": 2})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data["count"], 3)
+                self.assertEqual(len(response.data["results"]), 2)
+                self.assertTrue(response.data["next"])
+                self.assertTrue(all(str(row["task"]) == str(task.pk) for row in response.data["results"]))
+        response = self.client.get(url, {"search": "footing", "page_size": 2, "page": 2})
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(self.client.get(url, {"search": "missing"}).data["count"], 0)
+        self.assertEqual(self.client.get(url, {"search": "x" * 201}).status_code, 400)
+        forbidden = reverse("documents:task-document-list-create", args=[other_task.pk])
+        self.assertEqual(self.client.get(forbidden, {"search": "foundation"}).status_code, 403)
+
 
 @skipUnless(connection.vendor == "postgresql", "Version locking requires PostgreSQL")
 class ProjectDocumentConcurrencyTests(ProjectDocumentFixture, TransactionTestCase):

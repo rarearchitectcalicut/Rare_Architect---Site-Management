@@ -423,6 +423,9 @@ class TaskDocumentListCreateView(generics.ListCreateAPIView):
     def get(self, request, task_id):
 
         task = self.get_task(task_id)
+        search = request.query_params.get("search", "").strip()
+        if len(search) > 200:
+            raise ValidationError({"search": "Use no more than 200 characters."})
 
         queryset = (
             accessible_task_documents(request.user)
@@ -434,6 +437,14 @@ class TaskDocumentListCreateView(generics.ListCreateAPIView):
                 "-id",
             )
         )
+
+        for term in search.split():
+            matching_versions = TaskDocumentVersion.objects.filter(
+                document_id=OuterRef("pk"), original_filename__icontains=term,
+            )
+            queryset = queryset.annotate(filename_match=Exists(matching_versions)).filter(
+                Q(title__icontains=term) | Q(description__icontains=term) | Q(filename_match=True)
+            )
 
         page = self.paginate_queryset(queryset)
 

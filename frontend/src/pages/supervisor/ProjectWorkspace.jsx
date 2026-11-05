@@ -1,3 +1,4 @@
+import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -10,7 +11,6 @@ import {
     FolderKanban,
     RefreshCw,
     ScrollText,
-    Search,
 } from "lucide-react";
 
 import { api } from "../../api/client";
@@ -125,6 +125,7 @@ export function ProjectDocuments({ role = "SUPERVISOR" }) {
 function ProjectDocumentLibrary({ role = "SUPERVISOR", projectId }) {
     const [search, setSearch] = useState("");
     const [type, setType] = useState("");
+    const [searchReset, setSearchReset] = useState(0);
     const [sort, setSort] = useState("newest");
     const [page, setPage] = useState(1);
     const [revision, setRevision] = useState(0);
@@ -160,12 +161,12 @@ function ProjectDocumentLibrary({ role = "SUPERVISOR", projectId }) {
         {notice && <p role="status" className="rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
         {error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
         <section aria-label="Document filters" className="grid gap-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="text-xs font-semibold text-[#716658]">Search documents<input type="search" maxLength={200} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} className={documentControl} placeholder="Title, description, type or filename" /></label>
+            <ProjectSearch key={searchReset} query={search} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search documents" placeholder="Title, description, type or filename" loading={loading} suggestions={documents.map((doc) => ({ id: doc.id, name: doc.title, context: formatText(doc.document_type) }))} />
             <details className="rare-filter-disclosure sm:col-span-2 lg:col-span-3">
                 <summary>Filters and sorting</summary><div className="grid gap-4 pt-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-[#716658]">Document type<select value={type} onChange={(event) => { setType(event.target.value); setPage(1); }} className={documentControl}><option value="">All types</option>{(state.rules?.document_types || []).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             <label className="text-xs font-semibold text-[#716658]">Sort documents<select value={sort} onChange={(event) => { setSort(event.target.value); setPage(1); }} className={documentControl}><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="title">Title A-Z</option><option value="updated">Recently updated</option></select></label>
-            <button type="button" onClick={() => { setSearch(""); setType(""); setSort("newest"); setPage(1); }} className={`${documentButton} self-end`}>Clear filters</button>
+            <button type="button" onClick={() => { setSearchReset((value) => value + 1); setSearch(""); setType(""); setSort("newest"); setPage(1); }} className={`${documentButton} self-end`}>Clear filters</button>
             </div></details>
         </section>
         {loading ? <p role="status" className="text-sm text-[#716658]">Loading documents...</p> : !error && <><p className="text-xs text-[#716658]">{state.count} matching documents</p><div className="grid items-start gap-4 lg:grid-cols-2">{documents.map((documentRecord) => <article key={documentRecord.id} className="min-w-0 space-y-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5">
@@ -472,19 +473,7 @@ export default function SupervisorProjectWorkspace() {
                 <>
                     <section className="rounded-[20px] border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5">
                         <div className="relative">
-                            <Search
-                                size={18}
-                                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
-                            />
-
-                            <input
-                                type="search"
-                                aria-label={`Search ${config.title}`}
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder={`Search ${config.title.toLowerCase()}...`}
-                                className="h-12 w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] pl-11 pr-4 text-sm outline-none focus:border-[#211E1A]"
-                            />
+                            <ProjectSearch query={search} delay={0} onSearch={setSearch} label={`Search ${config.title}`} placeholder={`Search ${config.title.toLowerCase()}...`} />
                         </div>
                     </section>
 

@@ -1,3 +1,4 @@
+import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -7,7 +8,6 @@ import {
     Phone,
     Plus,
     RefreshCw,
-    Search,
     SlidersHorizontal,
     UserCheck,
     UserX,
@@ -404,31 +404,7 @@ export default function Supervisors() {
 
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-[minmax(0,1fr)_160px_180px_auto]">
                     <div className="group relative col-span-2 md:col-span-1">
-                        <Search
-                            size={18}
-                            className="
-                                pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2
-                                text-[#716658] transition-colors duration-200
-                                group-focus-within:text-[#211E1A]
-                            "
-                        />
-
-                        <input
-                            type="search"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search name, phone, email, username..."
-                            aria-label="Search supervisors"
-                            className="
-                                h-12 w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA]
-                                pl-11 pr-4 text-sm text-[#211E1A] outline-none
-                                transition-all duration-200
-                                placeholder:text-[#AAA196]
-                                hover:border-[#CFC4B5]
-                                focus:border-[#211E1A]
-                                focus:ring-4 focus:ring-[#211E1A]/10
-                            "
-                        />
+                        <ProjectSearch query={search} delay={0} onSearch={setSearch} label="Search supervisors" placeholder="Name, phone, email or username" suggestions={visibleSupervisors.map((person) => ({ id: person.id, name: supervisorName(person), context: person.username, to: `/admin/supervisors/${person.id}` }))} />
                     </div>
 
                     <div className="relative min-w-0">

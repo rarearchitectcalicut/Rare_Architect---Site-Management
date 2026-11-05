@@ -101,3 +101,94 @@ test("the shared admin picker keeps admin report and verification links", async 
     assert.match(html, /href="\/admin\/projects\/site-1\/daily-reports"/);
     assert.match(html, /href="\/admin\/approvals\?tab=work"/);
 });
+
+async function searchControl(initial = {}) {
+    const slots = [], jobs = new Map(), calls = [], navigations = [];
+    let cursor = 0, effects = [], serial = 0, tree;
+    let props = { query: "", onSearch: (value) => calls.push(value), ...initial };
+    const hooks = {
+        useState(value) {
+            const index = cursor++;
+            if (!(index in slots)) slots[index] = value;
+            return [slots[index], (next) => { slots[index] = typeof next === "function" ? next(slots[index]) : next; }];
+        },
+        useRef(value) { const index = cursor++; return slots[index] ||= { current: value }; },
+        useId: () => "search-test",
+        useEffect(create, deps) {
+            const index = cursor++, previous = slots[index];
+            if (!previous || deps.some((value, i) => value !== previous.deps[i])) effects.push(() => { previous?.cleanup?.(); slots[index] = { deps, cleanup: create() }; });
+        },
+    };
+    const { exports } = await loadSource("components/daily-reports/ReportProjectPicker.jsx", {
+        overrides: { react: { ...React, ...hooks }, "react-router-dom": { useNavigate: () => (to) => navigations.push(to) }, "api/projectApi.js": { projectApi: {} } },
+        append: `
+            export let schedule, cancel;
+            export function timers(add, remove) { schedule = add; cancel = remove; }
+            const setTimeout = (callback, delay) => schedule(callback, delay);
+            const clearTimeout = (id) => cancel(id);
+        `,
+    });
+    exports.timers((callback, delay) => { const id = ++serial; jobs.set(id, { callback, delay }); return id; }, (id) => jobs.delete(id));
+    function draw(next = {}) {
+        props = { ...props, ...next }; cursor = 0; effects = [];
+        tree = exports.ProjectSearch(props); effects.forEach((effect) => effect());
+        return tree;
+    }
+    function nodes(node) {
+        if (Array.isArray(node)) return node.flatMap(nodes);
+        if (!node || typeof node !== "object") return [];
+        return [node, ...nodes(node.props?.children)];
+    }
+    draw();
+    return {
+        draw, calls, jobs, navigations,
+        input: () => nodes(tree).find((node) => node.type === "input"),
+        options: () => nodes(tree).filter((node) => node.props?.role === "option"),
+        clear: () => nodes(tree).find((node) => node.type === "button" && node.props["aria-label"]?.startsWith("Clear")),
+        type(value) { this.input().props.onChange({ target: { value } }); draw(); },
+        key(key) { this.input().props.onKeyDown({ key, preventDefault() {} }); draw(); },
+        tick() { const pending = [...jobs.values()]; jobs.clear(); pending.forEach((job) => job.callback()); draw(); },
+        cleanup() { slots.forEach((slot) => slot?.cleanup?.()); },
+    };
+}
+
+test("live search debounces rapid typing once, preserves input and suppresses stale suggestions", async () => {
+    const ui = await searchControl({ suggestions: [{ id: "old", name: "Old site" }] });
+    ui.type("N"); ui.type("Ne"); ui.type("New");
+    assert.equal(ui.calls.length, 0); assert.equal(ui.jobs.size, 1);
+    assert.equal([...ui.jobs.values()][0].delay, 300);
+    assert.equal(ui.input().props.value, "New"); assert.equal(ui.options().length, 0);
+    ui.tick(); assert.deepEqual(ui.calls, ["New"]);
+    ui.key("Enter"); assert.equal(ui.calls.length, 1);
+    ui.draw({ query: "New", suggestions: [{ id: "new", name: "New site" }] });
+    assert.equal(ui.options().length, 1); ui.cleanup();
+});
+
+test("autocomplete limits real matches, supports both arrow directions, Enter and Escape", async () => {
+    const suggestions = Array.from({ length: 9 }, (_, index) => ({ id: index, name: `Site ${index}`, context: "Project" }));
+    const ui = await searchControl({ query: "Site", suggestions });
+    ui.input().props.onFocus(); ui.draw(); assert.equal(ui.options().length, 6);
+    ui.key("ArrowUp"); assert.equal(ui.input().props["aria-activedescendant"], "search-test-5");
+    ui.key("ArrowDown"); assert.equal(ui.input().props["aria-activedescendant"], "search-test-0");
+    ui.key("Enter"); assert.deepEqual(ui.calls, ["Site 0"]);
+    assert.equal(ui.input().props["aria-expanded"], false);
+    ui.draw({ query: "Site 0" }); ui.key("ArrowDown"); ui.key("Escape");
+    assert.equal(ui.input().props["aria-expanded"], false); ui.cleanup();
+});
+
+test("clearing and unmount cancel pending debounce; client filtering is immediate", async () => {
+    const ui = await searchControl({ query: "Site" });
+    ui.type("Another site"); ui.clear().props.onClick(); ui.draw(); ui.tick();
+    assert.deepEqual(ui.calls, [""]); assert.equal(ui.input().props.value, "");
+    ui.type("Pending"); ui.cleanup(); assert.equal(ui.jobs.size, 0);
+    const local = await searchControl({ delay: 0 });
+    local.type("Task"); assert.deepEqual(local.calls, ["Task"]); assert.equal(local.jobs.size, 0); local.cleanup();
+});
+
+test("pointer selection uses an existing detail route without sending another search", async () => {
+    const ui = await searchControl({ query: "Site", suggestions: [{ id: "1", name: "Site One", to: "/supervisor/projects/1" }] });
+    ui.input().props.onFocus(); ui.draw(); let prevented = false;
+    ui.options()[0].props.onPointerDown({ preventDefault() { prevented = true; } });
+    ui.options()[0].props.onClick(); ui.draw(); assert.equal(prevented, true);
+    assert.deepEqual(ui.navigations, ["/supervisor/projects/1"]); assert.equal(ui.calls.length, 0); assert.equal(ui.jobs.size, 0); ui.cleanup();
+});
