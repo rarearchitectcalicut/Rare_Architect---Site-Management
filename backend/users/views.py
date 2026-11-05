@@ -94,9 +94,10 @@ class LogoutView(APIView):
 
 
 # Current User Details View
-class CurrentUserView(generics.RetrieveAPIView):
+class CurrentUserView(generics.RetrieveUpdateAPIView):
     serializer_class = CurrentUserSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ["get", "patch", "head", "options"]
 
     def get_object(self):
         return self.request.user
