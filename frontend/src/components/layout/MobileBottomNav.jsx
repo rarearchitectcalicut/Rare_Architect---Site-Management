@@ -12,6 +12,7 @@ export default function MobileBottomNav({
     role,
     onOpenMore,
     moreOpen,
+    unreadCount,
 }) {
     const location = useLocation();
     const items = getMobilePrimaryNavigation(role);
@@ -62,7 +63,10 @@ export default function MobileBottomNav({
               `
                         }
                     >
-                        <NavIcon name={item.icon} size={20} />
+                        <span className="relative">
+                            <NavIcon name={item.icon} size={20} />
+                            {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#B42318] px-1 text-[10px] font-bold leading-none text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+                        </span>
 
                         <span className="text-xs font-medium">
                             {item.label}

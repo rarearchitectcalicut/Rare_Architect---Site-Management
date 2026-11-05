@@ -1,5 +1,6 @@
 import { formatDate, formatText } from "../approvals/approvalUtils";
 import ReportEvidence from "./ReportEvidence";
+import { TaskProgress } from "../tasks/TaskExecutionActions";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays, UserRound, CloudSun, FileText, ClipboardList, MapPin, ShieldAlert, ArrowUpRight, CheckCircle2, Clock3 } from "lucide-react";
@@ -67,6 +68,12 @@ export function ReportRowForm({ section, initial, onSave, onCancel, busy, values
     </form>;
 }
 
+function quantityUnits(value) {
+    if (!/^\d+(?:\.\d{1,3})?$/.test(String(value ?? ""))) return null;
+    const [whole, fraction = ""] = String(value).split(".");
+    return BigInt(whole) * 1000n + BigInt(fraction.padEnd(3, "0"));
+}
+
 export function ReportWorkForm({ initial, tasks, onTaskSearch, onTaskPage, drafts, onDraftPage, correction, onSave, onCancel, busy, values: controlledValues, onChange, prefill = false }) {
     const [taskId, setTaskId] = useState(initial?.task || "");
     const [search, setSearch] = useState("");
@@ -75,8 +82,18 @@ export function ReportWorkForm({ initial, tasks, onTaskSearch, onTaskPage, draft
     const setValues = onChange ?? setLocalValues;
     const task = initial || tasks?.results?.find((item) => item.id === taskId);
     const quantity = task?.measurement_method === "QUANTITY";
+    const progress = task?.progress;
+    const available = quantityUnits(progress?.available_quantity);
+    const entered = quantityUnits(values.quantity_completed_today);
+    const quantityError = quantity && (available === null || progress?.quantity_conflict
+        ? "Quantity availability is unavailable or conflicting. Refresh the report or ask Admin to review the baseline."
+        : entered === null || entered <= 0n
+            ? "Enter a positive quantity with up to three decimal places."
+            : entered > available ? `Only ${progress.available_quantity} ${task.measurement_unit} remains available to report. Your entry of ${values.quantity_completed_today} exceeds the approved quantity after verified and pending work.` : "");
+
     function submit(event) {
         event.preventDefault();
+        if (busy || !task || quantityError) return;
         const payload = { work_description: values.work_description, location_detail: values.location_detail, ...(quantity ? { quantity_completed_today: values.quantity_completed_today } : { completion_claimed: values.completion_claimed }) };
         if (correction) payload.new_daily_report = values.new_daily_report;
         else if (!initial) payload.task = taskId;
@@ -90,11 +107,17 @@ export function ReportWorkForm({ initial, tasks, onTaskSearch, onTaskPage, draft
             {initial && <p className="text-sm font-semibold">{initial.task_title}</p>}
             {correction && !prefill && <div><label className="text-xs text-[#716658]">Your target draft<select required className={input} value={values.new_daily_report} onChange={(event) => setValues((v) => ({ ...v, new_daily_report: event.target.value }))}><option value="">Choose a draft report</option>{(drafts?.results || []).map((report) => <option key={report.id} value={report.id}>{report.report_date} - {report.id.slice(0, 8)}</option>)}</select></label><div className="mt-2 flex gap-2"><button type="button" className={button} disabled={!drafts?.previous} onClick={() => onDraftPage(-1)}>Previous drafts</button><button type="button" className={button} disabled={!drafts?.next} onClick={() => onDraftPage(1)}>Next drafts</button></div><p className="mt-2 text-xs text-[#716658]">Create a draft from the report register first if none is available. The rejected original stays unchanged.</p></div>}
             {prefill && <div className="space-y-2 rounded-xl border border-[#ECC4BA] bg-[#FFF1EC] p-4 text-sm leading-6 text-[#803D32]"><p className="font-bold">Original rejected work · {formatText(initial.measurement_method)}</p><p>Reported: {quantity ? `${initial.quantity_completed_today} ${initial.measurement_unit}` : initial.completion_claimed ? "Completion claimed" : "No completion claim"}</p><p className="whitespace-pre-wrap break-words">{initial.work_description}</p><p>Location: {initial.location_detail || "Not specified"}</p><p className="whitespace-pre-wrap break-words font-semibold">Admin rejection reason: {initial.verification_note || "Not specified"}</p></div>}
+            {task && <section aria-label="Selected task progress" className="space-y-3 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4">
+                <p className="break-words text-sm font-semibold">{task.title || task.task_title} / {formatText(task.measurement_method)}</p>
+                {quantity && <dl className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">{[["Planned", progress?.planned_quantity], ["Admin-verified", progress?.verified_quantity], ["Pending review", progress?.pending_quantity], ["Available to report", progress?.available_quantity]].map(([label, value]) => <div key={label}><dt className="text-[#817669]">{label}</dt><dd className="mt-1 break-words font-semibold">{value == null ? "Unavailable" : `${value} ${task.measurement_unit}`}</dd></div>)}</dl>}
+                <TaskProgress progress={progress} />
+                <p className="text-xs leading-5 text-[#817669]">Pending quantities are awaiting Admin verification and are excluded from verified progress.</p>
+            </section>}
             <label className="block text-xs text-[#716658]">Work description<textarea required rows={3} className={input} value={values.work_description} onChange={(event) => setValues((v) => ({ ...v, work_description: event.target.value }))} /></label>
             <label className="block text-xs text-[#716658]">Location detail<input maxLength={255} className={input} value={values.location_detail} onChange={(event) => setValues((v) => ({ ...v, location_detail: event.target.value }))} /></label>
-            {task && (quantity ? <label className="block text-xs text-[#716658]">Quantity completed today ({task.measurement_unit})<input type="number" required min="0.001" step="0.001" max={task.planned_quantity || undefined} className={input} value={values.quantity_completed_today} onChange={(event) => setValues((v) => ({ ...v, quantity_completed_today: event.target.value }))} /><span className="mt-2 block">Approved planned quantity: {task.planned_quantity} {task.measurement_unit}. Submitted work remains pending until verified.</span></label> : <div><p className="text-xs leading-5 text-[#716658]">Completion criteria: {task.completion_criteria || "Not specified"}</p><label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" required checked={values.completion_claimed} onChange={(event) => setValues((v) => ({ ...v, completion_claimed: event.target.checked }))} />Claim completion for verification</label></div>)}
+            {task && (quantity ? <label className="block text-xs text-[#716658]">Quantity completed today ({task.measurement_unit})<input type="number" required min="0.001" step="0.001" inputMode="decimal" max={progress?.available_quantity ?? undefined} aria-invalid={Boolean(quantityError)} aria-describedby="work-quantity-feedback" className={input} value={values.quantity_completed_today} onChange={(event) => setValues((v) => ({ ...v, quantity_completed_today: event.target.value }))} /><span id="work-quantity-feedback" role={quantityError ? "alert" : undefined} className={`mt-2 block ${quantityError ? "text-[#B42318]" : "text-[#817669]"}`}>{quantityError || `Maximum allowed: ${progress?.available_quantity} ${task.measurement_unit}. Remaining after this entry: ${available !== null && entered !== null ? Number(available - entered) / 1000 : "Unavailable"} ${task.measurement_unit}.`}</span></label> : <div><p className="text-xs leading-5 text-[#716658]">Completion criteria: {task.completion_criteria || "Not specified"}</p><label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" required checked={values.completion_claimed} onChange={(event) => setValues((v) => ({ ...v, completion_claimed: event.target.checked }))} />Claim completion for verification</label></div>)}
         </fieldset>
-        {!prefill && <div className="flex flex-wrap gap-2"><button type="submit" disabled={busy || !task} className={correction ? correctionButton : saveButton}>{busy ? "Saving..." : correction ? "Save correction to draft" : "Save work entry"}</button><button type="button" disabled={busy} className={button} onClick={onCancel}>Back</button></div>}
+        {!prefill && <div className="flex flex-wrap gap-2"><button type="submit" disabled={busy || !task || Boolean(quantityError)} className={correction ? correctionButton : saveButton}>{busy ? "Saving..." : correction ? "Save correction to draft" : "Save work entry"}</button><button type="button" disabled={busy} className={button} onClick={onCancel}>Back</button></div>}
     </form>;
 }
 

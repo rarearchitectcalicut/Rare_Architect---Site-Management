@@ -8,6 +8,8 @@ from .models import Notification
 
 
 class NotificationSerializer(serializers.ModelSerializer):
+    event = serializers.CharField(read_only=True, default="", allow_null=True)
+    project_id = serializers.UUIDField(read_only=True, allow_null=True, default=None)
 
     class Meta:
         model = Notification
@@ -15,6 +17,8 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "notification_type",
+            "event",
+            "project_id",
             "title",
             "message",
             "reference_type",

@@ -16,7 +16,7 @@ const rowBase = `
   motion-reduce:transition-none
 `;
 
-export default function DesktopSidebar({ user, onLogout, loading }) {
+export default function DesktopSidebar({ user, onLogout, loading, unreadCount }) {
     const items = getNavigation(user.role);
 
     // FIX: isAdmin was used in the footer but never defined
@@ -91,6 +91,7 @@ export default function DesktopSidebar({ user, onLogout, loading }) {
                         </span>
 
                         <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                        {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-[#B42318] px-1.5 text-xs font-bold text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
                     </NavLink>
                 ))}
             </nav>

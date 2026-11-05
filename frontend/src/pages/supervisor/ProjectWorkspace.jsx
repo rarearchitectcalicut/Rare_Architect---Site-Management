@@ -134,6 +134,11 @@ function ProjectDocumentLibrary({ role = "SUPERVISOR", projectId }) {
     const [upload, setUpload] = useState(null);
     const [history, setHistory] = useState(null);
     const [notice, setNotice] = useState("");
+    useEffect(() => {
+        if (!notice) return;
+        const timer = setTimeout(() => setNotice(""), 8000);
+        return () => clearTimeout(timer);
+    }, [notice]);
     const admin = role === "ADMIN";
     const key = `${projectId}:${search}:${type}:${sort}:${page}:${revision}`;
     useEffect(() => {

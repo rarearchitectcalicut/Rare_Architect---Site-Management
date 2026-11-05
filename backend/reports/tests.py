@@ -50,7 +50,7 @@ class ApprovalWorkflowTests(TestCase):
         self.client.force_authenticate(self.supervisor)
         response = self.client.post(reverse("reports:task-delay-report-create", args=[self.task.id]), {
             "delay_type": "MATERIAL_DELAY", "reason": "Material delivery delayed",
-            "extension_requested": True, "requested_end_date": "2026-11-10",
+            "expected_completion_date": "2026-11-10", "extension_requested": True, "requested_end_date": "2026-11-10",
         }, format="json")
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response.data["reported_by_name"], "supervisor")
@@ -143,7 +143,7 @@ class ApprovalWorkflowTests(TestCase):
     def test_duplicate_pending_extension_is_rejected(self):
         self.delay()
         self.client.force_authenticate(self.supervisor)
-        response = self.client.post(reverse("reports:task-delay-report-create", args=[self.task.id]), {"delay_type": "WEATHER", "reason": "Rain", "extension_requested": True, "requested_end_date": "2026-11-15"}, format="json")
+        response = self.client.post(reverse("reports:task-delay-report-create", args=[self.task.id]), {"delay_type": "WEATHER", "reason": "Rain", "expected_completion_date": "2026-11-15", "extension_requested": True, "requested_end_date": "2026-11-15"}, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(DelayReport.objects.count(), 1)
 
@@ -173,6 +173,115 @@ class ApprovalWorkflowTests(TestCase):
         self.client.force_authenticate(self.admin)
         for query in [{"project": "invalid"}, {"extension_status": "INVALID"}, {"delay_type": "INVALID"}]:
             self.assertEqual(self.client.get(reverse("reports:delay-report-list"), query).status_code, 400)
+
+    def quantity_draft(self, amount=None):
+        report = DailyReport.objects.create(project=self.project, reported_by=self.supervisor, report_date=date(2026, 10, 27), work_summary="Measured work")
+        entry = DailyTaskWork.objects.create(daily_report=report, task=self.task, work_description="Measured work", quantity_completed_today=Decimal(amount)) if amount else None
+        return report, entry
+
+    def test_capacity_reserves_pending_but_not_other_drafts_or_rejections(self):
+        from .services import add_daily_task_work, verify_daily_task_work
+        verified = self.work("65")
+        verify_daily_task_work(entry_id=verified.pk, admin_user=self.admin)
+        self.work("20")
+        rejected = self.work("90")
+        self.review_work(rejected, "reject", "Duplicate")
+        self.quantity_draft("99")
+        progress = calculate_task_progress(self.task)
+        self.assertEqual(progress["verified_quantity"], "65.000")
+        self.assertEqual(progress["pending_quantity"], "20.000")
+        self.assertEqual(progress["available_quantity"], "15.000")
+        self.assertEqual(progress["progress_percentage"], "65.00")
+        report, _ = self.quantity_draft()
+        from rest_framework.exceptions import ValidationError
+        for amount in ["15.001", "101"]:
+            with self.assertRaises(ValidationError) as error:
+                add_daily_task_work(report_id=report.pk, supervisor=self.supervisor, validated_data={"task": self.task, "work_description": "Work", "quantity_completed_today": Decimal(amount)})
+            self.assertIn("15.000", str(error.exception.detail))
+        entry = add_daily_task_work(report_id=report.pk, supervisor=self.supervisor, validated_data={"task": self.task, "work_description": "Work", "quantity_completed_today": Decimal("15")})
+        self.assertEqual(entry.quantity_completed_today, Decimal("15"))
+        self.assertEqual(calculate_task_progress(self.task)["progress_percentage"], "65.00")
+
+    def test_draft_edit_excludes_itself_and_duplicate_task_cannot_bypass_capacity(self):
+        from .services import update_daily_task_work, add_daily_task_work
+        from rest_framework.exceptions import ValidationError
+        self.work("80")
+        report, entry = self.quantity_draft("10")
+        update_daily_task_work(entry_id=entry.pk, supervisor=self.supervisor, data={"quantity_completed_today": "20"})
+        entry.refresh_from_db()
+        self.assertEqual(entry.quantity_completed_today, Decimal("20"))
+        with self.assertRaises(ValidationError):
+            update_daily_task_work(entry_id=entry.pk, supervisor=self.supervisor, data={"quantity_completed_today": "20.001"})
+        with self.assertRaises(ValidationError):
+            add_daily_task_work(report_id=report.pk, supervisor=self.supervisor, validated_data={"task": self.task, "work_description": "Duplicate", "quantity_completed_today": Decimal("1")})
+        self.assertEqual(report.work_entries.count(), 1)
+        self.client.force_authenticate(self.supervisor)
+        for value in ["0", "-1", "NaN", "1.0001"]:
+            response = self.client.patch(reverse("reports:daily-task-work-detail", args=[entry.pk]), {"quantity_completed_today": value}, format="json")
+            self.assertEqual(response.status_code, 400, response.data)
+            self.assertIn("quantity_completed_today", response.data)
+        response = self.client.get(reverse("tasks:task-register"), {"project": self.project.pk, "exclude_daily_report": report.pk})
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["count"], 0)
+        self.client.force_authenticate(self.other)
+        self.assertEqual(self.client.get(reverse("tasks:task-register"), {"exclude_daily_report": report.pk}).status_code, 404)
+
+    def test_submission_rechecks_capacity_and_keeps_entire_draft_on_failure(self):
+        from .services import submit_daily_report
+        from rest_framework.exceptions import ValidationError
+        self.work("85")
+        report, entry = self.quantity_draft("16")
+        with self.assertRaises(ValidationError) as error:
+            submit_daily_report(report_id=report.pk, supervisor=self.supervisor)
+        self.assertIn(str(self.task.pk), error.exception.detail["work_entries"])
+        report.refresh_from_db(); entry.refresh_from_db()
+        self.assertEqual(report.status, "DRAFT")
+        self.assertIsNone(report.submitted_at)
+        self.assertEqual(entry.quantity_completed_today, Decimal("16"))
+        self.assertEqual(calculate_task_progress(self.task)["progress_percentage"], "0.00")
+        DailyTaskWork.objects.filter(pk=entry.pk).update(quantity_completed_today=Decimal("15"))
+        submit_daily_report(report_id=report.pk, supervisor=self.supervisor)
+        self.assertEqual(calculate_task_progress(self.task)["pending_quantity"], "100.000")
+
+    def test_rejected_correction_reserves_once_and_preserves_original(self):
+        from .services import correct_rejected_daily_task_work, submit_daily_report
+        from rest_framework.exceptions import ValidationError
+        rejected = self.work("90")
+        self.review_work(rejected, "reject", "Remeasure")
+        self.work("80")
+        report, _ = self.quantity_draft()
+        payload = {"work_description": "Correct measurement", "quantity_completed_today": "20"}
+        with self.assertRaises(ValidationError):
+            correct_rejected_daily_task_work(rejected_entry_id=rejected.pk, new_report_id=report.pk, supervisor=self.supervisor, corrected_data={**payload, "quantity_completed_today": "21"})
+        correction = correct_rejected_daily_task_work(rejected_entry_id=rejected.pk, new_report_id=report.pk, supervisor=self.supervisor, corrected_data=payload)
+        repeated = correct_rejected_daily_task_work(rejected_entry_id=rejected.pk, new_report_id=report.pk, supervisor=self.supervisor, corrected_data=payload)
+        self.assertEqual(repeated.pk, correction.pk)
+        submit_daily_report(report_id=report.pk, supervisor=self.supervisor)
+        progress = calculate_task_progress(self.task)
+        self.assertEqual(progress["pending_quantity"], "100.000")
+        self.assertEqual(progress["verified_quantity"], "0.000")
+        self.assertEqual(DailyTaskWork.objects.filter(correction_of=rejected).count(), 1)
+        rejected.refresh_from_db()
+        self.assertEqual(rejected.verification_status, "REJECTED")
+        self.assertEqual(rejected.quantity_completed_today, Decimal("90"))
+
+    def test_legacy_pending_conflict_is_visible_and_verification_requires_resolution(self):
+        from .services import verify_daily_task_work
+        from rest_framework.exceptions import ValidationError
+        first = self.work("60")
+        self.work("50")
+        progress = calculate_task_progress(self.task)
+        self.assertTrue(progress["quantity_conflict"])
+        self.assertEqual(progress["available_quantity"], "0.000")
+        with self.assertRaises(ValidationError):
+            verify_daily_task_work(entry_id=first.pk, admin_user=self.admin)
+        first.refresh_from_db()
+        self.assertEqual(first.verification_status, "PENDING")
+        self.assertEqual(DailyTaskWork.objects.count(), 2)
+        from .progress import validate_work_capacity
+        self.task.planned_quantity = None
+        with self.assertRaises(ValidationError):
+            validate_work_capacity(self.task, Decimal("1"))
 
     def test_work_queue_excludes_drafts_and_exposes_report_context(self):
         self.work(submitted=False)
@@ -412,10 +521,10 @@ class ApprovalWorkflowTests(TestCase):
         url = reverse("reports:task-delay-report-create", args=[self.task.pk])
         self.client.force_authenticate(self.supervisor)
         for invalid in [{"delay_type": "INVALID"}, {"reason": " "}, {"reason": "x" * 201}, {"extension_requested": True}, {"requested_end_date": "2026-11-01"}, {"extension_requested": True, "requested_end_date": "2026-10-30"}, {"expected_completion_date": "2026-09-30"}]:
-            response = self.client.post(url, {"delay_type": "WEATHER", "reason": "Rain", **invalid}, format="json")
+            response = self.client.post(url, {"delay_type": "WEATHER", "reason": "Rain", "expected_completion_date": "2026-11-01", **invalid}, format="json")
             self.assertEqual(response.status_code, 400, response.data)
         for delay_type in DelayReport.DelayType.values:
-            response = self.client.post(url, {"delay_type": delay_type, "reason": "Valid delay", "extension_requested": False, "requested_end_date": None}, format="json")
+            response = self.client.post(url, {"delay_type": delay_type, "reason": "Valid delay", "expected_completion_date": "2026-11-01", "extension_requested": False, "requested_end_date": None}, format="json")
             self.assertEqual(response.status_code, 201, response.data)
             self.assertEqual(response.data["status"], "PENDING")
             self.assertIsNone(response.data["extension_status"])
@@ -425,6 +534,29 @@ class ApprovalWorkflowTests(TestCase):
         self.assertEqual(self.task.work_status, "NOT_STARTED")
         self.assertEqual(self.task.end_date, date(2026, 10, 30))
         self.assertEqual(calculate_task_progress(self.task)["progress_percentage"], "0.00")
+
+    def test_delay_completion_must_be_strictly_after_locked_task_deadline(self):
+        url = reverse("reports:task-delay-report-create", args=[self.task.pk])
+        self.client.force_authenticate(self.supervisor)
+        payload = {"delay_type": "WEATHER", "reason": "Rain"}
+        for value in [None, "2026-10-29", "2026-10-30"]:
+            response = self.client.post(url, {**payload, "expected_completion_date": value}, format="json")
+            self.assertEqual(response.status_code, 400, response.data)
+            self.assertIn("expected_completion_date", response.data)
+        self.assertFalse(DelayReport.objects.exists())
+        response = self.client.post(url, {**payload, "expected_completion_date": "2026-10-31"}, format="json")
+        self.assertEqual(response.status_code, 201, response.data)
+        rows = self.client.get(reverse("reports:delay-report-list"), {"task": self.task.pk}).data["results"]
+        self.assertEqual([row["id"] for row in rows], [response.data["id"]])
+        self.task.end_date = date(2026, 11, 2)
+        self.task.save(update_fields=["end_date"])
+        response = self.client.post(url, {**payload, "expected_completion_date": "2026-11-01"}, format="json")
+        self.assertEqual(response.status_code, 400, response.data)
+        self.task.end_date = None
+        self.task.save(update_fields=["end_date"])
+        response = self.client.post(url, {**payload, "expected_completion_date": "2026-11-03"}, format="json")
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn("task", response.data)
 
     def test_delay_read_and_create_permissions_remain_project_scoped(self):
         report = self.delay()

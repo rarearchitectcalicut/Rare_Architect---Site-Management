@@ -15,7 +15,7 @@ export default function ExtensionReview({ record }) {
         <Meta label="Supervisor's reason" value={record.reason} />
         <Meta label="Detailed explanation" value={record.description} />
         <Meta label="Delay report decision" value={formatText(record.status)} />
-        <Meta label="Extension decision" value={formatText(record.extension_status)} />
+        <Meta label="Extension decision" value={record.extension_status === "PENDING" ? "Awaiting decision" : formatText(record.extension_status)} />
         {record.extension_admin_comment && <Meta label="Extension feedback" value={record.extension_admin_comment} />}
         <div className="grid gap-4 sm:grid-cols-2"><Meta label="Extension reviewed by" value={record.extension_reviewed_by_name} /><Meta label="Extension reviewed at" value={formatDateTime(record.extension_reviewed_at)} /></div>
         {record.extension_status === "APPROVED" && <div className="grid gap-4 rounded-xl bg-[#F1EADF] p-4 sm:grid-cols-2"><Meta label="Previous approved deadline" value={history?.previous_approved_deadline ? formatDate(history.previous_approved_deadline) : "Not recorded / no deadline set"} /><Meta label="New approved deadline" value={formatDate(history?.new_approved_deadline)} /></div>}

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import ProjectCategories from "../components/dashboard/ProjectCategories";
 
 import {
@@ -13,14 +13,20 @@ import {
   FileText,
   FolderKanban,
   ListTodo,
+  Plus,
   RefreshCw,
   ShieldCheck,
+  X,
 } from "lucide-react";
 
 import { useAuth } from "../hooks/useAuth";
 import { dashboardApi } from "../api/dashboardApi";
 import LoadingScreen from "../components/LoadingScreen";
 import AdminQuickActions from "../components/dashboard/AdminQuickActions";
+import ApprovalModal from "../components/approvals/ApprovalModal";
+import { ProjectSearch } from "../components/daily-reports/ReportProjectPicker";
+import { projectApi } from "../api/projectApi";
+import { validationMessage } from "../hooks/useApprovalReview";
 
 // =====================================================
 // MOTION SYSTEM
@@ -753,6 +759,78 @@ function SupervisorActionPanel({ title, group, type, delay = 0 }) {
 // SUPERVISOR DASHBOARD
 // =====================================================
 
+function SupervisorProjectSelector({ action, onClose }) {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [revision, setRevision] = useState(0);
+  const [result, setResult] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const navigating = useRef(false);
+  const key = JSON.stringify([query, page, revision]);
+  const current = result?.key === key ? result : null;
+  const title = action === "report" ? "Create Daily Report" : "Create Task";
+  useEffect(() => {
+    const controller = new AbortController();
+    projectApi.getProjects({ search: query, page, page_size: 20 }, controller.signal).then((data) => {
+      if (Array.isArray(data)) data = { results: data.slice((page - 1) * 20, page * 20), next: page * 20 < data.length, previous: page > 1 };
+      if (!Array.isArray(data?.results)) throw new Error("Unexpected project response.");
+      if (!controller.signal.aborted) setResult({ key, data: { ...data, results: data.results.filter((project) => ["ACTIVE", "MAINTENANCE"].includes(project.status)) } });
+    }).catch((error) => {
+      if (!controller.signal.aborted) setResult({ key, error: validationMessage(error, "Unable to load assigned projects.") });
+    });
+    return () => controller.abort();
+  }, [key, query, page]);
+  function proceed(event) {
+    event.preventDefault();
+    if (!selected || !current?.data || navigating.current || !["ACTIVE", "MAINTENANCE"].includes(selected.status)) return;
+    navigating.current = true;
+    navigate(`/supervisor/projects/${encodeURIComponent(selected.id)}/${action === "report" ? "daily-reports" : "tasks"}?create=true`);
+    onClose();
+  }
+  return <ApprovalModal label={`${title}: choose project`} onClose={onClose}>
+    <form onSubmit={proceed} className="space-y-5 p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{title}</h2><p className="mt-2 text-sm text-[#817669]">Choose an assigned Active or Maintenance project.</p></div><button type="button" onClick={onClose} aria-label="Close project selector" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-[#211E1A]"><X size={20} /></button></div>
+      <ProjectSearch query={query} onSearch={(value) => { setQuery(value); setPage(1); }} label="Search assigned projects" />
+      {!current && <p role="status" className="text-sm text-[#817669]">Loading assigned projects...</p>}
+      {current?.error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{current.error} <button type="button" onClick={() => setRevision((value) => value + 1)} className="min-h-11 px-3 font-semibold underline">Retry</button></div>}
+      {current?.data && <>
+        <fieldset className="max-h-[35dvh] space-y-2 overflow-y-auto"><legend className="mb-2 text-sm font-semibold">Project</legend>
+          {current.data.results.map((project) => <label key={project.id} className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border p-3 ${selected?.id === project.id ? "border-[#211E1A] bg-[#F1EADF]" : "border-[#E7DED2] bg-[#FFFDFA]"}`}>
+            <input type="radio" name="quick-action-project" value={project.id} checked={selected?.id === project.id} onChange={() => setSelected(project)} className="mt-1 accent-[#211E1A]" /><span className="min-w-0"><strong className="block break-words text-sm">{project.name}</strong><span className="mt-1 block text-xs text-[#817669]">{project.status === "ACTIVE" ? "Active" : "Maintenance"}</span></span>
+          </label>)}
+          {!current.data.results.length && <p role="status" className="py-4 text-sm text-[#817669]">No eligible projects on this page. {current.data.next || current.data.previous ? "Try another page or search by project name." : "Try another search, or contact Admin about your project assignments."}</p>}
+        </fieldset>
+        {(current.data.next || current.data.previous) && <nav aria-label="Assigned project pages" className="flex items-center justify-between gap-3"><button type="button" className="rare-button rare-button-secondary" disabled={!current.data.previous} onClick={() => setPage((value) => value - 1)}>Previous</button><span className="text-xs text-[#817669]">Page {page}</span><button type="button" className="rare-button rare-button-secondary" disabled={!current.data.next} onClick={() => setPage((value) => value + 1)}>Next</button></nav>}
+      </>}
+      {selected && <p role="status" className="break-words rounded-xl bg-[#E6F4EA] p-3 text-sm text-[#166534]">Selected: <strong>{selected.name}</strong> / {selected.status === "ACTIVE" ? "Active" : "Maintenance"}</p>}
+      <div className="flex justify-end gap-3 border-t border-[#E7DED2] pt-4"><button type="button" onClick={onClose} className="rare-button rare-button-secondary">Cancel</button><button type="submit" disabled={!selected || !current || Boolean(current.error)} className="rare-button rare-button-primary">Continue<ArrowRight size={18} aria-hidden="true" /></button></div>
+    </form>
+  </ApprovalModal>;
+}
+
+function SupervisorQuickActions() {
+  const [action, setAction] = useState(null);
+  const actions = [
+    { label: "My Projects", path: "/supervisor/projects", icon: FolderKanban, tile: "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB]" },
+    { label: "My Tasks", path: "/supervisor/tasks", icon: ListTodo, tile: "bg-[#EDE9FE] text-[#7C3AED] group-hover:bg-[#7C3AED]" },
+    { label: "Daily Report", action: "report", icon: FileText, tile: "bg-[#E6F4EA] text-[#16A34A] group-hover:bg-[#16A34A]" },
+    { label: "Create Task", action: "task", icon: Plus, tile: "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB]" },
+  ];
+  return <>
+    <section aria-label="Supervisor Quick Actions" className="rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] px-4 py-5 sm:px-6">
+      <h2 className="mb-4 text-base font-bold text-[#211E1A] sm:mb-5">Quick Actions</h2>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">{actions.map((item) => {
+        const Icon = item.icon;
+        const className = "group flex flex-col items-center justify-center gap-2.5 rounded-2xl px-2 py-3 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A]/40 sm:py-4";
+        const content = <><span className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${item.tile}`}><Icon size={23} strokeWidth={1.8} aria-hidden="true" /></span><span className="text-xs font-medium text-[#665E53] group-hover:text-[#211E1A] sm:text-sm">{item.label}</span></>;
+        return item.path ? <Link key={item.label} to={item.path} className={className}>{content}</Link> : <button key={item.label} type="button" onClick={() => setAction(item.action)} className={className}>{content}</button>;
+      })}</div>
+    </section>
+    {action && <SupervisorProjectSelector action={action} onClose={() => setAction(null)} />}
+  </>;
+}
+
 function SupervisorDashboard({ summary, actionItems }) {
   const projects = summary.projects || {};
   const tasks = summary.my_tasks || {};
@@ -816,6 +894,7 @@ function SupervisorDashboard({ summary, actionItems }) {
       </section>
 
       {/* STATUS OVERVIEW */}
+      <SupervisorQuickActions />
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
         <Panel delay={stagger(4)} title="My Tasks">
           <CountRow

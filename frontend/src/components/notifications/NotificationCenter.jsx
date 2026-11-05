@@ -16,6 +16,8 @@ import {
     RefreshCw,
     UserRoundCheck,
     X,
+    XCircle,
+    CheckCircle2,
 } from "lucide-react";
 
 import { notificationApi } from "../../api/notificationApi";
@@ -31,7 +33,7 @@ const TYPE_CONFIG = {
     TASK_APPROVAL: {
         label: "Task approval",
         icon: ClipboardCheck,
-        tone: "bg-[#E7F2E8] text-[#296F40]",
+        tone: "bg-[#F1EADF] text-[#74614D]",
     },
     TASK_CHANGE_REQUEST: {
         label: "Change request",
@@ -51,7 +53,7 @@ const TYPE_CONFIG = {
     DELAY_REPORT: {
         label: "Delay report",
         icon: Clock3,
-        tone: "bg-[#FCE9E6] text-[#B5473E]",
+        tone: "bg-[#FFF2D8] text-[#94651D]",
     },
     EXTENSION_REQUEST: {
         label: "Extension request",
@@ -66,7 +68,7 @@ const TYPE_CONFIG = {
 };
 
 // =====================================================
-// DATA HELPERS (unchanged logic)
+// DATA HELPERS
 // =====================================================
 
 function itemsFrom(data) {
@@ -75,7 +77,9 @@ function itemsFrom(data) {
     throw new Error("Unexpected notifications response.");
 }
 
-async function fetchNotifications() {
+async function fetchNotifications(signal) {
+    let unread = null;
+    let total = null;
     const items = [];
     let page = 1;
     let hasNext = true;
@@ -85,7 +89,10 @@ async function fetchNotifications() {
             throw new Error("Notification pagination limit exceeded.");
         }
 
-        const response = await notificationApi.list({ page });
+        const response = await notificationApi.list({ page, ...(page === 1 ? { include_counts: true } : {}) }, signal);
+        if (signal?.aborted) return null;
+        if (page === 1 && Number.isInteger(response.unread_count) && response.unread_count >= 0) unread = response.unread_count;
+        if (page === 1 && Number.isInteger(response.total_count) && response.total_count >= 0) total = response.total_count;
         items.push(...itemsFrom(response).map((notification) => ({
             ...notification,
             type: notification.notification_type || notification.type,
@@ -96,7 +103,7 @@ async function fetchNotifications() {
         page += 1;
     }
 
-    return items;
+    return { items, unread_count: unread, total_count: total };
 }
 
 function readableType(type) {
@@ -189,7 +196,7 @@ function readError(error, fallback) {
 }
 
 // =====================================================
-// NAVIGATION RESOLVER (unchanged logic)
+// NOTIFICATION DESTINATIONS
 // =====================================================
 
 async function resolveDestination(notification, role) {
@@ -231,16 +238,16 @@ async function resolveDestination(notification, role) {
     if (["DELAY_REPORT", "EXTENSION_REQUEST"].includes(type) && ref) {
         const report = await delayApi.get(ref);
         return supervisor
-            ? `/supervisor/projects/${report.project_id}/delays?request=${encodeURIComponent(ref)}`
+            ? `/supervisor/projects/${report.project_id}/delays?request=${encodeURIComponent(ref)}${type === "EXTENSION_REQUEST" ? "&type=extension" : ""}`
             : `/admin/delays?request=${encodeURIComponent(ref)}&type=${type === "EXTENSION_REQUEST" ? "extension" : "delay"}`;
     }
     if (kind === "DAILY_TASK_WORK" && ref) {
         const entry = await dailyReportApi.work(ref);
-        return supervisor ? `/supervisor/projects/${entry.project_id}/daily-reports` : `/admin/approvals?tab=work&entry=${encodeURIComponent(ref)}`;
+        return supervisor ? `/supervisor/projects/${entry.project_id}/daily-reports?report=${encodeURIComponent(idOf(entry.daily_report))}` : `/admin/approvals?tab=work&entry=${encodeURIComponent(ref)}`;
     }
     if (kind === "DAILY_REPORT" && ref) {
         const report = await dailyReportApi.get(ref);
-        return supervisor ? `/supervisor/projects/${report.project}/daily-reports` : `/admin/reports?report=${encodeURIComponent(ref)}`;
+        return supervisor ? `/supervisor/projects/${report.project}/daily-reports?report=${encodeURIComponent(ref)}` : `/admin/reports?report=${encodeURIComponent(ref)}`;
     }
 
     const taskRelated =
@@ -258,6 +265,8 @@ async function resolveDestination(notification, role) {
             task.project_id || task.project
         );
     }
+
+    if (kind === "TASK_BATCH" && projectId) return `/${supervisor ? "supervisor" : "admin"}/projects/${projectId}/tasks`;
 
     if (supervisor) {
         if (taskRelated && projectId) {
@@ -329,13 +338,17 @@ async function resolveDestination(notification, role) {
 }
 
 function configFor(notification) {
-    return (
-        TYPE_CONFIG[notification.type] || {
-            label: readableType(notification.type),
-            icon: Bell,
-            tone: "bg-[#F1EADF] text-[#74614D]",
-        }
-    );
+    const type = notification.notification_type || notification.type;
+    const base = TYPE_CONFIG[type] || { label: readableType(type), icon: Bell, tone: "bg-[#F1EADF] text-[#74614D]" };
+    const event = notification.event || "";
+    if (["TASK_REJECTED", "TASK_EDIT_REJECTED", "TIMELINE_REORDER_REJECTED", "DELAY_REPORT_REJECTED", "EXTENSION_REJECTED", "DAILY_TASK_WORK_REJECTED", "PROJECT_CANCELLED"].includes(event)) {
+        return { ...base, label: event === "PROJECT_CANCELLED" ? "Project cancelled" : `${base.label} / Rejected`, icon: XCircle, tone: "bg-[#FCE9E6] text-[#B42318]" };
+    }
+    if (["TASK_APPROVED", "TASK_EDIT_APPROVED", "TIMELINE_REORDER_APPROVED", "DELAY_REPORT_APPROVED", "EXTENSION_APPROVED", "DAILY_TASK_WORK_VERIFIED"].includes(event)) {
+        return { ...base, label: `${base.label} / ${event.endsWith("VERIFIED") ? "Verified" : "Approved"}`, icon: CheckCircle2, tone: "bg-[#E7F2E8] text-[#166534]" };
+    }
+    if (event === "PROJECT_DATES_CHANGED") return { ...base, label: "Project dates changed", tone: "bg-[#E9F0FC] text-[#3565A5]" };
+    return base;
 }
 
 // =====================================================
@@ -422,14 +435,25 @@ export default function NotificationCenter({
     role = "ADMIN",
 }) {
     const navigate = useNavigate();
+    const mounted = useRef(false);
+    useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
     const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(null);
+    const [totalCount, setTotalCount] = useState(null);
+    const [markingAll, setMarkingAll] = useState(false);
+    const markAllRef = useRef(false);
     const [loading, setLoading] = useState(true);
     const [openingId, setOpeningId] = useState("");
     const openingRef = useRef(false);
 
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
+    useEffect(() => {
+        if (!notice) return;
+        const timer = setTimeout(() => setNotice(""), 8000);
+        return () => clearTimeout(timer);
+    }, [notice]);
     const [refreshKey, setRefreshKey] = useState(0);
 
     const [search, setSearch] = useState("");
@@ -442,18 +466,21 @@ export default function NotificationCenter({
         useState(null);
 
     useEffect(() => {
-        let cancelled = false;
+        const controller = new AbortController();
 
         async function load() {
             setLoading(true);
             setError("");
 
             try {
-                const data = await fetchNotifications();
+                const data = await fetchNotifications(controller.signal);
 
-                if (!cancelled) setNotifications(data);
+                if (!controller.signal.aborted && data) {
+                    setNotifications(data.items); setUnreadCount(data.unread_count); setTotalCount(data.total_count);
+                    window.dispatchEvent(new CustomEvent("rare:notifications-updated", { detail: { unread_count: data.unread_count } }));
+                }
             } catch (err) {
-                if (!cancelled) {
+                if (!controller.signal.aborted) {
                     setError(
                         readError(
                             err,
@@ -462,14 +489,14 @@ export default function NotificationCenter({
                     );
                 }
             } finally {
-                if (!cancelled) setLoading(false);
+                if (!controller.signal.aborted) setLoading(false);
             }
         }
 
         load();
 
         return () => {
-            cancelled = true;
+            controller.abort();
         };
     }, [refreshKey]);
 
@@ -495,9 +522,6 @@ export default function NotificationCenter({
         [notifications]
     );
 
-    const unreadCount = notifications.filter(
-        (item) => !item.is_read
-    ).length;
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -578,7 +602,7 @@ export default function NotificationCenter({
     }
 
     async function openNotification(notification) {
-        if (openingRef.current) return;
+        if (openingRef.current || markAllRef.current) return;
 
         openingRef.current = true;
         setOpeningId(notification.id);
@@ -587,7 +611,10 @@ export default function NotificationCenter({
 
         try {
             if (!notification.is_read) {
-                await notificationApi.markRead(notification.id);
+                const read = await notificationApi.markRead(notification.id);
+                if (!mounted.current) return;
+                if (Number.isInteger(read.unread_count)) setUnreadCount(read.unread_count);
+                if (Number.isInteger(read.total_count)) setTotalCount(read.total_count);
 
                 setNotifications((previous) =>
                     previous.map((item) =>
@@ -595,14 +622,14 @@ export default function NotificationCenter({
                             ? {
                                 ...item,
                                 is_read: true,
-                                read_at: new Date().toISOString(),
+                                read_at: read.read_at,
                             }
                             : item
                     )
                 );
 
                 window.dispatchEvent(
-                    new Event("rare:notifications-updated")
+                    new CustomEvent("rare:notifications-updated", { detail: { unread_count: read.unread_count } })
                 );
             }
 
@@ -614,11 +641,13 @@ export default function NotificationCenter({
                     role
                 );
             } catch {
+                if (!mounted.current) return;
                 setNotice(
                     "Notification opened, but its related record is unavailable."
                 );
             }
 
+            if (!mounted.current) return;
             if (destination) {
                 navigate(destination);
                 return;
@@ -626,6 +655,7 @@ export default function NotificationCenter({
 
             setOpenedNotification(notification);
         } catch (err) {
+            if (!mounted.current) return;
             setError(
                 readError(
                     err,
@@ -634,8 +664,22 @@ export default function NotificationCenter({
             );
         } finally {
             openingRef.current = false;
-            setOpeningId("");
+            if (mounted.current) setOpeningId("");
         }
+    }
+
+    async function markAllRead() {
+        if (markAllRef.current || openingRef.current) return;
+        markAllRef.current = true; setMarkingAll(true); setError("");
+        try {
+            const data = await notificationApi.markAllRead();
+            if (!mounted.current) return;
+            setUnreadCount(data.unread_count); setTotalCount(data.total_count);
+            setNotice("Notifications marked as read.");
+            setRefreshKey((value) => value + 1);
+            window.dispatchEvent(new CustomEvent("rare:notifications-updated", { detail: { unread_count: data.unread_count } }));
+        } catch (failure) { if (mounted.current) setError(readError(failure, "Unable to mark notifications as read. Please retry.")); }
+        finally { markAllRef.current = false; if (mounted.current) setMarkingAll(false); }
     }
 
     const hasFilters =
@@ -644,12 +688,12 @@ export default function NotificationCenter({
         sort !== "NEWEST";
 
     const tabs = [
-        { key: "ALL", label: "All", count: notifications.length },
+        { key: "ALL", label: "All", count: totalCount },
         { key: "UNREAD", label: "Unread", count: unreadCount },
         {
             key: "READ",
             label: "Read",
-            count: notifications.length - unreadCount,
+            count: unreadCount === null || totalCount === null ? null : totalCount - unreadCount,
         },
     ];
 
@@ -668,6 +712,7 @@ export default function NotificationCenter({
                 />
             )}
 
+            {unreadCount > 0 && <div className="flex justify-end"><button type="button" onClick={markAllRead} disabled={markingAll || loading || Boolean(openingId)} className="rare-button rare-button-secondary">{markingAll ? "Marking as read..." : "Mark all as read"}</button></div>}
             {/* HEADER */}
             <header className="rare-page-header flex items-start justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-4">
@@ -691,7 +736,7 @@ export default function NotificationCenter({
                                 ? "Checking for updates..."
                                 : unreadCount > 0
                                     ? `You have ${unreadCount} unread ${unreadCount === 1 ? "update" : "updates"}`
-                                    : "You're all caught up"}
+                                    : unreadCount === null ? "Unread count unavailable" : "You're all caught up"}
                         </p>
                     </div>
                 </div>

@@ -293,6 +293,7 @@ class TaskRegisterSerializer(TaskListSerializer):
 
 
 class TaskRegisterQuerySerializer(serializers.Serializer):
+    exclude_daily_report = serializers.UUIDField(required=False)
     delay_eligible = serializers.BooleanField(required=False, default=False)
     search = serializers.CharField(required=False, allow_blank=True, max_length=200, trim_whitespace=True)
     project = serializers.UUIDField(required=False)

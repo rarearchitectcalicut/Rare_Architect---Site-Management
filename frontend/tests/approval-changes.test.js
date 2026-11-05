@@ -162,7 +162,7 @@ test("daily-report API uses existing project, draft, section and correction endp
 test("work forms show approved quantity units or completion criteria without percentage input", async () => {
     const { exports } = await loadSource("components/daily-reports/DailyReportSummary.jsx");
     const props = { busy: false, onSave() {}, onCancel() {} };
-    const quantity = render(exports.ReportWorkForm, { ...props, initial: { id: "entry", task: "task", task_title: "Plastering", measurement_method: "QUANTITY", planned_quantity: "100", measurement_unit: "SQM", quantity_completed_today: "25", work_description: "Wall work" } });
+    const quantity = render(exports.ReportWorkForm, { ...props, initial: { id: "entry", task: "task", task_title: "Plastering", measurement_method: "QUANTITY", planned_quantity: "100", measurement_unit: "SQM", quantity_completed_today: "25", work_description: "Wall work", progress: { measurement_method: "QUANTITY", planned_quantity: "100", verified_quantity: "65", pending_quantity: "10", available_quantity: "25", progress_percentage: "65.00", measurement_unit: "SQM" } } });
     assert(quantity.includes("Quantity completed today (SQM)"));
     assert(quantity.includes("100 SQM"));
     assert(!quantity.includes("percent"));
@@ -619,7 +619,7 @@ async function delayFormHarness() {
 
 test("delay form validates dates, clears disabled extension dates and prevents duplicate confirmations or submissions", async () => {
     const ui = await delayFormHarness();
-    ui.change("task", "task"); ui.change("reason", " Rain delayed access "); ui.change("extension_requested", true); ui.change("requested_end_date", "2026-10-30");
+    ui.change("task", "task"); ui.change("expected_completion_date", "2026-11-10"); ui.change("reason", " Rain delayed access "); ui.change("extension_requested", true); ui.change("requested_end_date", "2026-10-30");
     await ui.submit(); ui.draw();
     assert.equal(ui.confirmations.length, 0);
     assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props["aria-invalid"], true);
@@ -637,7 +637,7 @@ test("delay form validates dates, clears disabled extension dates and prevents d
 });
 
 test("delay form preserves backend field errors and can retry after failure or cancelled confirmation", async () => {
-    const ui = await delayFormHarness(); ui.change("task", "task"); ui.change("reason", "Rain");
+    const ui = await delayFormHarness(); ui.change("task", "task"); ui.change("expected_completion_date", "2026-11-10"); ui.change("reason", "Rain");
     const cancelled = ui.submit(); ui.confirmations[0](false); await cancelled;
     assert.equal(ui.requests.length, 0);
     const first = ui.submit(); ui.confirmations[1](true); await flushDelay();
@@ -958,5 +958,355 @@ test("project editing offers active categories and preserves an unchanged inacti
     assert.equal(updates[1].payload.get("category"), "active");
     draw({ ...project, status: "CANCELLED" });
     assert.equal(tree, null); assert.equal(updates.length, 2);
+    state.cleanup();
+});
+
+test("notification presentation uses audited events and keeps ambiguous legacy records neutral", async () => {
+    const { exports } = await loadSource("components/notifications/NotificationCenter.jsx", { append: "\nexport { configFor, NotificationRow, resolveDestination };" });
+    const rejected = exports.configFor({ notification_type: "TASK_APPROVAL", title: "Task approved", event: "TASK_REJECTED" });
+    assert.match(rejected.tone, /B42318/); assert.match(rejected.label, /Rejected/);
+    assert.match(exports.configFor({ notification_type: "TASK_APPROVAL", event: "TASK_APPROVED" }).tone, /166534/);
+    assert.match(exports.configFor({ notification_type: "PROJECT_ASSIGNMENT", event: "SUPERVISOR_ASSIGNED" }).tone, /3565A5/);
+    assert.match(exports.configFor({ notification_type: "SYSTEM", event: "PROJECT_CANCELLED" }).tone, /B42318/);
+    assert.match(exports.configFor({ notification_type: "SYSTEM", event: "PROJECT_DATES_CHANGED" }).tone, /3565A5/);
+    assert.match(exports.configFor({ notification_type: "TASK_APPROVAL", title: "Task approved" }).tone, /74614D/);
+    const html = render(exports.NotificationRow, { notification: { id: "rejected", notification_type: "TASK_APPROVAL", title: "Rejected task", event: "TASK_REJECTED", is_read: false, message: "Read the Admin comment" } });
+    assert.match(html, /Rejected task/); assert.match(html, /B42318/); assert.match(html, /Task approval \/ Rejected/);
+});
+
+test("project notifications and task batches use supported contextual destinations", async () => {
+    const { exports } = await loadSource("components/notifications/NotificationCenter.jsx", { append: "\nexport { resolveDestination };" });
+    const project = { notification_type: "SYSTEM", reference_type: "PROJECT", reference_id: "project" };
+    assert.equal(await exports.resolveDestination(project, "SUPERVISOR"), "/supervisor/projects/project");
+    assert.equal(await exports.resolveDestination(project, "ADMIN"), "/admin/projects/project");
+    assert.equal(await exports.resolveDestination({ notification_type: "TASK_APPROVAL", reference_type: "TASK_BATCH", project_id: "project" }, "ADMIN"), "/admin/projects/project/tasks");
+});
+
+test("desktop and mobile navigation share the actual unread badge and hide zero counts", async () => {
+    const user = { id: "user", username: "Supervisor", role: "SUPERVISOR" };
+    for (const file of ["components/layout/DesktopSidebar.jsx", "components/layout/MobileBottomNav.jsx"]) {
+        const { exports } = await loadSource(file);
+        const positive = render(exports.default, { user, role: user.role, unreadCount: 12, open: true });
+        assert.match(positive, /12 unread notifications/);
+        const zero = render(exports.default, { user, role: user.role, unreadCount: 0, open: true });
+        assert.ok(!zero.includes("0 unread notifications"));
+    }
+});
+
+test("Supervisor task details show original review comments, reviewers and timestamps", async () => {
+    const state = delayHooks(); const calls = [];
+    const { exports: helpers } = await loadSource("api/taskApi.js", { overrides: { "api/client.js": { api: {} } } });
+    const { exports } = await loadSource("pages/supervisor/ProjectTasks.jsx", { overrides: {
+        react: { ...React, ...state.hooks },
+        "api/delayApi.js": { delayApi: { list: async () => ({ count: 0, results: [] }) } },
+        "api/taskApi.js": { ...helpers, taskApi: { history: async (id, params, signal) => {
+            calls.push({ id, params, signal });
+            return { count: 3, results: [
+                { id: "extension", action: "EXTENSION_APPROVED", actor_name: "Actual Admin", created_at: "2026-11-05T11:00:00Z", details: { admin_comment: "Delivery time approved" } },
+                { id: "approved", action: "APPROVED", actor_name: "Actual Admin", created_at: "2026-11-05T10:00:00Z", details: { comment: "Quantity checked and approved" } },
+                { id: "rejected", action: "REJECTED", actor_name: "Earlier Admin", created_at: "2026-11-04T10:00:00Z", details: { reason: "Correct the quantities" } },
+            ] };
+        } } },
+    }, append: "\nexport { ExpandedTask };" });
+    let tree;
+    const task = { id: "task", approval_status: "APPROVED", work_status: "NOT_STARTED" };
+    const draw = () => { tree = state.render(() => exports.ExpandedTask({ task, loading: false })); };
+    draw(); await flushDelay(); draw();
+    assert.equal(calls.length, 1); assert.equal(calls[0].params.decisions_only, true); assert.equal(calls[0].params.page_size, 10);
+    const contents = JSON.stringify(tree);
+    for (const text of ["Quantity checked and approved", "Correct the quantities", "Actual Admin", "Earlier Admin", "Delivery time approved", "Admin decisions and comments"]) assert.ok(contents.includes(text));
+    state.cleanup(); assert.equal(calls[0].signal.aborted, true);
+});
+
+test("layout consumes authoritative read counts without duplicate requests and rejects stale replies", async () => {
+    const state = delayHooks(), requests = [];
+    const user = { id: "user", role: "SUPERVISOR" };
+    let pathname = "/supervisor/projects";
+    const Router = await import("react-router-dom");
+    const { exports } = await loadSource("layouts/AppLayout.jsx", { overrides: {
+        react: { ...React, ...state.hooks },
+        "hooks/useAuth.js": { useAuth: () => ({ user, logout: async () => {} }) },
+        "react-router-dom": { ...Router, useLocation: () => ({ pathname }), useNavigate: () => () => {} },
+        "api/notificationApi.js": { notificationApi: { unreadCount: (signal) => new Promise((resolve) => requests.push({ signal, resolve })) } },
+    }, append: `
+        export const listeners = new Map();
+        const window = { scrollY: 0, setInterval: () => 1, clearInterval() {}, addEventListener(name, callback) { listeners.set(name, callback); }, removeEventListener(name) { listeners.delete(name); } };
+        document.addEventListener = () => {}; document.removeEventListener = () => {};
+    ` });
+    let tree;
+    const draw = () => { tree = state.render(() => exports.default()); };
+    draw(); assert.equal(requests.length, 1);
+    exports.listeners.get("rare:notifications-updated")({ detail: { unread_count: 5 } }); draw();
+    assert.equal(requests.length, 1); assert.equal(requests[0].signal.aborted, true);
+    requests[0].resolve({ unread_count: 99 }); await flushDelay(); draw();
+    const sidebar = documentWalk((node) => node.props?.user && node.props.onLogout && node.props.unreadCount === 5, tree);
+    assert.ok(sidebar);
+    pathname = "/supervisor/notifications"; draw(); assert.equal(requests.length, 2);
+    requests[1].resolve({ unread_count: 3 }); await flushDelay(); draw();
+    const current = documentWalk((node) => node.props?.user && node.props.onLogout && node.props.unreadCount === 3, tree);
+    assert.ok(current);
+    await current.props.onLogout(); draw();
+    assert.ok(!documentWalk((node) => node.props?.unreadCount === 3, tree));
+    state.cleanup();
+});
+
+async function notificationHarness({ failRead = false, deferAll = false } = {}) {
+    const state = delayHooks(), navigations = []; let tree, readCalls = 0, allCalls = 0, resolveAll;
+    const records = Array.from({ length: 12 }, (_, index) => ({ id: `notification-${index}`, notification_type: "SYSTEM", event: "PROJECT_DATES_CHANGED", reference_type: "PROJECT", reference_id: "project", title: `Project update ${index}`, message: "Schedule changed", is_read: false, created_at: "2026-11-05T10:00:00Z" }));
+    const Router = await import("react-router-dom");
+    const markAll = () => { records.forEach((row) => { row.is_read = true; }); return { unread_count: 0, total_count: 12, updated_count: 12 }; };
+    const { exports } = await loadSource("components/notifications/NotificationCenter.jsx", { overrides: {
+        react: { ...React, ...state.hooks, useMemo: (compute) => compute() },
+        "react-router-dom": { ...Router, useNavigate: () => (to) => navigations.push(to) },
+        "api/notificationApi.js": { notificationApi: {
+            list: async () => ({ count: 12, total_count: 12, unread_count: records.filter((row) => !row.is_read).length, results: records.map((row) => ({ ...row })), next: null }),
+            markRead: async (id) => { readCalls++; if (failRead) throw { response: { data: { detail: "No access to this notification" } } }; const row = records.find((item) => item.id === id); row.is_read = true; row.read_at = "2026-11-05T11:00:00Z"; return { ...row, unread_count: 11, total_count: 12 }; },
+            markAllRead: async () => { allCalls++; return deferAll ? new Promise((resolve) => { resolveAll = () => resolve(markAll()); }) : markAll(); },
+        } },
+    }, append: `
+        export const dispatched = [];
+        const window = { dispatchEvent(event) { dispatched.push(event); }, addEventListener() {}, removeEventListener() {} };
+        const CustomEvent = class { constructor(type, options) { this.type = type; this.detail = options.detail; } };
+        let noticeTimer;
+        const setTimeout = (callback) => { noticeTimer = callback; return 1; };
+        const clearTimeout = () => { noticeTimer = null; };
+        export function expireNotice() { noticeTimer?.(); }
+    ` });
+    function draw() { tree = state.render(() => exports.default({ role: "SUPERVISOR" })); }
+    const find = (predicate) => documentWalk(predicate, tree);
+    draw(); await flushDelay(); draw();
+    return { draw, find, navigations, exports, cleanup: state.cleanup,
+        readCalls: () => readCalls, allCalls: () => allCalls, resolveAll: () => resolveAll(),
+        row: () => find((node) => node.props?.notification?.id === "notification-0"),
+    };
+}
+
+test("notification read uses server timestamps and counts before navigating to the project", async () => {
+    const ui = await notificationHarness();
+    assert.ok(ui.find((node) => node.type === "p" && String(node.props.children).includes("12 unread updates")));
+    await ui.row().props.onOpen(ui.row().props.notification); ui.draw();
+    assert.equal(ui.readCalls(), 1);
+    assert.deepEqual(ui.navigations, ["/supervisor/projects/project"]);
+    assert.equal(ui.row().props.notification.read_at, "2026-11-05T11:00:00Z");
+    assert.equal(ui.exports.dispatched.at(-1).detail.unread_count, 11);
+    ui.cleanup();
+});
+
+test("failed notification read preserves unread state and does not navigate", async () => {
+    const ui = await notificationHarness({ failRead: true });
+    await ui.row().props.onOpen(ui.row().props.notification); ui.draw();
+    assert.equal(ui.navigations.length, 0);
+    assert.ok(ui.find((node) => node.props?.role === "alert" && String(node.props.children).includes("No access")));
+    ui.find((node) => node.type === "button" && node.props["aria-label"] === "Refresh notifications").props.onClick();
+    ui.draw(); await flushDelay(); ui.draw();
+    assert.equal(ui.row().props.notification.is_read, false);
+    ui.cleanup();
+});
+
+test("mark all waits for server success, prevents duplicate writes and clears its transient notice", async () => {
+    const ui = await notificationHarness({ deferAll: true });
+    const button = ui.find((node) => node.type === "button" && node.props.children === "Mark all as read");
+    const pending = button.props.onClick();
+    await button.props.onClick(); ui.draw();
+    assert.equal(ui.allCalls(), 1);
+    assert.equal(ui.exports.dispatched.at(-1).detail.unread_count, 12);
+    ui.resolveAll(); await pending; ui.draw(); await flushDelay(); ui.draw();
+    assert.equal(ui.exports.dispatched.at(-1).detail.unread_count, 0);
+    assert.ok(ui.find((node) => node.props?.role === "status" && node.props.children === "Notifications marked as read."));
+    ui.exports.expireNotice(); ui.draw();
+    assert.ok(!ui.find((node) => node.props?.role === "status" && node.props.children === "Notifications marked as read."));
+    ui.cleanup();
+});
+
+test("unmounted notification operations cannot update a later session's unread badge", async () => {
+    const ui = await notificationHarness({ deferAll: true });
+    const pending = ui.find((node) => node.type === "button" && node.props.children === "Mark all as read").props.onClick();
+    const events = ui.exports.dispatched.length;
+    ui.cleanup(); ui.resolveAll(); await pending;
+    assert.equal(ui.exports.dispatched.length, events);
+});
+
+
+test("delay completion date is required and strictly after the task deadline", async () => {
+    const ui = await delayFormHarness();
+    ui.change("task", "task"); ui.change("reason", "Rain");
+    assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props.min, "2026-10-31");
+    assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props.required, true);
+    for (const value of ["", "2026-10-29", "2026-10-30"]) {
+        ui.change("expected_completion_date", value);
+        await ui.submit(); ui.draw();
+        assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props["aria-invalid"], true);
+    }
+    assert.equal(ui.confirmations.length, 0);
+    ui.change("expected_completion_date", "2026-10-31");
+    const submission = ui.submit();
+    assert.equal(ui.confirmations.length, 1);
+    ui.confirmations[0](false); await submission;
+});
+
+test("Supervisor task details load only that task's paginated delay reports and discard stale results", async () => {
+    const state = delayHooks(), requests = [];
+    const { exports: helpers } = await loadSource("api/taskApi.js", { overrides: { "api/client.js": { api: {} } } });
+    const { exports } = await loadSource("pages/supervisor/ProjectTasks.jsx", { overrides: {
+        react: { ...React, ...state.hooks },
+        "api/taskApi.js": { ...helpers, taskApi: { history: async () => ({ count: 0, results: [] }) } },
+        "api/delayApi.js": { delayApi: { list: (params, signal) => new Promise((resolve) => requests.push({ params, signal, resolve })) } },
+    }, append: "\nexport { ExpandedTask };" });
+    let task = { id: "first", end_date: "2026-10-30" }, tree;
+    const draw = () => { tree = state.render(() => exports.ExpandedTask({ task, loading: false })); };
+    draw();
+    assert.deepEqual(JSON.parse(JSON.stringify(requests[0].params)), { task: "first", page: 1, page_size: 5 });
+    task = { id: "second", end_date: "2026-11-01" }; draw();
+    assert.equal(requests[0].signal.aborted, true);
+    requests[0].resolve({ count: 1, results: [{ id: "old", reason: "Old private report" }] });
+    requests[1].resolve({ count: 1, results: [{ id: "current", task: "second", reason: "Rain delay", status: "APPROVED", extension_status: "PENDING" }] });
+    await flushDelay(); draw();
+    assert.ok(!JSON.stringify(tree).includes("Old private report"));
+    assert.ok(JSON.stringify(tree).includes("Rain delay"));
+    assert.ok(JSON.stringify(tree).includes("Delay reports for this task"));
+    state.cleanup(); assert.equal(requests[1].signal.aborted, true);
+});
+
+
+function quickFind(node, predicate) {
+    if (Array.isArray(node)) return node.map((child) => quickFind(child, predicate)).find(Boolean);
+    if (!node || typeof node !== "object") return;
+    return predicate(node) ? node : quickFind(node.props?.children, predicate);
+}
+
+test("Supervisor Quick Actions match the Admin card pattern and provide direct project/task links", async () => {
+    const state = delayHooks();
+    const { exports } = await loadSource("pages/Dashboard.jsx", { overrides: { react: { ...React, ...state.hooks }, "components/dashboard/AdminQuickActions.jsx": { default: () => null } }, append: "\nexport { SupervisorQuickActions };" });
+    let tree;
+    const draw = () => { tree = state.render(() => exports.SupervisorQuickActions()); };
+    draw();
+    const contents = JSON.stringify(tree);
+    for (const text of ["My Projects", "My Tasks", "Daily Report", "Create Task", "grid-cols-2", "sm:grid-cols-4", "/supervisor/projects", "/supervisor/tasks"]) assert.ok(contents.includes(text));
+    quickFind(tree, (node) => node.type === "button" && JSON.stringify(node.props.children).includes("Daily Report")).props.onClick(); draw();
+    assert.ok(quickFind(tree, (node) => node.type?.name === "SupervisorProjectSelector" && node.props.action === "report"));
+    state.cleanup();
+});
+
+test("one Supervisor project selector handles eligible projects, errors, search and both create destinations without mutations", async () => {
+    const Router = await import("react-router-dom");
+    for (const action of ["report", "task"]) {
+        const state = delayHooks(), requests = [], routes = [];
+        const { exports } = await loadSource("pages/Dashboard.jsx", { overrides: {
+            react: { ...React, ...state.hooks },
+            "components/dashboard/AdminQuickActions.jsx": { default: () => null },
+            "react-router-dom": { ...Router, useNavigate: () => (path) => routes.push(path) },
+            "api/projectApi.js": { projectApi: { getProjects: (params, signal) => new Promise((resolve, reject) => requests.push({ params, signal, resolve, reject })) } },
+        }, append: "\nexport { SupervisorProjectSelector };" });
+        let tree, closed = 0;
+        const draw = () => { tree = state.render(() => exports.SupervisorProjectSelector({ action, onClose: () => closed++ })); };
+        const submit = () => quickFind(tree, (node) => node.type === "form").props.onSubmit({ preventDefault() {} });
+        draw(); draw();
+        assert.equal(requests.length, 1);
+        submit(); assert.equal(routes.length, 0);
+        requests[0].resolve({ results: [
+            { id: "active", name: "Active site", status: "ACTIVE" }, { id: "maintenance", name: "Maintenance site", status: "MAINTENANCE" },
+            { id: "cancelled", name: "Hidden cancelled", status: "CANCELLED" }, { id: "completed", name: "Hidden completed", status: "COMPLETED" }, { id: "hold", name: "Hidden on hold", status: "ON_HOLD" },
+        ], next: true, previous: false });
+        await flushDelay(); draw();
+        assert.ok(JSON.stringify(tree).includes("Maintenance site"));
+        for (const text of ["Hidden cancelled", "Hidden completed", "Hidden on hold"]) assert.ok(!JSON.stringify(tree).includes(text));
+        quickFind(tree, (node) => node.type === "input" && node.props.value === "maintenance").props.onChange(); draw();
+        quickFind(tree, (node) => node.type?.name === "ProjectSearch").props.onSearch("Maintenance"); draw();
+        assert.equal(requests.length, 2); assert.equal(requests[1].params.search, "Maintenance");
+        assert.ok(JSON.stringify(tree).includes("Selected:"));
+        requests[1].reject({ response: { data: { detail: "Access changed" } } }); await flushDelay(); draw();
+        assert.ok(JSON.stringify(tree).includes("Access changed"));
+        quickFind(tree, (node) => node.type === "button" && node.props.children === "Retry").props.onClick(); draw();
+        requests[2].resolve({ results: [], next: false, previous: false }); await flushDelay(); draw();
+        submit(); submit();
+        assert.deepEqual(routes, [`/supervisor/projects/maintenance/${action === "report" ? "daily-reports" : "tasks"}?create=true`]);
+        assert.equal(closed, 1);
+        state.cleanup(); assert.equal(requests[2].signal.aborted, true);
+    }
+});
+
+test("dashboard create links open existing Supervisor task/report forms only for eligible projects and never save on navigation", async () => {
+    const Router = await import("react-router-dom");
+    const projectId = "00000000-0000-4000-8000-000000000001";
+    const { exports: helpers } = await loadSource("api/taskApi.js", { overrides: { "api/client.js": { api: {} } } });
+    for (const status of ["ACTIVE", "MAINTENANCE", "ON_HOLD", "CANCELLED", "COMPLETED"]) {
+        for (const kind of ["task", "report"]) {
+            const state = delayHooks(); let query = new URLSearchParams("create=true");
+            const setQuery = (next) => { query = next; };
+            const { exports } = await loadSource(kind === "task" ? "pages/supervisor/ProjectTasks.jsx" : "pages/admin/DailyReports.jsx", { overrides: {
+                react: { ...React, ...state.hooks, useMemo: (calculate) => calculate() },
+                "react-router-dom": { ...Router, useParams: () => ({ projectId }), useSearchParams: () => [query, setQuery] },
+                "api/projectApi.js": { projectApi: { getProject: async () => ({ id: projectId, status }), getProjectOverview: async () => ({ id: projectId, status }) } },
+                "api/taskApi.js": { ...helpers, taskApi: { list: async () => [] } },
+                "api/dailyReportApi.js": { dailyReportApi: { list: async () => ({ count: 0, results: [], summary: { total: 0, drafts: 0, submitted: 0, pending_work: 0 } }) } },
+            }, append: kind === "report" ? "\nexport { ProjectReportWorkspace };" : "" });
+            let tree;
+            const draw = () => { tree = state.render(() => kind === "task" ? exports.default() : exports.ProjectReportWorkspace({ projectId, role: "SUPERVISOR", user: { id: "supervisor" } })); };
+            draw(); await flushDelay(); draw(); draw();
+            const eligible = ["ACTIVE", "MAINTENANCE"].includes(status);
+            if (kind === "task") {
+                const form = quickFind(tree, (node) => node.type?.name === "TaskForm");
+                assert.equal(form.props.open, eligible);
+            } else {
+                assert.equal(Boolean(quickFind(tree, (node) => node.type?.name === "ReportDiaryForm")), eligible);
+            }
+            assert.equal(query.has("create"), false);
+            state.cleanup();
+        }
+    }
+});
+
+
+test("task work form shows verified, pending and available quantities and blocks overflow without losing values", async () => {
+    const state = delayHooks(), saved = [];
+    const { exports } = await loadSource("components/daily-reports/DailyReportSummary.jsx", { overrides: { react: { ...React, ...state.hooks } } });
+    const progress = { measurement_method: "QUANTITY", measurement_unit: "SQM", planned_quantity: "100.000", verified_quantity: "65.000", pending_quantity: "20.000", available_quantity: "15.000", progress_percentage: "65.00" };
+    let initial = { id: "entry", task: "task", task_title: "Walls", measurement_method: "QUANTITY", measurement_unit: "SQM", quantity_completed_today: "25", work_description: "Site work", progress };
+    let tree;
+    const draw = () => { tree = state.render(() => exports.ReportWorkForm({ initial, onSave: (payload) => saved.push(payload), onCancel() {} })); };
+    draw();
+    const content = JSON.stringify(tree);
+    for (const text of ["100.000 SQM", "65.000 SQM", "20.000 SQM", "15.000 SQM", "Only 15.000 SQM", "Pending quantities are awaiting Admin verification"]) assert.ok(content.includes(text));
+    const bar = quickFind(tree, (node) => node.type?.name === "TaskProgress");
+    const html = render(bar.type, bar.props);
+    assert.ok(html.includes('aria-valuenow="65"'));
+    assert.equal(quickFind(tree, (node) => node.type === "button" && node.props.type === "submit").props.disabled, true);
+    quickFind(tree, (node) => node.type === "form").props.onSubmit({ preventDefault() {} });
+    assert.equal(saved.length, 0);
+    quickFind(tree, (node) => node.type === "input" && node.props.type === "number").props.onChange({ target: { value: "15.000" } }); draw();
+    assert.equal(quickFind(tree, (node) => node.type === "button" && node.props.type === "submit").props.disabled, false);
+    quickFind(tree, (node) => node.type === "form").props.onSubmit({ preventDefault() {} });
+    assert.equal(saved[0].quantity_completed_today, "15.000");
+    // A refreshed baseline must invalidate stale quantities without rewriting the input.
+    initial = { ...initial, progress: { ...progress, pending_quantity: "25.000", available_quantity: "10.000" } }; draw();
+    assert.equal(quickFind(tree, (node) => node.type === "input" && node.props.type === "number").props.value, "15.000");
+    assert.ok(JSON.stringify(tree).includes("Only 10.000 SQM"));
+    for (const value of ["0", "-1", "1.0001", "NaN"]) {
+        quickFind(tree, (node) => node.type === "input" && node.props.type === "number").props.onChange({ target: { value } }); draw();
+        assert.equal(quickFind(tree, (node) => node.type === "button" && node.props.type === "submit").props.disabled, true);
+    }
+    state.cleanup();
+});
+
+
+test("selecting another task replaces work capacity and keeps completion-only inputs quantity-free", async () => {
+    const state = delayHooks();
+    const { exports } = await loadSource("components/daily-reports/DailyReportSummary.jsx", { overrides: { react: { ...React, ...state.hooks } } });
+    const tasks = { results: [
+        { id: "quantity", title: "Measured walls", measurement_method: "QUANTITY", measurement_unit: "SQM", progress: { measurement_method: "QUANTITY", measurement_unit: "SQM", planned_quantity: "100.000", verified_quantity: "25.000", pending_quantity: "15.000", available_quantity: "60.000", progress_percentage: "25.00" } },
+        { id: "completion", title: "Inspection", measurement_method: "COMPLETION_ONLY", completion_criteria: "Signed check", progress: { measurement_method: "COMPLETION_ONLY", progress_percentage: "0.00", is_fully_verified: false } },
+    ] };
+    let tree;
+    const draw = () => { tree = state.render(() => exports.ReportWorkForm({ tasks, onSave() {}, onCancel() {} })); };
+    draw();
+    assert.ok(!quickFind(tree, (node) => node.props?.["aria-label"] === "Selected task progress"));
+    quickFind(tree, (node) => node.type === "select").props.onChange({ target: { value: "quantity" } }); draw();
+    assert.ok(JSON.stringify(tree).includes("60.000 SQM"));
+    quickFind(tree, (node) => node.type === "select").props.onChange({ target: { value: "completion" } }); draw();
+    assert.ok(!quickFind(tree, (node) => node.type === "input" && node.props.type === "number"));
+    assert.ok(JSON.stringify(tree).includes("Signed check"));
+    assert.ok(!JSON.stringify(tree).includes("60.000 SQM"));
+    const bar = quickFind(tree, (node) => node.type?.name === "TaskProgress");
+    assert.ok(render(bar.type, bar.props).includes('aria-valuenow="0"'));
     state.cleanup();
 });

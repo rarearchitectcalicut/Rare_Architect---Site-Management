@@ -1,5 +1,5 @@
 from projects.permissions import lock_project_for_work
-from .progress import eligible_verified_work
+from .progress import eligible_verified_work, validate_work_capacity, verified_work_totals
 from django.db import transaction,IntegrityError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -328,9 +328,35 @@ def submit_daily_report(*, report_id, supervisor):
             }
         )
 
-    tasks = Task.objects.filter(daily_work_entries__daily_report=report).order_by("id").select_for_update()
+    tasks = list(Task.objects.filter(pk__in=report.work_entries.values("task_id")).order_by("id").select_for_update())
     if any(task.work_status == Task.WorkStatus.CANCELLED for task in tasks):
         raise ValidationError({"task": "Remove cancelled tasks from this draft before submitting it."})
+
+    totals = verified_work_totals([task.pk for task in tasks])
+    entries = list(report.work_entries.select_related("correction_of__daily_report"))
+    errors = {}
+    for task in tasks:
+        work = [entry for entry in entries if entry.task_id == task.pk]
+        try:
+            if task.project_id != report.project_id or task.approval_status != Task.ApprovalStatus.APPROVED:
+                raise ValidationError({"task": "Work must belong to an approved task in this project."})
+            for entry in work:
+                if entry.verification_status != "PENDING":
+                    raise ValidationError({"task": "Draft work must be pending review."})
+                if entry.correction_of_id and (entry.correction_of.verification_status != "REJECTED" or entry.correction_of.task_id != task.pk or entry.correction_of.daily_report.status != "SUBMITTED" or entry.correction_of.daily_report.project_id != report.project_id):
+                    raise ValidationError({"correction_of": "Correct only rejected submitted work for this task and project."})
+            if task.measurement_method == Task.MeasurementMethod.QUANTITY:
+                for entry in work:
+                    if entry.quantity_completed_today is None or entry.quantity_completed_today <= 0 or entry.completion_claimed:
+                        raise ValidationError({"quantity_completed_today": "Each entry must contain a positive measured quantity."})
+                validate_work_capacity(task, sum((entry.quantity_completed_today for entry in work), Decimal("0.000")), totals=totals)
+            elif task.measurement_method == Task.MeasurementMethod.COMPLETION_ONLY:
+                if any(entry.quantity_completed_today is not None or not entry.completion_claimed for entry in work):
+                    raise ValidationError({"completion_claimed": "Completion-only tasks require a completion claim without a quantity."})
+        except ValidationError as error:
+            errors[str(task.pk)] = {"task_title": task.title, "errors": error.detail}
+    if errors:
+        raise ValidationError({"work_entries": errors})
 
     report.status = DailyReport.Status.SUBMITTED
     report.submitted_at = timezone.now()
@@ -529,6 +555,8 @@ def update_daily_task_work(*, entry_id, supervisor, data):
         entry_id=entry_id,
         supervisor=supervisor,
     )
+
+    entry.task = Task.objects.select_for_update().get(pk=entry.task_id)
 
     allowed_fields = {
         "work_description",
@@ -1313,36 +1341,12 @@ def verify_daily_task_work(
 
         quantity = entry.quantity_completed_today
 
-        if quantity is None or quantity <= 0:
+        if quantity is None or quantity <= 0 or entry.completion_claimed:
             raise ValidationError(
                 {"quantity_completed_today": ("A positive quantity is required.")}
             )
 
-        verified_total = eligible_verified_work().filter(task=task).aggregate(total=Sum("quantity_completed_today"))["total"] or Decimal("0.000")
-
-        if task.planned_quantity is None or task.planned_quantity <= 0 or task.measurement_unit not in Task.MeasurementUnit.values:
-            raise ValidationError(
-                {"task": "The task has no approved quantity baseline."}
-            )
-
-        new_total = verified_total + quantity
-
-        if new_total > task.planned_quantity:
-            remaining = max(
-                task.planned_quantity - verified_total,
-                Decimal("0.000"),
-            )
-
-            raise ValidationError(
-                {
-                    "quantity_completed_today": (
-                        "Verification would exceed the "
-                        "approved planned quantity. "
-                        f"Remaining allowable quantity: {remaining} "
-                        f"{task.measurement_unit}."
-                    )
-                }
-            )
+        validate_work_capacity(task, quantity, exclude_entry_id=entry.pk)
 
     elif task.measurement_method == Task.MeasurementMethod.COMPLETION_ONLY:
 

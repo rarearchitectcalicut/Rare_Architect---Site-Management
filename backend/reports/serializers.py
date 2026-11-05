@@ -297,18 +297,8 @@ class DailyTaskWorkCreateSerializer(serializers.ModelSerializer):
                     }
                 )
 
-            # Verification service will check the
-            # cumulative accepted quantity under
-            # a database lock.
-            if quantity > task.planned_quantity:
-                raise serializers.ValidationError(
-                    {
-                        "quantity_completed_today": (
-                            "Today's reported quantity cannot "
-                            "exceed the planned task quantity."
-                        )
-                    }
-                )
+            from .progress import validate_work_capacity
+            validate_work_capacity(task, quantity, report_id=daily_report.pk, exclude_entry_id=self.instance.pk if self.instance else None)
 
         # -----------------------------------------
         # COMPLETION-ONLY TASK
@@ -897,14 +887,8 @@ class DailyTaskWorkUpdateSerializer(serializers.ModelSerializer):
                     }
                 )
 
-            if quantity > task.planned_quantity:
-                raise serializers.ValidationError(
-                    {
-                        "quantity_completed_today": (
-                            "Quantity cannot exceed the planned quantity."
-                        )
-                    }
-                )
+            from .progress import validate_work_capacity
+            validate_work_capacity(task, quantity, report_id=entry.daily_report_id, exclude_entry_id=entry.pk)
 
             if claimed:
                 raise serializers.ValidationError(
@@ -1103,6 +1087,14 @@ class DelayReportCreateSerializer(serializers.ModelSerializer):
         # -----------------------------------------
         # EXPECTED COMPLETION DATE VALIDATION
         # -----------------------------------------
+
+        if task.end_date is None:
+            raise serializers.ValidationError({"task": "Set an approved task deadline before reporting a delay."})
+
+        if expected_completion_date is None or expected_completion_date <= task.end_date:
+            raise serializers.ValidationError({
+                "expected_completion_date": "Expected completion is required and must be later than the current task deadline."
+            })
 
         if (
             expected_completion_date is not None

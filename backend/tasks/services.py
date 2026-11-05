@@ -203,9 +203,7 @@ def create_bulk_tasks(*, project, user, tasks_data):
     # Send ONE notification per active Admin
     # for the entire batch, not per task.
     #
-    # schedule_notifications() registers an
-    # on_commit callback, so notification records
-    # are created only after a successful commit.
+    # Notification rows share this atomic transaction.
     notify_admins_bulk_tasks_created(
         batch=batch,
         task_count=len(tasks),

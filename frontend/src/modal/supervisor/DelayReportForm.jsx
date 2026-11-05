@@ -10,6 +10,13 @@ import { delayApi } from "../../api/delayApi";
 const input = "mt-2 w-full rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-3 text-sm outline-none focus:border-[#817669]";
 const initial = { task: "", delay_type: "MATERIAL_DELAY", reason: "", description: "", expected_completion_date: "", extension_requested: false, requested_end_date: "" };
 
+function dayAfter(value) {
+    if (!value) return undefined;
+    const date = new Date(`${value}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date.toISOString().slice(0, 10);
+}
+
 function FieldError({ errors, name }) {
     const values = errors[name];
     const text = Array.isArray(values) ? values.filter((value) => typeof value === "string").join(" ") : typeof values === "string" ? values : "";
@@ -44,6 +51,8 @@ export default function DelayReportForm({ tasks, taskOptions, onClose, onSaved }
         if (!task || task.approval_status !== "APPROVED" || ["COMPLETED", "CANCELLED"].includes(task.work_status)) invalid.task = "Select an approved unfinished task.";
         if (!form.reason.trim() || form.reason.trim().length > 200) invalid.reason = "Provide a reason of up to 200 characters.";
         if (!delayTypes.includes(form.delay_type)) invalid.delay_type = "Choose a supported delay type.";
+        if (!task?.end_date) invalid.task = "Set an approved task deadline before reporting a delay.";
+        if (!form.expected_completion_date || task?.end_date && form.expected_completion_date <= task.end_date) invalid.expected_completion_date = "Choose an expected completion date after the current task deadline.";
         if (form.expected_completion_date && task?.start_date && form.expected_completion_date < task.start_date) invalid.expected_completion_date = "Expected completion cannot precede the task start date.";
         if (form.extension_requested) {
             if (task?.has_pending_extension) invalid.extension_requested = "This task already has a pending deadline extension.";
@@ -80,10 +89,10 @@ export default function DelayReportForm({ tasks, taskOptions, onClose, onSaved }
                 <label className="block text-xs font-semibold text-[#716658]">Delay type *<select {...field("delay_type")} value={form.delay_type} onChange={(event) => update("delay_type", event.target.value)} className={input}>{delayTypes.map((value) => <option key={value} value={value}>{formatText(value)}</option>)}</select><FieldError name="delay_type" errors={errors} /></label>
                 <label className="block text-xs font-semibold text-[#716658]">Reason *<input {...field("reason")} required maxLength={200} value={form.reason} onChange={(event) => update("reason", event.target.value)} className={input} /><FieldError name="reason" errors={errors} /></label>
                 <label className="block text-xs font-semibold text-[#716658]">Description<textarea {...field("description")} rows={3} value={form.description} onChange={(event) => update("description", event.target.value)} className={input} /><FieldError name="description" errors={errors} /></label>
-                <label className="block text-xs font-semibold text-[#716658]">Expected completion date<input {...field("expected_completion_date")} type="date" min={task?.start_date || undefined} value={form.expected_completion_date} onChange={(event) => update("expected_completion_date", event.target.value)} className={input} /><FieldError name="expected_completion_date" errors={errors} /></label>
+                <label className="block text-xs font-semibold text-[#716658]">Expected completion date *<input {...field("expected_completion_date")} type="date" required min={dayAfter(task?.end_date)} value={form.expected_completion_date} onChange={(event) => update("expected_completion_date", event.target.value)} className={input} /><FieldError name="expected_completion_date" errors={errors} /></label>
                 <label className="flex items-center gap-3 text-sm font-semibold"><input {...field("extension_requested")} type="checkbox" disabled={Boolean(task?.has_pending_extension)} checked={form.extension_requested} onChange={(event) => update("extension_requested", event.target.checked)} />Request a deadline extension</label>
                 <FieldError name="extension_requested" errors={errors} />
-                {form.extension_requested && <label className="block text-xs font-semibold text-[#716658]">Requested new end date *<input {...field("requested_end_date")} type="date" required min={task?.end_date || task?.start_date || undefined} value={form.requested_end_date} onChange={(event) => update("requested_end_date", event.target.value)} className={input} /><FieldError name="requested_end_date" errors={errors} /></label>}
+                {form.extension_requested && <label className="block text-xs font-semibold text-[#716658]">Requested new end date *<input {...field("requested_end_date")} type="date" required min={dayAfter(task?.end_date)} value={form.requested_end_date} onChange={(event) => update("requested_end_date", event.target.value)} className={input} /><FieldError name="requested_end_date" errors={errors} /></label>}
                 <div className="flex justify-end gap-3"><button type="button" onClick={close} className="rounded-xl border border-[#E7DED2] px-4 py-3 text-sm font-semibold">Cancel</button><button type="submit" disabled={!task} className="rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-[#FFFDFA] disabled:opacity-40">Submit delay report</button></div>
             </fieldset>
         </form>

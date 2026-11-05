@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Plus, RefreshCw } from "lucide-react";
 import { useDelayReports } from "../../hooks/useDelayReports";
@@ -16,6 +16,11 @@ export default function ProjectDelays({ role = "SUPERVISOR" }) {
     const projectId = route.projectId || params.get("project") || undefined;
     const [formOpen, setFormOpen] = useState(false);
     const [notice, setNotice] = useState("");
+    useEffect(() => {
+        if (!notice) return;
+        const timer = setTimeout(() => setNotice(""), 8000);
+        return () => clearTimeout(timer);
+    }, [notice]);
     const admin = role === "ADMIN";
     const prefix = admin ? "/admin" : "/supervisor";
     const data = useDelayReports(projectId, { tasksEnabled: formOpen && !admin });

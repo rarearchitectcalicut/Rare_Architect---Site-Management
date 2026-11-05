@@ -344,12 +344,7 @@ class ProjectAssignmentSerializer(serializers.Serializer):
             ).values_list("supervisor_id", flat=True)
         )
 
-        if existing_ids:
-            raise serializers.ValidationError(
-                "One or more supervisors are already " "assigned to this project."
-            )
-
-        return supervisors
+        return [supervisor for supervisor in supervisors if supervisor.pk not in existing_ids]
 
 # ===========================================
 #     PROJECT OVERVIEW SERIALIZER

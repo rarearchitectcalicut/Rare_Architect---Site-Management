@@ -122,7 +122,7 @@ function DelayRecords({ records }) {
             <Fields rows={[
                 ["Type", formatText(record.delay_type)], ["Reason", record.reason], ["Description", record.description],
                 ["Status", formatText(record.status)], ["Reported by", record.reported_by_name], ["Reported", formatDate(record.reported_at)],
-                ["Original deadline", "Not exposed by the delay API; recorded changes may appear in History."],
+                ["Deadline when reported", record.deadline_history?.submission_deadline_recorded ? formatDate(record.deadline_history.deadline_at_submission) : "Not recorded"],
                 ["Current deadline", formatDate(record.current_end_date)], ["Expected completion", formatDate(record.expected_completion_date)],
                 ["Extension requested", record.extension_requested ? "Yes" : "No"], ["Requested end date", formatDate(record.requested_end_date)],
                 ["Extension decision", formatText(record.extension_status)], ["Admin feedback", record.admin_comment],

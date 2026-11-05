@@ -1,13 +1,12 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-import logging
 import uuid
+from django.db.models import Q
 from django.contrib.auth import get_user_model
 from .models import Notification
 
 
-logger = logging.getLogger(__name__)
 # =====================================================
 # USER NOTIFICATION QUERYSET
 # =====================================================
@@ -90,12 +89,12 @@ def create_notifications(
     message,
     reference_type="",
     reference_id=None,
+    project_id=None,
 ):
     """
     Create one notification per active recipient.
 
-    Call through schedule_notifications() from
-    business workflows that use transactions.
+    Called inside the existing atomic business workflows.
     """
 
     User = get_user_model()
@@ -103,7 +102,13 @@ def create_notifications(
     recipients = User.objects.filter(
         id__in=set(recipient_ids),
         is_active=True,
-    ).values_list("id", flat=True)
+    )
+    if project_id is not None:
+        recipients = recipients.filter(
+            Q(role="ADMIN", is_staff=True) |
+            Q(role="SUPERVISOR", is_staff=False, project_assignments__project_id=project_id)
+        )
+    recipients = recipients.values_list("id", flat=True).distinct()
 
     notifications = [
         Notification(
@@ -124,7 +129,7 @@ def create_notifications(
 
 
 # =====================================================
-# SCHEDULE NOTIFICATIONS AFTER DATABASE COMMIT
+# CREATE TRANSACTIONAL DATABASE NOTIFICATIONS
 # =====================================================
 
 
@@ -136,45 +141,19 @@ def schedule_notifications(
     message,
     reference_type="",
     reference_id=None,
+    project_id=None,
 ):
+    """Create database notifications in the caller's transaction.
+
+    Business workflows are atomic, so notification failures roll back the whole
+    operation instead of losing feedback after a successful commit.
     """
-    Schedule notification creation after the
-    business transaction commits successfully.
-
-    Notifications are not created if the
-    enclosing transaction rolls back.
-    """
-
-    recipients = tuple(set(recipient_ids))
-
-    if not recipients:
-        return
-
-    # Validate reference before registering callback.
     if reference_id is not None:
         reference_id = uuid.UUID(str(reference_id))
-
-    def send_after_commit():
-        try:
-            create_notifications(
-                recipient_ids=recipients,
-                notification_type=notification_type,
-                title=title,
-                message=message,
-                reference_type=reference_type,
-                reference_id=reference_id,
-            )
-        except Exception:
-            logger.exception(
-                "Failed to create %s notifications " "for %s:%s",
-                notification_type,
-                reference_type,
-                reference_id,
-            )
-
-    transaction.on_commit(
-        send_after_commit,
-        robust=True,
+    return create_notifications(
+        recipient_ids=recipient_ids, notification_type=notification_type,
+        title=title, message=message, reference_type=reference_type,
+        reference_id=reference_id, project_id=project_id,
     )
 
 

@@ -122,6 +122,19 @@ function ProjectReportWorkspace({ projectId, role, user }) {
     const reportId = params.get("report");
     const correctionId = role === "SUPERVISOR" ? params.get("correct") : null;
     const selectedId = correctionId || reportId;
+    const canCreate = role === "SUPERVISOR" && !projectError && ["ACTIVE", "MAINTENANCE"].includes(project?.status);
+    useEffect(() => {
+        if (params.get("create") !== "true" || !project || projectError) return;
+        const next = new URLSearchParams(params);
+        next.delete("create");
+        setParams(next, { replace: true });
+        if (canCreate && !selectedId) {
+            setCreating(true);
+            setMutationError("");
+        } else if (role === "SUPERVISOR") {
+            setMutationError("Report creation is unavailable for this project's current status or selection.");
+        }
+    }, [params, setParams, project, projectError, canCreate, selectedId, role]);
     const page = Math.max(1, Number(params.get("page")) || 1);
     const filters = Object.fromEntries(["search", "status", "date_from", "date_to", "reported_by", "sort"].map((key) => [key, params.get(key) || (key === "sort" ? "newest" : "")]));
     if (role === "ADMIN") filters.status = "SUBMITTED";
@@ -169,12 +182,12 @@ function ProjectReportWorkspace({ projectId, role, user }) {
     return <div className="mx-auto min-w-0 max-w-[1500px] space-y-6 pb-8 text-[#211E1A]">
         {!result && loading && <LoadingScreen message="Loading daily reports..." />}
         <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-xs text-[#716658]"><Link to={`${prefix}/projects`}>Projects</Link><span>/</span><Link to={`${prefix}/projects/${projectId}`}>{project?.name || "Project Overview"}</Link><span>/</span><span aria-current="page">Daily Reports</span></nav>
-        <header className="rare-page-header relative flex flex-wrap items-center justify-between gap-6 overflow-hidden rounded-[28px] border border-[#E7DED2] bg-[#FFFDFA] p-6 text-[#211E1A] shadow-[0_12px_36px_-24px_rgba(0,0,0,0.6)] sm:p-8"><div className="min-w-0 border-l-2 border-[#E7DED2] pl-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#716658]">{project?.name || "Project workspace"}</p><h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Daily Reports</h1><p className="mt-3 max-w-xl text-base leading-7 text-[#716658]">A clear record of every day on site. Review the diary, measured work and supporting evidence in one place.</p></div><div className="flex flex-wrap gap-2"><button type="button" disabled={loading || busy} className={`${actionBase} border-[#E7DED2] bg-[#F1EADF] text-[#211E1A] hover:bg-[#E7DED2]`} onClick={() => setRevision((v) => v + 1)}><RefreshCw size={18} aria-hidden="true" />Refresh</button>{role === "SUPERVISOR" && project && project.status !== "CANCELLED" && !selectedId && <button type="button" disabled={busy} className={primaryAction} onClick={() => { setCreating(true); setMutationError(""); }}><Plus size={20} aria-hidden="true" />Create Daily Report</button>}</div></header>
+        <header className="rare-page-header relative flex flex-wrap items-center justify-between gap-6 overflow-hidden rounded-[28px] border border-[#E7DED2] bg-[#FFFDFA] p-6 text-[#211E1A] shadow-[0_12px_36px_-24px_rgba(0,0,0,0.6)] sm:p-8"><div className="min-w-0 border-l-2 border-[#E7DED2] pl-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#716658]">{project?.name || "Project workspace"}</p><h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Daily Reports</h1><p className="mt-3 max-w-xl text-base leading-7 text-[#716658]">A clear record of every day on site. Review the diary, measured work and supporting evidence in one place.</p></div><div className="flex flex-wrap gap-2"><button type="button" disabled={loading || busy} className={`${actionBase} border-[#E7DED2] bg-[#F1EADF] text-[#211E1A] hover:bg-[#E7DED2]`} onClick={() => setRevision((v) => v + 1)}><RefreshCw size={18} aria-hidden="true" />Refresh</button>{canCreate && !selectedId && <button type="button" disabled={busy} className={primaryAction} onClick={() => { setCreating(true); setMutationError(""); }}><Plus size={20} aria-hidden="true" />Create Daily Report</button>}</div></header>
         {error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700"><p>{error}</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className={action} onClick={() => setRevision((v) => v + 1)}>Retry</button><button type="button" className={action} onClick={() => setParams({})}>Clear filters</button></div></div>}
         {project?.status === "CANCELLED" && <p role="status" className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-sm text-[#716658]">This project has been cancelled. Existing records remain available for reference.</p>}
         {mutationError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{mutationError}</p>}
         {selectedId && !projectError ? <ReportDetail key={`${selectedId}:${Boolean(correctionId)}`} reportId={selectedId} projectId={projectId} role={role} user={user} externalRevision={revision} onSelect={selectReport} correctionMode={Boolean(correctionId)} onCorrectReport={startCorrection} sourceHint={params.get("source")} /> : <>
-            {creating && project?.status !== "CANCELLED" && <ReportDiaryForm onSave={create} onCancel={() => setCreating(false)} busy={busy} />}
+            {creating && canCreate && <ReportDiaryForm onSave={create} onCancel={() => setCreating(false)} busy={busy} />}
             <ReportFilters role={role} filters={filters} reporters={result?.data?.reporters || []} onApply={(next) => { const query = new URLSearchParams(Object.entries(next).filter(([, value]) => value)); setParams(query, { replace: true }); }} onClear={() => setParams({})} />
             {loading && result && <p role="status" className="text-sm text-[#817669]">Updating reports...</p>}
             {data && <>
@@ -221,7 +234,7 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
     const editorBusy = Boolean(busy) || loading || Boolean(state.error);
     const pageKey = JSON.stringify(pages);
     const resourceKey = `${tab}:${pageKey}:${version}`;
-    const choiceKey = `${editing?.section}:${editing?.row?.id}:${editing?.correction}:${taskSearch}:${taskPage}:${draftPage}:${choiceRevision}`;
+    const choiceKey = `${editing?.section}:${editing?.row?.id}:${editing?.correction}:${taskSearch}:${taskPage}:${draftPage}:${choiceRevision}:${version}`;
     const choiceData = choices?.key === choiceKey ? choices.data : null;
 
     useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -258,11 +271,11 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
         const controller = new AbortController();
         const promise = editing.correction
             ? dailyReportApi.list(projectId, { status: "DRAFT", reported_by: user.id, page: draftPage, page_size: 25 }, controller.signal)
-            : taskApi.register({ project: projectId, approval_status: "APPROVED", search: taskSearch, page: taskPage, page_size: 25 }, controller.signal);
+            : taskApi.register({ project: projectId, exclude_daily_report: reportId, approval_status: "APPROVED", search: taskSearch, page: taskPage, page_size: 25 }, controller.signal);
         promise.then((data) => { if (!controller.signal.aborted) setChoices({ key: choiceKey, data: reportPage(data, editing.correction ? draftPage : taskPage) }); })
             .catch((failure) => { if (!controller.signal.aborted) setChoices({ key: choiceKey, error: validationMessage(failure, "Unable to load form choices.") }); });
         return () => controller.abort();
-    }, [choiceKey, editing, projectId, user.id, draftPage, taskPage, taskSearch]);
+    }, [choiceKey, editing, projectId, reportId, user.id, draftPage, taskPage, taskSearch]);
 
     function resource(section) { return resources[section]?.key === resourceKey ? resources[section] : null; }
     function changePage(section, delta) { setPages((v) => ({ ...v, [section]: Math.max(1, (v[section] || 1) + delta) })); }
@@ -290,7 +303,7 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
             if (kind === "submit") setState({ key: version, report: response, error: "" });
             setRevision((v) => v + 1);
             if (kind === "correct") onSelect(response.daily_report);
-        } catch (failure) { if (mounted.current) { setError(validationMessage(failure)); if (kind === "upload") setRevision((v) => v + 1); } }
+        } catch (failure) { if (mounted.current) { setError(validationMessage(failure)); if (["row", "correct"].includes(kind)) setChoiceRevision((value) => value + 1); if (kind === "upload") setRevision((v) => v + 1); } }
         finally { inFlight.current = false; if (mounted.current) setBusy(""); }
     }
     async function savePrefill(submit = false) {

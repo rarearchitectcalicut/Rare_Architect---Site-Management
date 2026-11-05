@@ -122,6 +122,10 @@ class TaskRegisterView(generics.ListAPIView):
             completed=Count("id", filter=Q(work_status=Task.WorkStatus.COMPLETED)), overdue=Count("id", filter=overdue),
         )
         queryset = base
+        if "exclude_daily_report" in filters:
+            from reports.models import DailyReport
+            report = get_object_or_404(DailyReport.objects.filter(project__in=self.accessible_projects()), pk=filters["exclude_daily_report"])
+            queryset = queryset.exclude(daily_work_entries__daily_report=report)
         for field in ("approval_status", "work_status", "priority"):
             if field in filters:
                 queryset = queryset.filter(**{field: filters[field]})
@@ -496,11 +500,18 @@ class TaskHistoryView(generics.ListAPIView):
             self.kwargs["id"],
         )
 
-        return (
+        queryset = (
             TaskHistory.objects.filter(task=task)
             .select_related("actor", "task__project")
             .order_by("-created_at", "-id")
         )
+        if self.request.query_params.get("decisions_only") == "true":
+            queryset = queryset.filter(action__in=[
+                "APPROVED", "REJECTED", "EDIT_APPROVED", "EDIT_REJECTED",
+                "ORDER_CHANGE_APPROVED", "ORDER_CHANGE_REJECTED",
+                "EXTENSION_APPROVED", "EXTENSION_REJECTED",
+            ])
+        return queryset
 
 
 class TaskDecisionListView(generics.ListAPIView):
