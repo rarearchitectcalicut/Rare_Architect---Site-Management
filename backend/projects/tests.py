@@ -94,12 +94,68 @@ class ProjectCancellationTests(TestCase):
         self.admin.save(update_fields=["is_active"])
         self.assertEqual(self.cancel().status_code, 403)
 
-    def test_duplicate_cancel_and_reactivation_rejected_but_metadata_edit_allowed(self):
+    def test_cancelled_project_rejects_metadata_edits_and_mixed_status_updates(self):
         self.assertEqual(self.cancel().status_code, 200)
         self.assertEqual(self.cancel().status_code, 400)
-        self.assertEqual(self.client.patch(self.url, {"status": "ACTIVE"}, format="json").status_code, 400)
-        self.assertEqual(self.client.patch(self.url, {"location": "Corrected historical address"}, format="json").status_code, 200)
+        for payload in ({"location": "Changed address"}, {"name": "Changed name"}, {"status": "ACTIVE", "name": "Bypass"}, {}):
+            response = self.client.patch(self.url, payload, format="json")
+            self.assertEqual(response.status_code, 400)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.name, "Retained project")
         self.assertEqual(ActivityLog.objects.filter(entity_id=self.project.pk, action="PROJECT_STATUS_CHANGED").count(), 1)
+
+    def test_admin_can_change_cancelled_status_without_losing_history(self):
+        for target in ("ACTIVE", "MAINTENANCE", "ON_HOLD", "COMPLETED"):
+            with self.subTest(status=target):
+                Project.objects.filter(pk=self.project.pk).update(status="CANCELLED")
+                self.client.force_authenticate(self.supervisor)
+                self.assertEqual(self.client.patch(self.url, {"status": target}, format="json").status_code, 403)
+                self.client.force_authenticate(self.admin)
+                response = self.client.patch(self.url, {"status": target}, format="json")
+                self.assertEqual(response.status_code, 200, response.data)
+                self.project.refresh_from_db()
+                self.assertEqual(self.project.status, target)
+                self.assertEqual(self.project.name, "Retained project")
+                self.assertTrue(TaskHistory.objects.filter(pk=self.history.pk).exists())
+                self.assertTrue(DailyReport.objects.filter(pk=self.report.pk).exists())
+                self.assertTrue(ActivityLog.objects.filter(entity_id=self.project.pk, action="PROJECT_STATUS_CHANGED", metadata__old_status="CANCELLED", metadata__new_status=target).exists())
+        self.assertEqual(self.client.patch(self.url, {"status": "INVALID"}, format="json").status_code, 400)
+
+    def test_cancelled_project_blocks_pending_task_changes_and_assignment_writes(self):
+        from rest_framework.exceptions import ValidationError
+        from tasks.services import approve_task, approve_task_change_request, create_task_change_request, cancel_task
+        change = create_task_change_request(task_id=self.task.pk, supervisor=self.supervisor, new_values={"title": "Proposed title"}, reason="Revise title")
+        pending = Task.objects.create(project=self.project, created_by=self.supervisor, title="Pending task")
+        self.assertEqual(self.cancel().status_code, 200)
+        for operation in (
+            lambda: approve_task(task_id=pending.pk, admin_user=self.admin),
+            lambda: approve_task_change_request(change_request_id=change.pk, admin_user=self.admin),
+            lambda: cancel_task(task_id=self.task.pk, user=self.admin, reason="Close task"),
+        ):
+            with self.assertRaises(ValidationError):
+                operation()
+        self.assertEqual(self.client.post(self.url + "assign-supervisors/", {"supervisor_ids": [str(self.other.pk)]}, format="json").status_code, 400)
+        self.assertEqual(self.client.delete(self.url + f"supervisors/{self.supervisor.pk}/").status_code, 400)
+        self.task.refresh_from_db(); pending.refresh_from_db(); change.refresh_from_db()
+        self.assertEqual(self.task.title, "Retained task")
+        self.assertEqual(self.task.work_status, "NOT_STARTED")
+        self.assertEqual(pending.approval_status, "PENDING")
+        self.assertEqual(change.status, "PENDING")
+        self.assertEqual(ProjectSupervisor.objects.filter(project=self.project).count(), 1)
+
+    def test_cancellation_blocks_approval_of_an_existing_timeline_change(self):
+        from rest_framework.exceptions import ValidationError
+        from tasks.services import create_timeline_reorder_request, approve_timeline_reorder_request
+        self.task.display_order = 1
+        self.task.save(update_fields=["display_order"])
+        second = Task.objects.create(project=self.project, created_by=self.supervisor, title="Second task", approval_status="APPROVED", display_order=2)
+        change = create_timeline_reorder_request(project=self.project, supervisor=self.supervisor, task_ids=[second.pk, self.task.pk], reason="Revise sequence")
+        self.assertEqual(self.cancel().status_code, 200)
+        with self.assertRaises(ValidationError):
+            approve_timeline_reorder_request(request_id=change.pk, admin_user=self.admin)
+        self.task.refresh_from_db(); second.refresh_from_db(); change.refresh_from_db()
+        self.assertEqual([self.task.display_order, second.display_order], [1, 2])
+        self.assertEqual(change.status, "PENDING")
 
     def test_audit_failure_rolls_back_cancellation(self):
         with patch("projects.views.create_activity_log", side_effect=RuntimeError("Audit unavailable")):
@@ -130,6 +186,7 @@ class ProjectCancellationTests(TestCase):
         self.client.force_authenticate(self.supervisor)
         attempts = [
             (self.url + "tasks/", {"title": "New task"}),
+            (self.url + "tasks/bulk-create/", {"tasks": [{"title": "Bulk task"}]}),
             (self.url + "daily-reports/", {"report_date": date.today().isoformat()}),
             (f"/api/v1/daily-reports/{self.draft.pk}/submit/", {}),
             (f"/api/v1/tasks/{self.task.pk}/start/", {}),
@@ -156,6 +213,28 @@ class ProjectCancellationTests(TestCase):
         for value in ("ON_HOLD", "MAINTENANCE"):
             project = Project.objects.create(name=value, category=self.project.category, created_by=self.admin, status=value)
             self.assertEqual(self.client.patch(f"/api/v1/projects/{project.pk}/", {"status": "CANCELLED", "cancellation_reason": "Site closed"}, format="json").status_code, 200)
+
+    def test_active_category_choices_preserve_admin_management_and_historical_projects(self):
+        inactive = ProjectCategory.objects.create(name="Retired category", is_active=False)
+        categories_url = "/api/v1/project-categories/"
+        choices = self.client.get(categories_url, {"is_active": "true"})
+        self.assertEqual(choices.status_code, 200)
+        self.assertNotIn(str(inactive.pk), [str(row["id"]) for row in choices.data["results"]])
+        management = self.client.get(categories_url)
+        self.assertIn(str(inactive.pk), [str(row["id"]) for row in management.data["results"]])
+        self.assertEqual(self.client.patch(f"{categories_url}{inactive.pk}/", {"description": "Kept for history"}, format="json").status_code, 200)
+        self.assertEqual(self.client.post("/api/v1/projects/", {"name": "Invalid project", "category": str(inactive.pk)}, format="json").status_code, 400)
+        self.assertEqual(self.client.patch(self.url, {"category": str(inactive.pk)}, format="json").status_code, 400)
+        Project.objects.filter(pk=self.project.pk).update(category=inactive)
+        for user in (self.admin, self.supervisor):
+            self.client.force_authenticate(user)
+            detail = self.client.get(self.url)
+            self.assertEqual(detail.status_code, 200)
+            self.assertEqual(detail.data["category_name"], "Retired category")
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.patch(self.url, {"location": "Historical category retained"}, format="json").status_code, 200)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.category_id, inactive.pk)
 
 
 @skipUnless(connection.vendor == "postgresql", "Requires PostgreSQL row locks")

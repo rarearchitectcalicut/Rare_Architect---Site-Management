@@ -87,7 +87,7 @@ export function useApprovalReview(item, onSuccess) {
             const workflowItem = record.change_type === "ORDER_CHANGE" ? { ...item, requestType: "timeline" } : item;
             await submitReview(workflowItem, action, comment.trim());
             window.dispatchEvent(new Event("rare:notifications-updated"));
-            onSuccess();
+            onSuccess(workflowItem, action);
             return true;
         } catch (failure) {
             setError(validationMessage(failure));

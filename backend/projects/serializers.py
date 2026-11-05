@@ -164,8 +164,10 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         current_status = getattr(self.instance, "status", None)
         new_status = attrs.get("status")
-        if current_status == Project.Status.CANCELLED and new_status is not None:
-            raise serializers.ValidationError({"status": "Cancelled projects cannot be cancelled again or reactivated."})
+        if current_status == Project.Status.CANCELLED and (
+            set(attrs) != {"status"} or new_status == Project.Status.CANCELLED
+        ):
+            raise serializers.ValidationError({"project": "Change the cancelled project's status before editing its details. Send only the new status."})
         if new_status == Project.Status.CANCELLED:
             if current_status not in {Project.Status.ACTIVE, Project.Status.MAINTENANCE, Project.Status.ON_HOLD}:
                 raise serializers.ValidationError({"status": "Only active, maintenance or on-hold projects can be cancelled."})
@@ -228,6 +230,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
 #          PROJECT DETAILED SERIALIZER
 # ===========================================
 class ProjectDetailSerializer(serializers.ModelSerializer):
+    category_is_active = serializers.BooleanField(source="category.is_active", read_only=True)
     cancellation = serializers.SerializerMethodField()
 
     def get_cancellation(self, obj):
@@ -266,6 +269,7 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
             "created_by_name",
             "supervisor_count",
             "cancellation",
+            "category_is_active",
             "created_at",
             "updated_at",
         )
@@ -351,6 +355,7 @@ class ProjectAssignmentSerializer(serializers.Serializer):
 #     PROJECT OVERVIEW SERIALIZER
 # ===========================================
 class ProjectOverviewSerializer(serializers.ModelSerializer):
+    category_is_active = serializers.BooleanField(source="category.is_active", read_only=True)
     cancellation = serializers.SerializerMethodField()
 
     def get_cancellation(self, obj):
@@ -392,6 +397,7 @@ class ProjectOverviewSerializer(serializers.ModelSerializer):
             "category",
             "category_name",
             "category_image",
+            "category_is_active",
             "cover_image",
             "start_date",
             "end_date",

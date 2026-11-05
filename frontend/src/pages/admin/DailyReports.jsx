@@ -15,9 +15,9 @@ import { validationMessage } from "../../hooks/useApprovalReview";
 import { formatDate, formatText } from "../../components/approvals/approvalUtils";
 
 const control = "mt-2 w-full min-w-0 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] px-3 py-3 text-sm outline-none focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]";
-const actionBase = "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-5 py-3 text-base font-bold leading-6 transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#94651D] disabled:cursor-not-allowed disabled:opacity-50";
-const action = `${actionBase} border-[#C5AE8F] bg-[#F1EADF] text-[#4F3D27] hover:bg-[#E8DAC6]`;
-const primaryAction = `${actionBase} border-[#211E1A] bg-[#211E1A] text-[#FFFDFA] hover:bg-[#39332B]`;
+const actionBase = "rare-button";
+const action = `${actionBase} rare-button-secondary`;
+const primaryAction = `${actionBase} rare-button-primary`;
 const submitAction = `${actionBase} border-[#047857] bg-[#047857] text-white shadow-sm hover:bg-[#065F46]`;
 const deleteAction = `${actionBase} border-[#B91C1C] bg-[#DC2626] text-white shadow-sm hover:bg-[#B91C1C]`;
 const reportTabs = [["diary", "Site diary"], ["work-entries", "Task work"], ["manpower", "Manpower"], ["materials", "Materials"], ["attachments", "Attachments"], ["review", "Review & Submit"]];

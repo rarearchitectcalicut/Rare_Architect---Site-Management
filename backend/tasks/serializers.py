@@ -641,6 +641,7 @@ class TaskChangeRequestCreateSerializer(serializers.Serializer):
 # TASK CHANGE REQUEST DETAIL SERIALIZER
 # =====================================================
 class TaskChangeRequestDetailSerializer(serializers.ModelSerializer):
+    project_status = serializers.CharField(source="task.project.status", read_only=True)
     task_title = serializers.CharField(
         source="task.title",
         read_only=True,
@@ -671,6 +672,7 @@ class TaskChangeRequestDetailSerializer(serializers.ModelSerializer):
             "task_title",
             "project_id",
             "requested_by",
+            "project_status",
             "requested_by_name",
             "change_type",
             "old_values",

@@ -10,9 +10,9 @@ import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicke
 
 const statuses = [["", "All projects"], ["ACTIVE", "Active"], ["MAINTENANCE", "Maintenance"], ["ON_HOLD", "On hold"], ["COMPLETED", "Completed"], ["CANCELLED", "Cancelled"]];
 const orders = [["-created_at", "Newest first"], ["created_at", "Oldest first"], ["name", "Name A-Z"], ["-name", "Name Z-A"], ["start_date", "Start date"], ["end_date", "Completion date"]];
-const buttonBase = "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition-colors duration-200 motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#94651D] disabled:cursor-not-allowed disabled:opacity-45";
-const button = `${buttonBase} border-[#CDBBA3] bg-[#FFFDFA] text-[#4F3D27] hover:bg-[#F1EADF]`;
-const primaryButton = `${buttonBase} border-[#211E1A] bg-[#211E1A] text-[#FFFDFA] hover:bg-[#39332B]`;
+const buttonBase = "rare-button";
+const button = `${buttonBase} rare-button-secondary`;
+const primaryButton = `${buttonBase} rare-button-primary`;
 const control = "min-h-12 w-full min-w-0 rounded-xl border border-[#D7C8B5] bg-[#FFFDFA] px-3 py-3 text-base text-[#352D24] outline-none transition-colors focus:border-[#94651D] focus:ring-2 focus:ring-[#E8D9BF] disabled:opacity-50 motion-reduce:transition-none";
 
 function projectPage(response, page = 1, pageSize = 12) {

@@ -239,6 +239,7 @@ export default function AddProject({
         handleSubmit,
         reset,
         setError,
+        setValue,
         formState: { errors },
     } = useForm({
         resolver: zodResolver(projectSchema),
@@ -284,10 +285,19 @@ export default function AddProject({
 
         async function loadCategories() {
             try {
-                const response = await projectApi.getCategories();
+                let response = await projectApi.getCategories({ is_active: true });
+                const all = [...getItems(response)];
+                let page = 1;
+                while (response?.next) {
+                    if (++page > 500) throw new Error("Category pagination limit reached.");
+                    response = await projectApi.getCategories({ is_active: true, page });
+                    all.push(...getItems(response));
+                }
+                const active = all.filter((item) => item.is_active !== false);
 
                 if (!cancelled) {
-                    setCategories(getItems(response));
+                    setCategories(active);
+                    if (initialCategoryId && !active.some((item) => String(item.id) === String(initialCategoryId))) setValue("category", "");
                 }
             } catch (error) {
                 if (!cancelled) {
@@ -309,7 +319,7 @@ export default function AddProject({
         return () => {
             cancelled = true;
         };
-    }, [open, initialCategoryId, reset]);
+    }, [open, initialCategoryId, reset, setValue]);
 
     // ---------------------------------------------
     // COVER IMAGE PREVIEW

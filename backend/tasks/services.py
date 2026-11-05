@@ -228,7 +228,7 @@ def approve_task(*, task_id, admin_user, comment=""):
 
     # Serialize timeline membership changes with project-first reorder decisions.
     reference = get_object_or_404(Task.objects.only("project_id"), pk=task_id)
-    project = Project.objects.select_for_update().get(pk=reference.project_id)
+    project = lock_project_for_work(reference.project_id)
     task = get_object_or_404(
         Task.objects.select_for_update(),
         pk=task_id,
@@ -491,7 +491,7 @@ def cancel_task(*, task_id, user, reason):
     reason = validate_lifecycle_reason(reason)
 
     reference = get_object_or_404(Task.objects.only("project_id"), pk=task_id)
-    Project.objects.select_for_update().get(pk=reference.project_id)
+    lock_project_for_work(reference.project_id)
     task = get_object_or_404(
         Task.objects.select_related("project").select_for_update(),
         pk=task_id,
@@ -761,7 +761,7 @@ def approve_task_change_request(
 
     # Project-first locking serializes date edits with project schedule updates.
     reference = Task.objects.only("project_id").get(pk=request_obj.task_id)
-    Project.objects.select_for_update().get(pk=reference.project_id)
+    lock_project_for_work(reference.project_id)
     task = Task.objects.select_for_update().get(pk=request_obj.task_id)
 
     # Lock the change request before reviewing it.
@@ -1176,6 +1176,7 @@ def approve_timeline_reorder_request(
     validate_timeline_admin(admin_user)
 
     project, change_request = get_locked_timeline_request(request_id)
+    lock_project_for_work(project.pk)
 
     if change_request.status != TaskChangeRequest.Status.PENDING:
         raise ValidationError({"detail": "This timeline request is already reviewed."})

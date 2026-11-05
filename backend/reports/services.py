@@ -2018,6 +2018,7 @@ def approve_delay_extension(
     report, task = get_locked_pending_extension(
         report_id=report_id,
     )
+    task.project = lock_project_for_work(task.project_id)
 
     # -----------------------------------------
     # DELAY REPORT MUST BE APPROVED FIRST

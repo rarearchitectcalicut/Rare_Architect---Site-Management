@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from users.permissions import MustChangePasswordPermission,IsAdminRole
 from .models import ProjectCategory,Project,ProjectSupervisor
-from .permissions import IsAdminOrReadOnly
+from .permissions import IsAdminOrReadOnly, lock_project_for_work
 from .serializers import (
     ProjectCategorySerializer,
     ProjectCategoryListSerializer,
@@ -38,6 +38,8 @@ class ProjectCategoryListCreateView(generics.ListCreateAPIView):
     """
 
     queryset = ProjectCategory.objects.all()
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["is_active"]
 
     permission_classes = [
         IsAuthenticated,
@@ -459,11 +461,9 @@ class ProjectAssignSupervisorsView(generics.GenericAPIView):
         IsAdminRole,
     ]
 
+    @transaction.atomic
     def post(self, request, project_id):
-        project = get_object_or_404(
-            Project,
-            id=project_id,
-        )
+        project = lock_project_for_work(project_id)
 
         serializer = self.get_serializer(
             data=request.data,
@@ -547,6 +547,7 @@ class ProjectRemoveSupervisorView(generics.GenericAPIView):
 
     @transaction.atomic
     def delete(self, request, project_id, supervisor_id):
+        lock_project_for_work(project_id)
         assignment = get_object_or_404(
             ProjectSupervisor.objects.select_for_update(),
             project_id=project_id,

@@ -82,6 +82,33 @@ class ApprovalWorkflowTests(TestCase):
         self.project.save(update_fields=["end_date"])
         self.assertEqual(self.post_decision("delay-extension-approve", report).status_code, 200)
 
+    def test_cancelled_project_blocks_extension_without_mutating_deadline_or_decision(self):
+        report = self.delay()
+        self.assertEqual(self.post_decision("delay-report-approve", report).status_code, 200)
+        Project.objects.filter(pk=self.project.pk).update(status="CANCELLED")
+        history_count = self.task.history.count()
+        response = self.post_decision("delay-extension-approve", report)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("project", response.data)
+        report.refresh_from_db(); self.task.refresh_from_db()
+        self.assertEqual(self.task.end_date, date(2026, 10, 30))
+        self.assertEqual(report.extension_status, "PENDING")
+        self.assertEqual(self.task.history.count(), history_count)
+
+    def test_extension_audit_failure_rolls_back_deadline_and_decision_together(self):
+        from unittest.mock import patch
+        report = self.delay()
+        self.assertEqual(self.post_decision("delay-report-approve", report).status_code, 200)
+        history_count = self.task.history.count()
+        with patch("reports.services.create_activity_log", side_effect=RuntimeError("Audit unavailable")):
+            with self.assertRaises(RuntimeError):
+                self.post_decision("delay-extension-approve", report)
+        self.task.refresh_from_db(); report.refresh_from_db()
+        self.assertEqual(self.task.end_date, date(2026, 10, 30))
+        self.assertEqual(report.extension_status, "PENDING")
+        self.assertIsNone(report.extension_reviewed_at)
+        self.assertEqual(self.task.history.count(), history_count)
+
     def test_delay_approval_does_not_approve_extension_or_change_deadline(self):
         report = self.delay()
         self.assertEqual(self.post_decision("delay-report-approve", report).status_code, 200)

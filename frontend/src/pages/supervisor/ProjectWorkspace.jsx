@@ -23,7 +23,7 @@ import { validationMessage } from "../../hooks/useApprovalReview";
 import { formatDateTime, formatText } from "../../components/approvals/approvalUtils";
 
 const documentControl = "mt-2 w-full min-w-0 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] px-3 py-3 text-sm text-[#211E1A]";
-const documentButton = "rounded-xl border border-[#E7DED2] bg-[#FFFDFA] px-4 py-3 text-sm font-semibold text-[#211E1A] hover:bg-[#F1EADF] disabled:opacity-40";
+const documentButton = "rare-button rare-button-secondary";
 
 function documentSize(size) {
     if (typeof size !== "number" || !Number.isFinite(size) || size < 0) return "Size unavailable";

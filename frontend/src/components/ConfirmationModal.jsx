@@ -42,19 +42,19 @@ export default function ConfirmationModal({ title, message, confirmLabel, onDeci
             <p id={messageId} className="mt-3 break-words text-sm leading-6 text-[#716658]">
                 {message}
             </p>
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:flex sm:justify-end">
+            <div className="rare-action-footer mt-5 grid grid-cols-1 gap-3 sm:flex sm:justify-end">
                 <button
                     type="button"
                     autoFocus
                     onClick={() => onDecision(false)}
-                    className="rounded-xl border border-[#E4DCCD] px-5 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                    className="rare-button rare-button-secondary"
                 >
                     Cancel
                 </button>
                 <button
                     type="button"
                     onClick={() => onDecision(true)}
-                    className="rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#39332B] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                    className="rare-button rare-button-primary"
                 >
                     {confirmLabel}
                 </button>

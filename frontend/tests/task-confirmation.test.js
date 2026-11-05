@@ -101,7 +101,13 @@ test("cancelled and completed projects have no active cancellation control", asy
     for (const status of ["CANCELLED", "COMPLETED"]) {
         const page = await projectCancellationHarness(status);
         assert(!page.find((node) => node.type === "button" && node.props.children === "Cancel Project"));
-        if (status === "CANCELLED") assert.match(page.text(), /Existing records remain available for reference/);
+        if (status === "CANCELLED") {
+            assert.match(page.text(), /Existing records remain available for reference/);
+            const edit = page.find((node) => node.type === "button" && node.props.onClick && String(node.props.children).includes("Edit Project"));
+            assert.equal(edit.props.disabled, true);
+            const assign = page.find((node) => node.type === "button" && String(node.props.children).includes("Add Supervisor"));
+            assert.equal(assign.props.disabled, true);
+        }
     }
 });
 
@@ -695,4 +701,61 @@ test("shared schedule feedback supports either nullable project boundary and equ
     assert.deepEqual(check({ start_date: "2026-11-02", end_date: "2026-11-02" }, { end_date: "2026-11-02" }), {});
     assert.deepEqual(check({}, { start_date: "2026-10-01", end_date: "2026-11-02" }), {});
     assert.deepEqual(check({ start_date: "2030-01-01" }, {}), {});
+});
+
+test("cancelled project status changes send only the selected status and wait for backend success", async () => {
+    let resolve;
+    const page = await projectCancellationHarness("CANCELLED", () => new Promise((done) => { resolve = done; }));
+    const select = page.find((node) => node.type === "select" && node.props["aria-label"] === "New project status");
+    assert(select);
+    for (const status of ["ACTIVE", "MAINTENANCE", "ON_HOLD", "COMPLETED"]) {
+        assert(select.props.children.some((option) => option.props.value === status));
+    }
+    select.props.onChange({ target: { value: "MAINTENANCE" } }); page.render();
+    const pending = page.submit(); page.render();
+    await page.submit();
+    assert.equal(page.calls.length, 1);
+    assert.equal(page.calls[0][1].status, "MAINTENANCE");
+    assert.deepEqual(Object.keys(page.calls[0][1]), ["status"]);
+    assert.match(page.text(), /Updating status/);
+    assert.match(page.text(), /This project has been cancelled/);
+    resolve({ status: "MAINTENANCE" }); await pending; page.render();
+    assert.match(page.text(), /Project status changed to maintenance/);
+    assert(!page.find((node) => node.type === "select" && node.props["aria-label"] === "New project status"));
+    const edit = page.find((node) => node.type === "button" && String(node.props.children).includes("Edit Project"));
+    assert.equal(edit.props.disabled, false);
+});
+
+test("failed reactivation preserves cancelled state, selection and retry controls", async () => {
+    const page = await projectCancellationHarness("CANCELLED", async () => { throw new Error("Retry this status change"); });
+    await page.submit(); page.render();
+    assert.match(page.text(), /This project has been cancelled/);
+    assert.match(page.text(), /Retry this status change/);
+    const select = page.find((node) => node.type === "select" && node.props["aria-label"] === "New project status");
+    assert.equal(select.props.value, "ACTIVE");
+    assert.equal(select.props.disabled, false);
+});
+
+test("category dashboard requests active categories and excludes inactive cards", async () => {
+    for (const paginated of [true, false]) {
+        const slots = [], requests = []; let cursor = 0, effects = [];
+        const items = [{ id: "active", name: "Active category", is_active: true }, { id: "inactive", name: "Inactive category", is_active: false }];
+        const { exports } = await loadSource("components/dashboard/ProjectCategories.jsx", { overrides: {
+            react: { ...React,
+                useState(initial) { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], (next) => { slots[index] = typeof next === "function" ? next(slots[index]) : next; }]; },
+                useEffect(create, deps) { const index = cursor++, previous = slots[index]; if (!previous || deps.some((value, i) => value !== previous.deps[i])) effects.push(() => { previous?.cleanup?.(); slots[index] = { deps, cleanup: create() }; }); },
+            },
+            "api/projectApi.js": { projectApi: { getCategories: async (params) => { requests.push(params); return paginated ? { results: items, count: 2 } : items; } } },
+        } });
+        function draw() { cursor = 0; effects = []; const tree = exports.default(); effects.forEach((effect) => effect()); return tree; }
+        function cards(node) {
+            if (Array.isArray(node)) return node.flatMap(cards);
+            if (!node || typeof node !== "object") return [];
+            return node.props?.category ? [node.props.category.id] : cards(node.props?.children);
+        }
+        draw(); for (let i = 0; i < 8; i++) await Promise.resolve();
+        assert.equal(requests.length, 1); assert.equal(requests[0].is_active, true);
+        assert.deepEqual(Array.from(cards(draw())), ["active"]);
+        slots.forEach((slot) => slot?.cleanup?.());
+    }
 });
