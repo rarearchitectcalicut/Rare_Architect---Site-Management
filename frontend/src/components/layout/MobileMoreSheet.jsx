@@ -105,6 +105,7 @@ export default function MobileMoreSheet({
     user,
     onLogout,
     loading,
+    unreadCount,
 }) {
     const closeButtonRef = useRef(null);
     const dialogRef = useRef(null);
@@ -289,6 +290,7 @@ export default function MobileMoreSheet({
                                                     {item.label}
                                                 </span>
 
+                                                {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-[#B42318] px-1.5 text-xs font-bold text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
                                                 <ChevronRight
                                                     size={18}
                                                     className={chevronClass(isActive)}

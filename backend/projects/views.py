@@ -26,6 +26,8 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from .filters import ProjectFilter
 from .pagination import ProjectPagination
 from activity.services import create_activity_log
+from notifications.models import Notification
+from notifications.services import create_notifications
 
 # ============================================================
 # PROJECT CATEGORY LIST-CREATE VIEW
@@ -358,6 +360,7 @@ class ProjectDetailView(generics.RetrieveUpdateAPIView):
         serializer.validate(serializer.validated_data)
         cancellation_reason = serializer.validated_data.pop("cancellation_reason", "")
         old_status = instance.status
+        old_dates = {field: getattr(instance, field) for field in ("start_date", "end_date")}
         changed_fields = [
             field for field, value in serializer.validated_data.items()
             if not (field == "cover_image" and value is None and not instance.cover_image)
@@ -378,6 +381,14 @@ class ProjectDetailView(generics.RetrieveUpdateAPIView):
                     **({"reason": cancellation_reason} if project.status == Project.Status.CANCELLED else {}),
                 },
             )
+            if project.status == Project.Status.CANCELLED:
+                create_notifications(
+                    recipient_ids=project.supervisor_assignments.values_list("supervisor_id", flat=True),
+                    project_id=project.pk, notification_type=Notification.Type.SYSTEM,
+                    title="Project cancelled",
+                    message=f"{project.name} has been cancelled by Admin. Existing project records remain available for reference.",
+                    reference_type="PROJECT", reference_id=project.pk,
+                )
         detail_fields = sorted(set(changed_fields) - {"status"})
         if detail_fields:
             create_activity_log(
@@ -390,6 +401,19 @@ class ProjectDetailView(generics.RetrieveUpdateAPIView):
                     "project_id": str(project.id),
                     "changed_fields": detail_fields,
                 },
+            )
+        date_fields = [field for field in old_dates if field in changed_fields]
+        if date_fields and project.status != Project.Status.CANCELLED:
+            changes = []
+            for field in date_fields:
+                before, after = old_dates[field], getattr(project, field)
+                label = "Start date" if field == "start_date" else "Expected completion date"
+                changes.append(f"{label} changed from {before.strftime('%d %B %Y') if before else 'not set'} to {after.strftime('%d %B %Y') if after else 'not set'}.")
+            create_notifications(
+                recipient_ids=project.supervisor_assignments.values_list("supervisor_id", flat=True),
+                project_id=project.pk, notification_type=Notification.Type.SYSTEM,
+                title="Project dates changed", message=f"{project.name}: " + " ".join(changes),
+                reference_type="PROJECT", reference_id=project.pk,
             )
 
 
@@ -502,6 +526,12 @@ class ProjectAssignSupervisorsView(generics.GenericAPIView):
                     )
 
                     assignments.append(assignment)
+                    create_notifications(
+                        recipient_ids=[supervisor.pk], project_id=project.pk,
+                        notification_type=Notification.Type.PROJECT_ASSIGNMENT,
+                        title="Project assigned", message=f"You have been assigned to the project {project.name}.",
+                        reference_type="PROJECT", reference_id=project.pk,
+                    )
 
         except (IntegrityError, ValidationError) as exc:
             raise ValidationError(

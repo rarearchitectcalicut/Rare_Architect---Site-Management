@@ -14,7 +14,7 @@ from projects.models import Project, ProjectCategory, ProjectSupervisor
 from tasks.models import Task, TaskHistory
 from tasks.services import create_timeline_reorder_request, approve_timeline_reorder_request
 from .models import DailyReport, DailyTaskWork, DelayReport
-from .services import create_delay_report, verify_daily_task_work, approve_delay_report, approve_delay_extension, reject_delay_extension
+from .services import submit_daily_report, create_delay_report, verify_daily_task_work, approve_delay_report, approve_delay_extension, reject_delay_extension
 from .progress import calculate_task_progress
 
 
@@ -51,12 +51,31 @@ class ApprovalConcurrencyTests(TransactionTestCase):
             report = DailyReport.objects.create(project=self.project, reported_by=self.supervisor, report_date=date(2026, 10, 23), work_summary="Measured work", status="SUBMITTED", submitted_at=timezone.now())
             entries.append(DailyTaskWork.objects.create(daily_report=report, task=self.task, work_description="Measured work", quantity_completed_today=Decimal("60")))
         results = self.race([lambda entry=entry: verify_daily_task_work(entry_id=entry.id, admin_user=self.admin) for entry in entries])
-        self.assertCountEqual(results, ["accepted", "rejected"])
+        self.assertCountEqual(results, ["rejected", "rejected"])
+        self.assertEqual(calculate_task_progress(self.task)["verified_quantity"], "0.000")
+        # Legacy pending overflow requires an explicit rejection before verification.
+        from .services import reject_daily_task_work
+        reject_daily_task_work(entry_id=entries[0].pk, admin_user=self.admin, verification_note="Duplicate quantity")
+        verify_daily_task_work(entry_id=entries[1].pk, admin_user=self.admin)
         self.assertEqual(calculate_task_progress(self.task)["verified_quantity"], "60.000")
+
+    def test_concurrent_report_submissions_reserve_capacity_once(self):
+        reports = []
+        for _ in range(2):
+            report = DailyReport.objects.create(project=self.project, reported_by=self.supervisor, report_date=date(2026, 10, 23), work_summary="Measured work")
+            DailyTaskWork.objects.create(daily_report=report, task=self.task, work_description="Measured work", quantity_completed_today=Decimal("60"))
+            reports.append(report)
+        result = self.race([lambda report=report: submit_daily_report(report_id=report.pk, supervisor=self.supervisor) for report in reports])
+        self.assertCountEqual(result, ["accepted", "rejected"])
+        self.assertEqual(DailyReport.objects.filter(status="DRAFT").count(), 1)
+        progress = calculate_task_progress(self.task)
+        self.assertEqual(progress["pending_quantity"], "60.000")
+        self.assertEqual(progress["available_quantity"], "40.000")
+        self.assertEqual(progress["progress_percentage"], "0.00")
 
     def test_concurrent_duplicate_extension_submission_creates_only_one_request(self):
         def submit():
-            create_delay_report(task_id=self.task.id, supervisor=self.supervisor, data={"delay_type": "WEATHER", "reason": "Heavy rain", "extension_requested": True, "requested_end_date": "2026-11-10"})
+            create_delay_report(task_id=self.task.id, supervisor=self.supervisor, data={"delay_type": "WEATHER", "reason": "Heavy rain", "expected_completion_date": "2026-11-10", "extension_requested": True, "requested_end_date": "2026-11-10"})
         self.assertCountEqual(self.race([submit, submit]), ["accepted", "rejected"])
         self.assertEqual(DelayReport.objects.filter(extension_status="PENDING").count(), 1)
 
@@ -71,7 +90,7 @@ class ApprovalConcurrencyTests(TransactionTestCase):
 
 
     def extension_request(self):
-        report = create_delay_report(task_id=self.task.pk, supervisor=self.supervisor, data={"delay_type": "WEATHER", "reason": "Heavy rain", "extension_requested": True, "requested_end_date": "2026-11-10"})
+        report = create_delay_report(task_id=self.task.pk, supervisor=self.supervisor, data={"delay_type": "WEATHER", "reason": "Heavy rain", "expected_completion_date": "2026-11-10", "extension_requested": True, "requested_end_date": "2026-11-10"})
         approve_delay_report(report_id=report.pk, admin_user=self.admin)
         return report
 

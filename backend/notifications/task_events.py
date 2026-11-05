@@ -22,6 +22,7 @@ def notify_admins_task_created(task):
 
     schedule_notifications(
         recipient_ids=admin_ids,
+        project_id=task.project_id,
         notification_type=Notification.Type.TASK_APPROVAL,
         title="New task requires approval",
         message=(f"Task '{task.title}' was submitted " "and requires Admin approval."),
@@ -54,6 +55,7 @@ def notify_admins_bulk_tasks_created(*, batch, task_count):
 
     schedule_notifications(
         recipient_ids=admin_ids,
+        project_id=batch.project_id,
         notification_type=Notification.Type.TASK_APPROVAL,
         title="New task batch requires approval",
         message=(
@@ -79,6 +81,7 @@ def notify_task_approved(task):
 
     schedule_notifications(
         recipient_ids=[task.created_by_id],
+        project_id=task.project_id,
         notification_type=Notification.Type.TASK_APPROVAL,
         title="Task approved",
         message=(
@@ -106,6 +109,7 @@ def notify_task_rejected(task):
 
     schedule_notifications(
         recipient_ids=[task.created_by_id],
+        project_id=task.project_id,
         notification_type=Notification.Type.TASK_APPROVAL,
         title="Task rejected",
         message=(
@@ -136,6 +140,7 @@ def notify_admins_task_resubmitted(task):
 
     schedule_notifications(
         recipient_ids=admin_ids,
+        project_id=task.project_id,
         notification_type=Notification.Type.TASK_APPROVAL,
         title="Task resubmitted for approval",
         message=(
@@ -168,6 +173,7 @@ def notify_admins_task_change_requested(change_request):
 
     schedule_notifications(
         recipient_ids=admin_ids,
+        project_id=change_request.task.project_id,
         notification_type=(Notification.Type.TASK_CHANGE_REQUEST),
         title="Task change request requires approval",
         message=(
@@ -193,6 +199,7 @@ def notify_task_change_approved(change_request):
 
     schedule_notifications(
         recipient_ids=[change_request.requested_by_id],
+        project_id=change_request.task.project_id,
         notification_type=Notification.Type.TASK_CHANGE_REQUEST,
         title="Task change request approved",
         message=(
@@ -218,6 +225,7 @@ def notify_task_change_rejected(change_request):
 
     schedule_notifications(
         recipient_ids=[change_request.requested_by_id],
+        project_id=change_request.task.project_id,
         notification_type=Notification.Type.TASK_CHANGE_REQUEST,
         title="Task change request rejected",
         message=(
@@ -251,6 +259,7 @@ def notify_admins_timeline_reorder_requested(change_request):
 
     schedule_notifications(
         recipient_ids=admin_ids,
+        project_id=change_request.task.project_id,
         notification_type=Notification.Type.TASK_CHANGE_REQUEST,
         title="Timeline reorder requires approval",
         message=(
@@ -276,6 +285,7 @@ def notify_timeline_reorder_approved(change_request):
 
     schedule_notifications(
         recipient_ids=[change_request.requested_by_id],
+        project_id=change_request.task.project_id,
         notification_type=Notification.Type.TASK_CHANGE_REQUEST,
         title="Timeline reorder approved",
         message=(
@@ -299,6 +309,7 @@ def notify_timeline_reorder_rejected(change_request):
 
     schedule_notifications(
         recipient_ids=[change_request.requested_by_id],
+        project_id=change_request.task.project_id,
         notification_type=Notification.Type.TASK_CHANGE_REQUEST,
         title="Timeline reorder rejected",
         message=(

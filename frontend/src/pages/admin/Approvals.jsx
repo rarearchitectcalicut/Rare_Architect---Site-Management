@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useApprovalQueues } from "../../hooks/useApprovalQueues";
 import { useRequestList } from "../../hooks/useRequestList";
@@ -13,6 +13,11 @@ export default function AdminApprovals() {
     const { queues, projects, errors, loading, refresh, revision, counts, delaySummary } = useApprovalQueues();
     const [params, setParams] = useSearchParams();
     const [notice, setNotice] = useState("");
+    useEffect(() => {
+        if (!notice) return;
+        const timer = setTimeout(() => setNotice(""), 8000);
+        return () => clearTimeout(timer);
+    }, [notice]);
     const requestedTab = params.get("tab") || "tasks";
     const tab = requestedTab === "rejected" ? "history" : Object.hasOwn(queueLabels, requestedTab) ? requestedTab : "tasks";
     const historyStatus = params.get("status") || (requestedTab === "rejected" ? "REJECTED" : "");

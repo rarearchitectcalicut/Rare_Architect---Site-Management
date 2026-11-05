@@ -463,6 +463,11 @@ export default function ProjectOverview() {
   const [cancelling, setCancelling] = useState(false);
   const [cancellationError, setCancellationError] = useState("");
   const [notice, setNotice] = useState("");
+  useEffect(() => {
+      if (!notice) return;
+      const timer = setTimeout(() => setNotice(""), 8000);
+      return () => clearTimeout(timer);
+  }, [notice]);
   const [nextStatus, setNextStatus] = useState("ACTIVE");
   const [changingStatus, setChangingStatus] = useState(false);
   const [statusError, setStatusError] = useState("");

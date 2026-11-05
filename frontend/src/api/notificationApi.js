@@ -2,16 +2,17 @@
 import { api } from "./client";
 
 export const notificationApi = {
-    list: async (params = {}) => {
+    list: async (params = {}, signal) => {
         const { data } = await api.get("notifications/", {
             params,
+            signal,
         });
         return data;
     },
 
-    unreadCount: async () => {
+    unreadCount: async (signal) => {
         const { data } = await api.get(
-            "notifications/unread-count/"
+            "notifications/unread-count/", { signal }
         );
         return data;
     },

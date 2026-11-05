@@ -1,6 +1,8 @@
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.db.models import Case, CharField, Count, OuterRef, Q, Subquery, Value, When
+from activity.models import ActivityLog
 
 from users.permissions import MustChangePasswordPermission
 from projects.pagination import ProjectPagination
@@ -29,6 +31,29 @@ class NotificationListView(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = user_notifications(self.request.user)
+        # Derive event meaning from the durable audit at notification creation,
+        # rather than the record's current status or editable display titles.
+        events = ActivityLog.objects.filter(
+            entity_id=OuterRef("reference_id"), entity_type=OuterRef("reference_type"),
+            created_at__lte=OuterRef("created_at"),
+        ).annotate(code=Case(
+            When(action="PROJECT_STATUS_CHANGED", metadata__new_status="CANCELLED", then=Value("PROJECT_CANCELLED")),
+            When(Q(action="PROJECT_UPDATED") & (Q(metadata__changed_fields__contains=["start_date"]) | Q(metadata__changed_fields__contains=["end_date"])), then=Value("PROJECT_DATES_CHANGED")),
+            default="action", output_field=CharField(),
+        )).order_by("-created_at", "-id")
+        actions = {
+            "TASK_APPROVAL": ["TASK_CREATED", "TASK_BATCH_CREATED", "TASK_RESUBMITTED", "TASK_APPROVED", "TASK_REJECTED"],
+            "TASK_CHANGE_REQUEST": ["TASK_EDIT_REQUESTED", "TASK_EDIT_APPROVED", "TASK_EDIT_REJECTED", "TIMELINE_REORDER_REQUESTED", "TIMELINE_REORDER_APPROVED", "TIMELINE_REORDER_REJECTED"],
+            "DAILY_REPORT": ["DAILY_REPORT_SUBMITTED", "DAILY_TASK_WORK_VERIFIED", "DAILY_TASK_WORK_REJECTED"],
+            "DELAY_REPORT": ["DELAY_REPORT_SUBMITTED", "DELAY_REPORT_APPROVED", "DELAY_REPORT_REJECTED"],
+            "EXTENSION_REQUEST": ["EXTENSION_APPROVED", "EXTENSION_REJECTED"],
+            "PROJECT_ASSIGNMENT": ["SUPERVISOR_ASSIGNED"],
+            "SYSTEM": ["PROJECT_UPDATED", "PROJECT_STATUS_CHANGED"],
+        }
+        queryset = queryset.annotate(project_id=Subquery(events.values("metadata__project_id")[:1]), event=Case(*[
+            When(notification_type=kind, then=Subquery(events.filter(action__in=allowed).values("code")[:1]))
+            for kind, allowed in actions.items()
+        ], default=Value(""), output_field=CharField()))
 
         unread = self.request.query_params.get("unread")
 
@@ -43,6 +68,14 @@ class NotificationListView(generics.ListAPIView):
             "-created_at",
             "-id",
         )
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        if request.query_params.get("include_counts") == "true":
+            response.data.update(user_notifications(request.user).aggregate(
+                total_count=Count("id"), unread_count=Count("id", filter=Q(is_read=False)),
+            ))
+        return response
 
 
 # =====================================================
@@ -81,11 +114,14 @@ class NotificationMarkReadView(generics.GenericAPIView):
             user=request.user,
         )
 
+        data = NotificationSerializer(
+            notification, context={"request": request},
+        ).data
+        data.update(user_notifications(request.user).aggregate(
+            total_count=Count("id"), unread_count=Count("id", filter=Q(is_read=False)),
+        ))
         return Response(
-            NotificationSerializer(
-                notification,
-                context={"request": request},
-            ).data,
+            data,
             status=status.HTTP_200_OK,
         )
 
@@ -111,7 +147,9 @@ class NotificationMarkAllReadView(generics.GenericAPIView):
             {
                 "message": "Notifications marked as read.",
                 "updated_count": updated_count,
-                "unread_count": 0,
+                **user_notifications(request.user).aggregate(
+                    total_count=Count("id"), unread_count=Count("id", filter=Q(is_read=False)),
+                ),
             },
             status=status.HTTP_200_OK,
         )

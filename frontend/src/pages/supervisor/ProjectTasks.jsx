@@ -22,6 +22,9 @@ import {
 
 import { projectApi } from "../../api/projectApi";
 import { taskApi, taskScheduleErrors } from "../../api/taskApi";
+import { delayApi } from "../../api/delayApi";
+import DelayReportReview from "../../components/approvals/review/DelayReportReview";
+import { formatDateTime } from "../../components/approvals/approvalUtils";
 import LoadingScreen from "../../components/LoadingScreen";
 import TaskDocuments from "../../components/tasks/TaskDocuments";
 import TaskExecutionActions, { TaskProgress } from "../../components/tasks/TaskExecutionActions";
@@ -187,6 +190,38 @@ function ExpandedTask({
     onStatusChanged,
 }) {
     const [documentsOpen, setDocumentsOpen] = useState(false);
+    const [delayPage, setDelayPage] = useState(1);
+    const [delayRevision, setDelayRevision] = useState(0);
+    const [delayReports, setDelayReports] = useState(null);
+    const delayKey = `${task?.id}:${task?.end_date}:${delayPage}:${delayRevision}`;
+    const delayState = delayReports?.key === delayKey ? delayReports : null;
+    useEffect(() => {
+        if (!task?.id) return;
+        const controller = new AbortController();
+        delayApi.list({ task: task.id, page: delayPage, page_size: 5 }, controller.signal).then((data) => {
+            if (!Array.isArray(data?.results) || !Number.isInteger(data.count)) throw new Error("Unexpected delay report response.");
+            if (!controller.signal.aborted) setDelayReports({ key: delayKey, data });
+        }).catch((failure) => {
+            if (!controller.signal.aborted) setDelayReports({ key: delayKey, error: failure.response?.data?.detail || "Unable to load task delay reports." });
+        });
+        return () => controller.abort();
+    }, [task?.id, delayPage, delayKey]);
+    const [decisionPage, setDecisionPage] = useState(1);
+    const [decisionRevision, setDecisionRevision] = useState(0);
+    const [decisions, setDecisions] = useState(null);
+    const decisionKey = `${task?.id}:${decisionPage}:${decisionRevision}`;
+    const decisionState = decisions?.key === decisionKey ? decisions : null;
+    useEffect(() => {
+        if (!task?.id) return;
+        const controller = new AbortController();
+        taskApi.history(task.id, { decisions_only: true, page: decisionPage, page_size: 10 }, controller.signal).then((data) => {
+            if (!Array.isArray(data?.results) || !Number.isInteger(data.count)) throw new Error("Unexpected decision history response.");
+            if (!controller.signal.aborted) setDecisions({ key: decisionKey, data });
+        }).catch((failure) => {
+            if (!controller.signal.aborted) setDecisions({ key: decisionKey, error: failure.response?.data?.detail || "Unable to load Admin decisions." });
+        });
+        return () => controller.abort();
+    }, [task?.id, decisionPage, decisionRevision, decisionKey]);
 
     if (loading) {
         return (
@@ -331,6 +366,38 @@ function ExpandedTask({
                 />
             </div>
 
+            <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
+                <h4 className="text-sm font-bold text-[#211E1A]">Admin decisions and comments</h4>
+                {!decisionState && <p role="status" className="text-sm text-[#716658]">Loading decision history...</p>}
+                {decisionState?.error && <p role="alert" className="text-sm text-red-700">{decisionState.error} <button type="button" className="underline" onClick={() => setDecisionRevision((value) => value + 1)}>Retry</button></p>}
+                {decisionState?.data?.results.map((decision) => <article key={decision.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4">
+                    <p className={`text-sm font-semibold ${decision.action.endsWith("REJECTED") ? "text-[#B42318]" : "text-[#166534]"}`}>{readable(decision.action)}</p>
+                    <p className="mt-1 text-xs text-[#716658]">{decision.actor_name || "Reviewer unavailable"} / {formatDateTime(decision.created_at)}</p>
+                    <p className="mt-3 whitespace-pre-wrap break-words text-sm text-[#211E1A]">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
+                </article>)}
+                {decisionState?.data?.count === 0 && <p className="text-sm text-[#716658]">No Admin decision has been recorded yet.</p>}
+                {decisionState?.data && (decisionState.data.next || decisionState.data.previous) && <nav aria-label="Decision history pages" className="flex flex-wrap items-center justify-between gap-3">
+                    <button type="button" className="rare-button rare-button-secondary" disabled={!decisionState.data.previous} onClick={() => setDecisionPage((page) => page - 1)}>Previous decisions</button>
+                    <span className="text-xs text-[#716658]">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
+                    <button type="button" className="rare-button rare-button-secondary" disabled={!decisionState.data.next} onClick={() => setDecisionPage((page) => page + 1)}>Next decisions</button>
+                </nav>}
+            </section>
+            <section aria-label="Task delay reports" className="mt-5 space-y-4 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h4 className="text-sm font-bold">Delay reports for this task</h4>
+                    <button type="button" className="rare-button rare-button-secondary" onClick={() => setDelayRevision((value) => value + 1)}>Refresh reports</button>
+                </div>
+                <p className="text-xs text-[#716658]">Current approved deadline: {formatDate(task.end_date)}. Reporting a delay does not change this deadline; an extension needs separate approval.</p>
+                {!delayState && <p role="status" className="text-sm text-[#716658]">Loading task delay reports...</p>}
+                {delayState?.error && <p role="alert" className="text-sm text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
+                {delayState?.data?.count === 0 && <p className="text-sm text-[#716658]">No delays have been reported for this task.</p>}
+                {delayState?.data?.results.map((report) => <article key={report.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article>)}
+                {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="flex flex-wrap items-center justify-between gap-3">
+                    <button type="button" className="rare-button rare-button-secondary" disabled={!delayState.data.previous} onClick={() => setDelayPage((page) => page - 1)}>Previous reports</button>
+                    <span className="text-xs text-[#716658]">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
+                    <button type="button" className="rare-button rare-button-secondary" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
+                </nav>}
+            </section>
             {/* DESCRIPTION AND COMPLETION CRITERIA */}
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
                 <div className="rounded-[18px] border border-[#EEE6DC] p-5">
@@ -485,7 +552,7 @@ function TaskCard({
 
 export default function SupervisorProjectTasks() {
     const { projectId } = useParams();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const linkedTaskId = searchParams.get("task");
 
     const [project, setProject] = useState(null);
@@ -511,6 +578,20 @@ export default function SupervisorProjectTasks() {
     const [editingTask, setEditingTask] = useState(null);
     const [bulkOpen, setBulkOpen] = useState(false);
     const [notice, setNotice] = useState("");
+    const [creationError, setCreationError] = useState("");
+
+    useEffect(() => {
+        if (searchParams.get("create") !== "true" || loading || String(project?.id) !== projectId || error) return;
+        const next = new URLSearchParams(searchParams);
+        next.delete("create");
+        setSearchParams(next, { replace: true });
+        if (["ACTIVE", "MAINTENANCE"].includes(project.status)) {
+            setEditingTask(null);
+            setFormOpen(true);
+        } else {
+            setCreationError("Task creation is unavailable for this project's current status.");
+        }
+    }, [searchParams, setSearchParams, loading, project, projectId, error]);
 
     // LOAD PROJECT AND TASK LIST
     useEffect(() => {
@@ -897,6 +978,7 @@ export default function SupervisorProjectTasks() {
 
             {project?.status === "CANCELLED" && <p role="status" className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-sm text-[#716658]">This project has been cancelled. Existing records remain available for reference.</p>}
             {/* SUCCESS NOTICE */}
+            {creationError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{creationError}</p>}
             {notice && (
                 <div
                     role="status"

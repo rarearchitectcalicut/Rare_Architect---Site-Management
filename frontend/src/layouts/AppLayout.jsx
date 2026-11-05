@@ -62,7 +62,8 @@ export default function AppLayout() {
     const [loggingOut, setLoggingOut] = useState(false);
     const [moreOpen, setMoreOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
+    const [unreadState, setUnreadState] = useState({ userId: null, count: null });
+    const unreadCount = unreadState.userId === user.id ? unreadState.count : null;
 
     const closeMore = useCallback(() => {
         setMoreOpen(false);
@@ -73,15 +74,23 @@ export default function AppLayout() {
 
         let cancelled = false;
         let latestRequest = 0;
+        let controller;
 
-        const refreshUnreadCount = async () => {
+        const refreshUnreadCount = async (event) => {
+            const supplied = event?.detail?.unread_count;
+            if (Number.isInteger(supplied) && supplied >= 0) {
+                ++latestRequest; controller?.abort();
+                setUnreadState({ userId: user.id, count: supplied });
+                return;
+            }
             if (document.visibilityState === "hidden") return;
 
             const request = ++latestRequest;
+            controller?.abort(); controller = new AbortController();
             try {
-                const data = await notificationApi.unreadCount();
-                if (!cancelled && request === latestRequest) {
-                    setUnreadCount(data.unread_count);
+                const data = await notificationApi.unreadCount(controller.signal);
+                if (!cancelled && request === latestRequest && Number.isInteger(data.unread_count) && data.unread_count >= 0) {
+                    setUnreadState({ userId: user.id, count: data.unread_count });
                 }
             } catch {
                 // Keep the last known count if a background refresh fails.
@@ -96,12 +105,13 @@ export default function AppLayout() {
 
         return () => {
             cancelled = true;
+            controller?.abort();
             window.clearInterval(interval);
             window.removeEventListener("rare:notifications-updated", refreshUnreadCount);
             window.removeEventListener("focus", refreshUnreadCount);
             document.removeEventListener("visibilitychange", refreshUnreadCount);
         };
-    }, [user.id, loggingOut]);
+    }, [user.id, loggingOut, location.pathname]);
 
     // ---------------------------------------------
     // HEADER GETS A SHADOW ONCE THE PAGE SCROLLS
@@ -145,6 +155,7 @@ export default function AppLayout() {
     const handleLogout = async () => {
         if (loggingOut) return;
 
+        setUnreadState({ userId: null, count: null });
         setLoggingOut(true);
         closeMore();
 
@@ -174,6 +185,7 @@ export default function AppLayout() {
                 user={user}
                 onLogout={handleLogout}
                 loading={loggingOut}
+                unreadCount={unreadCount}
             />
 
             {/* CONTENT AREA */}
@@ -345,6 +357,7 @@ export default function AppLayout() {
             {/* MOBILE FLOATING NAVIGATION */}
             <MobileBottomNav
                 role={user.role}
+                unreadCount={unreadCount}
                 onOpenMore={() => setMoreOpen(true)}
                 moreOpen={moreOpen}
             />
@@ -356,6 +369,7 @@ export default function AppLayout() {
                 user={user}
                 onLogout={handleLogout}
                 loading={loggingOut}
+                unreadCount={unreadCount}
             />
         </div>
     );

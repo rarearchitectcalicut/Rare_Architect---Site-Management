@@ -13,6 +13,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.test import APIClient
 
@@ -282,7 +283,8 @@ class ActivityIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(log.metadata["supervisor_id"], str(self.other.id))
         response = self.no_event(lambda: self.client.post(url, payload, format="json"))
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["assignments"], [])
         response, log = self.event(
             "SUPERVISOR_UNASSIGNED",
             lambda: self.client.delete(reverse("projects:project-remove-supervisor", args=[self.project.id, self.other.id])),
@@ -404,7 +406,10 @@ class ActivityIntegrationTests(TestCase):
         self.assertEqual(calculate_task_progress(task)["progress_percentage"], "60.00")
         other_report = self.draft()
         excess = self.work(other_report, task, quantity_completed_today=Decimal("5.000"), completion_claimed=False)
-        reports.submit_daily_report(report_id=other_report.id, supervisor=self.supervisor)
+        with self.assertRaises(ValidationError):
+            reports.submit_daily_report(report_id=other_report.id, supervisor=self.supervisor)
+        # Retain coverage for legacy submitted overflow as well.
+        DailyReport.objects.filter(pk=other_report.pk).update(status="SUBMITTED", submitted_at=timezone.now())
         count = ActivityLog.objects.count()
         with self.assertRaises(ValidationError):
             reports.verify_daily_task_work(entry_id=excess.id, admin_user=self.admin)
@@ -443,7 +448,7 @@ class ActivityIntegrationTests(TestCase):
 
     def test_delay_review_and_extension_are_separate(self):
         task = self.task(end_date=date.today())
-        report, _ = self.event("DELAY_REPORT_SUBMITTED", lambda: reports.create_delay_report(task_id=task.id, supervisor=self.supervisor, data={"delay_type": "WEATHER", "reason": "Rain", "extension_requested": True, "requested_end_date": (date.today() + timedelta(days=3)).isoformat()}))
+        report, _ = self.event("DELAY_REPORT_SUBMITTED", lambda: reports.create_delay_report(task_id=task.id, supervisor=self.supervisor, data={"delay_type": "WEATHER", "reason": "Rain", "expected_completion_date": (date.today() + timedelta(days=3)).isoformat(), "extension_requested": True, "requested_end_date": (date.today() + timedelta(days=3)).isoformat()}))
         self.event("DELAY_REPORT_APPROVED", lambda: reports.approve_delay_report(report_id=report.id, admin_user=self.admin), actor=self.admin)
         task.refresh_from_db()
         self.assertEqual(task.end_date, date.today())
@@ -454,7 +459,7 @@ class ActivityIntegrationTests(TestCase):
 
     def test_delay_and_extension_rejection_do_not_change_deadline(self):
         task = self.task(end_date=date.today())
-        report = reports.create_delay_report(task_id=task.id, supervisor=self.supervisor, data={"delay_type": "WEATHER", "reason": "Rain", "extension_requested": True, "requested_end_date": (date.today() + timedelta(days=3)).isoformat()})
+        report = reports.create_delay_report(task_id=task.id, supervisor=self.supervisor, data={"delay_type": "WEATHER", "reason": "Rain", "expected_completion_date": (date.today() + timedelta(days=3)).isoformat(), "extension_requested": True, "requested_end_date": (date.today() + timedelta(days=3)).isoformat()})
         self.event("DELAY_REPORT_REJECTED", lambda: reports.reject_delay_report(report_id=report.id, admin_user=self.admin, admin_comment="Declined"), actor=self.admin)
         self.event("EXTENSION_REJECTED", lambda: reports.reject_delay_extension(report_id=report.id, admin_user=self.admin, admin_comment="Declined"), actor=self.admin)
         task.refresh_from_db()

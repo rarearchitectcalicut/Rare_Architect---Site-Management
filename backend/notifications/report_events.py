@@ -26,6 +26,7 @@ def notify_admins_daily_report_submitted(report):
 
     schedule_notifications(
         recipient_ids=admin_ids,
+        project_id=report.project_id,
         notification_type=Notification.Type.DAILY_REPORT,
         title="Daily Report submitted",
         message=(
@@ -49,8 +50,7 @@ def notify_daily_task_work_verified(work_entry):
     Notify the Supervisor who submitted the
     Daily Report when Admin verifies a work entry.
 
-    Notification is created after the surrounding
-    transaction commits successfully.
+    Notification is created atomically with the decision.
     """
 
     report = work_entry.daily_report
@@ -58,6 +58,7 @@ def notify_daily_task_work_verified(work_entry):
 
     schedule_notifications(
         recipient_ids=[report.reported_by_id],
+        project_id=work_entry.daily_report.project_id,
         notification_type=Notification.Type.DAILY_REPORT,
         title="Daily task work verified",
         message=(
@@ -89,6 +90,7 @@ def notify_daily_task_work_rejected(entry):
 
     schedule_notifications(
         recipient_ids=[report.reported_by_id],
+        project_id=entry.daily_report.project_id,
         notification_type=Notification.Type.DAILY_REPORT,
         title="Daily task work rejected",
         message=(
@@ -150,6 +152,7 @@ def notify_admins_delay_report_submitted(delay_report):
 
     schedule_notifications(
         recipient_ids=admin_ids,
+        project_id=delay_report.task.project_id,
         notification_type=Notification.Type.DELAY_REPORT,
         title=title,
         message=message,
@@ -171,6 +174,7 @@ def notify_delay_report_approved(delay_report):
 
     schedule_notifications(
         recipient_ids=[delay_report.reported_by_id],
+        project_id=delay_report.task.project_id,
         notification_type=Notification.Type.DELAY_REPORT,
         title="Delay report approved",
         message=(
@@ -196,6 +200,7 @@ def notify_delay_report_rejected(delay_report):
 
     schedule_notifications(
         recipient_ids=[delay_report.reported_by_id],
+        project_id=delay_report.task.project_id,
         notification_type=Notification.Type.DELAY_REPORT,
         title="Delay report rejected",
         message=(
@@ -227,6 +232,7 @@ def notify_deadline_extension_approved(delay_report):
 
     schedule_notifications(
         recipient_ids=[delay_report.reported_by_id],
+        project_id=delay_report.task.project_id,
         notification_type=Notification.Type.EXTENSION_REQUEST,
         title="Deadline extension approved",
         message=(
@@ -254,6 +260,7 @@ def notify_deadline_extension_rejected(delay_report):
 
     schedule_notifications(
         recipient_ids=[delay_report.reported_by_id],
+        project_id=delay_report.task.project_id,
         notification_type=Notification.Type.EXTENSION_REQUEST,
         title="Deadline extension rejected",
         message=(
