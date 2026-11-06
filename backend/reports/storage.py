@@ -1,21 +1,12 @@
-from django.conf import settings
-from django.core.files.storage import FileSystemStorage
+from django.utils.deconstruct import deconstructible
+
+from common.storage_selector import SelectablePrivateStorage
 
 
-class PrivateReportStorage(FileSystemStorage):
-    """
-    Store report evidence outside the public
-    Django media directory.
-    """
-
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault(
-            "location",
-            settings.PRIVATE_MEDIA_ROOT,
-        )
-        # No public base_url.
-        kwargs.setdefault("base_url", None)
-        super().__init__(*args, **kwargs)
+@deconstructible
+class PrivateReportStorage(SelectablePrivateStorage):
+    def __init__(self):
+        super().__init__("PRIVATE_MEDIA_ROOT")
 
 
 private_report_storage = PrivateReportStorage()
