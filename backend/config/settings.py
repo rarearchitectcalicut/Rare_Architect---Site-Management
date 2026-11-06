@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
+    "cloudinary_storage",
     # Apps
     "users",
     "projects",
@@ -153,7 +154,38 @@ USE_TZ = True
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATIC_URL = "/static/"
+STORAGE_PROVIDER = os.getenv("STORAGE_PROVIDER", "local").strip().lower()
 
+
+if STORAGE_PROVIDER == "local":
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+elif STORAGE_PROVIDER == "cloudinary":
+    CLOUDINARY_STORAGE = {
+        "CLOUD_NAME": os.environ["CLOUDINARY_CLOUD_NAME"],
+        "API_KEY": os.environ["CLOUDINARY_API_KEY"],
+        "API_SECRET": os.environ["CLOUDINARY_API_SECRET"],
+        "SECURE": True,
+    }
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+else:
+    raise ValueError(f"Unsupported STORAGE_PROVIDER: {STORAGE_PROVIDER}")
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration

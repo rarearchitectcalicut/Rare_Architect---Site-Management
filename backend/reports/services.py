@@ -1041,16 +1041,23 @@ def upload_daily_report_attachment(
     supervisor,
     data,
 ):
-    lock_project_for_work(get_object_or_404(DailyReport.objects.only("project_id"), pk=report_id).project_id)
+    import hashlib
+
+    from common.image_compression import compress_image
+
+    lock_project_for_work(
+        get_object_or_404(
+            DailyReport.objects.only("project_id"),
+            pk=report_id,
+        ).project_id
+    )
+
     report = get_object_or_404(
         DailyReport.objects.select_for_update().select_related("project"),
         pk=report_id,
     )
 
-    validate_daily_report_draft(
-        report,
-        supervisor,
-    )
+    validate_daily_report_draft(report, supervisor)
 
     serializer = DailyReportAttachmentUploadSerializer(
         data=data,
@@ -1060,37 +1067,88 @@ def upload_daily_report_attachment(
 
     uploaded_file = serializer.validated_data["file"]
 
+    # Capture metadata before compression.
     original_filename = Path(uploaded_file.name).name[:255]
+    original_size = uploaded_file.size
+
+    # Hash the original upload, not the compressed file.
+    digest = hashlib.sha256()
+    uploaded_file.seek(0)
+
+    for chunk in uploaded_file.chunks():
+        digest.update(chunk)
+
+    original_sha256 = digest.hexdigest()
+    uploaded_file.seek(0)
+
     client_id = serializer.validated_data.get("client_id")
+
     if client_id:
         existing = DailyReportAttachment.objects.filter(pk=client_id).first()
+
         if existing:
-            if existing.daily_report_id != report.id or existing.file_size != uploaded_file.size or existing.original_filename != original_filename or existing.caption != serializer.validated_data.get("caption", "") or existing.task_work_id != getattr(serializer.validated_data.get("task_work"), "id", None):
-                raise ValidationError({"client_id": "This retry identifier belongs to different evidence."})
-            with existing.file.storage.open(existing.file.name, "rb") as saved:
-                matches = saved.read(uploaded_file.size + 1) == uploaded_file.read()
-            uploaded_file.seek(0)
+            same_metadata = (
+                existing.daily_report_id == report.id
+                and existing.file_size == original_size
+                and existing.original_filename == original_filename
+                and existing.caption == serializer.validated_data.get("caption", "")
+                and existing.task_work_id
+                == getattr(
+                    serializer.validated_data.get("task_work"),
+                    "id",
+                    None,
+                )
+            )
+
+            if not same_metadata:
+                raise ValidationError(
+                    {
+                        "client_id": (
+                            "This retry identifier belongs " "to different evidence."
+                        )
+                    }
+                )
+
+            if existing.original_sha256:
+                # New attachments: compare original checksums.
+                matches = existing.original_sha256 == original_sha256
+            else:
+                # Legacy attachments saved before checksums existed.
+                with existing.file.storage.open(existing.file.name, "rb") as saved:
+                    matches = saved.read(original_size + 1) == uploaded_file.read()
+
+                uploaded_file.seek(0)
+
             if not matches:
-                raise ValidationError({"client_id": "This retry identifier belongs to a different file."})
+                raise ValidationError(
+                    {
+                        "client_id": (
+                            "This retry identifier belongs " "to a different file."
+                        )
+                    }
+                )
+
             return existing
+
+    # Compress supported images only.
+    # PDFs pass through unchanged.
+    file_to_store = compress_image(uploaded_file)
 
     attachment = DailyReportAttachment(
         **({"id": client_id} if client_id else {}),
         daily_report=report,
         task_work=serializer.validated_data.get("task_work"),
         original_filename=original_filename,
-        file_size=uploaded_file.size,
+        file_size=original_size,
+        original_sha256=original_sha256,
         caption=serializer.validated_data.get("caption", ""),
         uploaded_by=supervisor,
     )
 
-    # FileField saves the file to private storage.
-    # If DB validation or saving fails, remove
-    # the newly written file.
     try:
         attachment.file.save(
             uploaded_file.name,
-            uploaded_file,
+            file_to_store,
             save=False,
         )
 
@@ -1107,14 +1165,20 @@ def upload_daily_report_attachment(
                 "daily_report_id": str(report.id),
                 "project_id": str(report.project_id),
                 "file_size": attachment.file_size,
-                "task_work_id": str(attachment.task_work_id) if attachment.task_work_id else None,
+                "task_work_id": (
+                    str(attachment.task_work_id) if attachment.task_work_id else None
+                ),
             },
         )
 
     except IntegrityError:
         if attachment.file.name:
             attachment.file.delete(save=False)
-        raise ValidationError({"client_id": "This retry identifier is already in use."})
+
+        raise ValidationError(
+            {"client_id": ("This retry identifier is already in use.")}
+        )
+
     except Exception:
         if attachment.file.name:
             attachment.file.delete(save=False)

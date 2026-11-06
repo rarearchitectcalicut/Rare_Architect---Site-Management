@@ -683,7 +683,6 @@ class ApprovalWorkflowTests(TestCase):
         self.assertEqual(len(response.data["results"]), 20)
 
 
-
 @skipUnless(connection.vendor == "postgresql", "Report row-lock tests require PostgreSQL")
 class DailyReportDeleteConcurrencyTests(TransactionTestCase):
     def setUp(self):
@@ -987,6 +986,98 @@ class DailyReportsWorkspaceTests(TestCase):
         self.assertTrue(DailyReport.objects.filter(pk=report.id).exists())
         self.assertTrue(DailyTaskWork.objects.filter(pk=work.id).exists())
         self.assertTrue(DailyReportAttachment.objects.filter(pk=attachment.id).exists())
+
+    def test_image_compression_and_checksum_retry(self):
+        import hashlib
+
+        report = self.create_report(work_summary="Photo evidence")
+        field = DailyReportAttachment._meta.get_field("file")
+        url = reverse(
+            "reports:daily-report-attachment-upload",
+            args=[report.id],
+        )
+
+        # Create a large JPEG to trigger compression.
+        buffer = BytesIO()
+        Image.effect_noise((2400, 1600), 80).convert("RGB").save(
+            buffer,
+            format="JPEG",
+            quality=95,
+        )
+
+        # The trailing marker lets us test that two
+        # different original files cannot share a retry ID.
+        original_bytes = buffer.getvalue() + b"A"
+        changed_bytes = buffer.getvalue() + b"B"
+        client_id = str(uuid4())
+
+        def make_upload(content):
+            return SimpleUploadedFile(
+                "site-photo.jpg",
+                content,
+                content_type="image/jpeg",
+            )
+
+        with TemporaryDirectory() as root, patch.object(
+            field,
+            "storage",
+            FileSystemStorage(location=root),
+        ):
+            response = self.client.post(
+                url,
+                {
+                    "client_id": client_id,
+                    "file": make_upload(original_bytes),
+                },
+                format="multipart",
+            )
+            self.assertEqual(response.status_code, 201, response.data)
+
+            attachment = DailyReportAttachment.objects.get(pk=response.data["id"])
+
+            self.assertEqual(
+                attachment.original_sha256,
+                hashlib.sha256(original_bytes).hexdigest(),
+            )
+            self.assertEqual(
+                attachment.file_size,
+                len(original_bytes),
+            )
+
+            with attachment.file.open("rb") as saved:
+                stored_bytes = saved.read()
+
+            self.assertLess(len(stored_bytes), len(original_bytes))
+
+            with Image.open(BytesIO(stored_bytes)) as image:
+                self.assertEqual(image.format, "JPEG")
+                self.assertEqual(image.size, (1920, 1280))
+
+            # Same original file and retry ID: no duplicate.
+            retry = self.client.post(
+                url,
+                {
+                    "client_id": client_id,
+                    "file": make_upload(original_bytes),
+                },
+                format="multipart",
+            )
+            self.assertEqual(retry.status_code, 201, retry.data)
+            self.assertEqual(retry.data["id"], response.data["id"])
+            self.assertEqual(report.attachments.count(), 1)
+
+            # Same filename and size, different original bytes:
+            # the checksum must reject this retry.
+            different = self.client.post(
+                url,
+                {
+                    "client_id": client_id,
+                    "file": make_upload(changed_bytes),
+                },
+                format="multipart",
+            )
+            self.assertEqual(different.status_code, 400)
+            self.assertEqual(report.attachments.count(), 1)
 
     def test_previews_verify_mime_inline_allowlist_and_keep_download(self):
         report = self.create_report(work_summary="Evidence")
