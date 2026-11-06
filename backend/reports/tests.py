@@ -987,6 +987,60 @@ class DailyReportsWorkspaceTests(TestCase):
         self.assertTrue(DailyTaskWork.objects.filter(pk=work.id).exists())
         self.assertTrue(DailyReportAttachment.objects.filter(pk=attachment.id).exists())
 
+    def test_attachment_upload_failure_cleans_only_new_file(self):
+        report = self.create_report(work_summary="Upload cleanup")
+        field = DailyReportAttachment._meta.get_field("file")
+
+        with TemporaryDirectory() as root, patch.object(
+            field,
+            "storage",
+            FileSystemStorage(location=root),
+        ):
+            storage = field.storage
+
+            # Simulate an existing attachment that must survive.
+            existing = report.attachments.create(
+                original_filename="existing.pdf",
+                file_size=16,
+                uploaded_by=self.supervisor,
+            )
+            existing.file.save(
+                "existing.pdf",
+                SimpleUploadedFile(
+                    "existing.pdf",
+                    b"%PDF-1.4\nExisting",
+                ),
+            )
+
+            existing_name = existing.file.name
+
+            # Simulate database failure after uploading a new file.
+            with patch(
+                "reports.services.create_activity_log",
+                side_effect=RuntimeError("Simulated audit failure"),
+            ):
+                with self.assertRaises(RuntimeError):
+                    self.client.post(
+                        reverse(
+                            "reports:daily-report-attachment-upload",
+                            args=[report.id],
+                        ),
+                        {
+                            "file": SimpleUploadedFile(
+                                "new.pdf",
+                                b"%PDF-1.4\nNew evidence",
+                                content_type="application/pdf",
+                            ),
+                        },
+                        format="multipart",
+                    )
+
+            # Existing evidence must remain available.
+            self.assertTrue(storage.exists(existing_name))
+
+            # Only the original attachment should remain.
+            self.assertEqual(report.attachments.count(), 1)
+
     def test_image_compression_and_checksum_retry(self):
         import hashlib
 
