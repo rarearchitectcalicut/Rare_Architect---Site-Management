@@ -16,6 +16,7 @@ import {
 
 import AccountProfile from "../../components/settings/AccountProfile";
 import ChangePasswordForm from "../../components/settings/ChangePasswordForm";
+import PushPreferences from "../../components/settings/PushPreferences";
 import LoadingScreen from "../../components/LoadingScreen";
 
 import { settingsApi } from "../../api/settingsApi";
@@ -913,6 +914,7 @@ export default function AdminSettings() {
           ===================================== */}
 
             <ChangePasswordForm />
+            <PushPreferences />
 
             {/* =====================================
           3. PROJECT CATEGORY MANAGEMENT

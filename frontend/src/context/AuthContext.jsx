@@ -10,6 +10,7 @@ import {
 
 import { authApi } from "../api/authApi";
 import LoadingScreen from "../components/LoadingScreen";
+import { disableDevicePush } from "../utils/pushNotifications";
 import {
   clearAuthTokens,
   getRefreshToken,
@@ -26,6 +27,8 @@ export function AuthProvider({ children }) {
   const restoreRequest = useRef(null);
 
   const clearSession = useCallback(() => {
+    // Also revoke browser delivery after expired authentication. Never block logout.
+    void disableDevicePush({ localOnly: true }).catch(() => {});
     clearAuthTokens();
     setUser(null);
   }, []);
@@ -104,6 +107,10 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
    
     const refresh = getRefreshToken();
+
+    // Both operations are attempted: a failed server request must still unsubscribe
+    // the browser. API revocation uses the existing token before it is cleared.
+    await disableDevicePush().catch(() => {});
 
     try {
       // Call backend while the access token is still available

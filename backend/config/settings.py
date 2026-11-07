@@ -210,6 +210,11 @@ PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
 DAILY_REPORT_MAX_FILE_SIZE = 10 * 1024 * 1024
 PRIVATE_DOCUMENT_ROOT = BASE_DIR / "private_documents"
 
+# Web Push is disabled until all three are configured. Never expose the private key.
+WEB_PUSH_VAPID_PRIVATE_KEY = os.getenv("WEB_PUSH_VAPID_PRIVATE_KEY", "")
+WEB_PUSH_VAPID_PUBLIC_KEY = os.getenv("WEB_PUSH_VAPID_PUBLIC_KEY", "")
+WEB_PUSH_VAPID_SUBJECT = os.getenv("WEB_PUSH_VAPID_SUBJECT", "")
+
 
 # Security settings for production.
 if not DEBUG:

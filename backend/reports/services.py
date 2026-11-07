@@ -45,6 +45,7 @@ from notifications.report_events import (
     notify_deadline_extension_approved,
     notify_deadline_extension_rejected,
 )
+from notifications.services import schedule_notifications
 
 # =====================================================
 # PROJECT ACCESS HELPERS
@@ -2136,6 +2137,9 @@ def approve_delay_extension(
 
     old_end_date = task.end_date
     new_end_date = report.requested_end_date
+    project = task.project
+    old_project_end_date = project.end_date
+    extend_project = old_project_end_date is not None and new_end_date > old_project_end_date
 
     if old_end_date is not None and new_end_date <= old_end_date:
         raise ValidationError(
@@ -2148,13 +2152,17 @@ def approve_delay_extension(
         )
 
     from tasks.serializers import validate_task_schedule
+    # Approval extends the locked project window only when necessary. Validate
+    # against the new window while preserving all other task date restrictions.
+    if extend_project:
+        project.end_date = new_end_date
     try:
-        validate_task_schedule(task.project, task.start_date, new_end_date)
+        validate_task_schedule(project, task.start_date, new_end_date)
     except ValidationError as exc:
         raise ValidationError({
             "requested_end_date": [
                 *exc.detail.values(),
-                "Review and update the project schedule first through project editing.",
+                "Review the task and project start dates before approving this extension.",
             ],
         })
 
@@ -2165,6 +2173,8 @@ def approve_delay_extension(
     task.end_date = new_end_date
 
     try:
+        if extend_project:
+            project.full_clean()
         task.full_clean()
 
     except DjangoValidationError as exc:
@@ -2172,6 +2182,9 @@ def approve_delay_extension(
             raise ValidationError(exc.message_dict)
 
         raise ValidationError(exc.messages)
+
+    if extend_project:
+        project.save(update_fields=["end_date", "updated_at"])
 
     task.save(
         update_fields=[
@@ -2208,6 +2221,9 @@ def approve_delay_extension(
                 old_end_date.isoformat() if old_end_date is not None else None
             ),
             "new_end_date": new_end_date.isoformat(),
+            "project_deadline_extended": extend_project,
+            "old_project_end_date": old_project_end_date.isoformat() if old_project_end_date else None,
+            "new_project_end_date": project.end_date.isoformat() if project.end_date else None,
             "admin_comment": admin_comment.strip(),
         },
     )
@@ -2226,9 +2242,31 @@ def approve_delay_extension(
             "new_status": report.extension_status,
             "old_end_date": old_end_date.isoformat() if old_end_date else None,
             "new_end_date": new_end_date.isoformat(),
+            "project_deadline_extended": extend_project,
+            "old_project_end_date": old_project_end_date.isoformat() if old_project_end_date else None,
+            "new_project_end_date": project.end_date.isoformat() if project.end_date else None,
             "comment": report.extension_admin_comment,
         },
     )
+
+    if extend_project:
+        create_activity_log(
+            actor=admin_user, action="PROJECT_UPDATED", entity_type="PROJECT", entity_id=project.pk,
+            description=f"Project '{project.name}' finish date extended by an approved task extension.",
+            metadata={
+                "project_id": str(project.pk), "task_id": str(task.pk),
+                "delay_report_id": str(report.pk), "changed_fields": ["end_date"],
+                "old_end_date": old_project_end_date.isoformat(),
+                "new_end_date": new_end_date.isoformat(), "source": "EXTENSION_APPROVED",
+            },
+        )
+        schedule_notifications(
+            recipient_ids=project.supervisor_assignments.values_list("supervisor_id", flat=True),
+            project_id=project.pk, notification_type="SYSTEM", title="Project dates changed",
+            message=(f"{project.name}: Project finish date extended from {old_project_end_date:%d %B %Y} "
+                     f"to {new_end_date:%d %B %Y} following an approved task deadline extension."),
+            reference_type="PROJECT", reference_id=project.pk,
+        )
 
     notify_deadline_extension_approved(report)
 

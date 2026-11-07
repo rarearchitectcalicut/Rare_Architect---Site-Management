@@ -16,6 +16,7 @@ import {
 import { settingsApi } from "../../api/settingsApi";
 import { useAuth } from "../../hooks/useAuth";
 import ChangePasswordForm from "../../components/settings/ChangePasswordForm";
+import PushPreferences from "../../components/settings/PushPreferences";
 import LoadingScreen from "../../components/LoadingScreen";
 
 const fields = [
@@ -475,6 +476,7 @@ export default function SupervisorSettings() {
             )}
 
             <ChangePasswordForm />
+            <PushPreferences />
         </div>
     );
 }
