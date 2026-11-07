@@ -420,7 +420,7 @@ export default function CategoryProjectList() {
                   ================================= */}
 
               {(hasNext || hasPrevious) && (
-                <div className="flex items-center justify-between gap-3 rounded-[20px] border border-[#E7DED2] bg-[#FFFDFA] px-4 py-3">
+                <nav aria-label="Category project pages" className="rare-pagination rounded-[20px] border border-[#E7DED2] bg-[#FFFDFA] px-4 py-3">
                   <button
                     type="button"
                     disabled={!hasPrevious}
@@ -437,7 +437,7 @@ export default function CategoryProjectList() {
                     Previous
                   </button>
 
-                  <span className="text-xs font-semibold text-[#716658]">
+                  <span aria-live="polite" aria-atomic="true" className="text-xs font-semibold text-[#716658]">
                     Page {page}
                   </span>
 
@@ -456,7 +456,7 @@ export default function CategoryProjectList() {
                     Next
                     <ArrowRight size={17} />
                   </button>
-                </div>
+                </nav>
               )}
             </>
           )}

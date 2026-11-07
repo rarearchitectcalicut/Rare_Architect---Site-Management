@@ -585,7 +585,7 @@ export default function TaskForm({
                             )}
                         </div>
 
-                        <footer className="flex justify-end gap-3 border-t border-[#EEE6DC] px-5 py-4 sm:px-7">
+                        <footer className="rare-action-footer flex shrink-0 flex-wrap justify-end gap-3 px-5 sm:px-7">
                             <button
                                 type="button"
                                 onClick={onClose}

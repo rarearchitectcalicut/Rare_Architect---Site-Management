@@ -201,7 +201,7 @@ function StatCard({
         </p>
 
         {hint && (
-          <p className="mt-2.5 text-xs text-[#958a7d] sm:mt-3">
+          <p className="mt-2.5 text-xs text-[#716658] sm:mt-3">
             {hint}
           </p>
         )}
@@ -801,10 +801,10 @@ function SupervisorProjectSelector({ action, onClose }) {
           </label>)}
           {!current.data.results.length && <p role="status" className="py-4 text-sm text-[#817669]">No eligible projects on this page. {current.data.next || current.data.previous ? "Try another page or search by project name." : "Try another search, or contact Admin about your project assignments."}</p>}
         </fieldset>
-        {(current.data.next || current.data.previous) && <nav aria-label="Assigned project pages" className="flex items-center justify-between gap-3"><button type="button" className="rare-button rare-button-secondary" disabled={!current.data.previous} onClick={() => setPage((value) => value - 1)}>Previous</button><span className="text-xs text-[#817669]">Page {page}</span><button type="button" className="rare-button rare-button-secondary" disabled={!current.data.next} onClick={() => setPage((value) => value + 1)}>Next</button></nav>}
+        {(current.data.next || current.data.previous) && <nav aria-label="Assigned project pages" className="rare-pagination"><button type="button" className="rare-button rare-button-secondary" disabled={!current.data.previous} onClick={() => setPage((value) => value - 1)}>Previous</button><span aria-live="polite" aria-atomic="true" className="text-xs text-[#817669]">Page {page}</span><button type="button" className="rare-button rare-button-secondary" disabled={!current.data.next} onClick={() => setPage((value) => value + 1)}>Next</button></nav>}
       </>}
       {selected && <p role="status" className="break-words rounded-xl bg-[#E6F4EA] p-3 text-sm text-[#166534]">Selected: <strong>{selected.name}</strong> / {selected.status === "ACTIVE" ? "Active" : "Maintenance"}</p>}
-      <div className="flex justify-end gap-3 border-t border-[#E7DED2] pt-4"><button type="button" onClick={onClose} className="rare-button rare-button-secondary">Cancel</button><button type="submit" disabled={!selected || !current || Boolean(current.error)} className="rare-button rare-button-primary">Continue<ArrowRight size={18} aria-hidden="true" /></button></div>
+      <div className="rare-action-footer flex flex-wrap justify-end gap-3"><button type="button" onClick={onClose} className="rare-button rare-button-secondary">Cancel</button><button type="submit" disabled={!selected || !current || Boolean(current.error)} className="rare-button rare-button-primary">Continue<ArrowRight size={18} aria-hidden="true" /></button></div>
     </form>
   </ApprovalModal>;
 }

@@ -30,6 +30,7 @@ import { projectApi } from "../../api/projectApi";
 import { supervisorApi } from "../../api/supervisorApi";
 import { getMediaUrl } from "../../utils/mediaUrl";
 import LoadingScreen from "../../components/LoadingScreen";
+import ApprovalModal from "../../components/approvals/ApprovalModal";
 
 import {
     formatAccountDate,
@@ -56,29 +57,8 @@ const inputClass = `
   disabled:opacity-50
 `;
 
-const darkButton = `
-  inline-flex items-center justify-center gap-2
-  rounded-xl bg-[#211E1A] px-4 py-3
-  text-sm font-semibold text-white
-  transition-all duration-200
-  hover:-translate-y-0.5
-  hover:bg-[#39332B]
-  hover:shadow-[0_8px_20px_rgba(33,30,26,0.15)]
-  active:translate-y-0
-  disabled:pointer-events-none disabled:opacity-50
-  motion-reduce:transform-none
-`;
-
-const outlineButton = `
-  inline-flex items-center justify-center gap-2
-  rounded-xl border border-[#E3D8CB]
-  bg-[#FFFDFA] px-4 py-3
-  text-sm font-semibold text-[#211E1A]
-  transition-all duration-200
-  hover:border-[#C8B8A6]
-  hover:bg-[#F7F1E9]
-  disabled:pointer-events-none disabled:opacity-50
-`;
+const darkButton = "rare-button rare-button-primary";
+const outlineButton = "rare-button rare-button-secondary";
 
 const editableFields = [
     {
@@ -279,13 +259,11 @@ function ConfirmModal({
     onClose,
 }) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/55 p-4 backdrop-blur-sm">
+        <ApprovalModal label={title} compact onClose={onClose}>
             <section
-                role="alertdialog"
-                aria-modal="true"
                 aria-labelledby="confirm-title"
                 aria-describedby="confirm-description"
-                className="w-full max-w-md rounded-[26px] bg-[#FFFDFA] p-6 shadow-2xl"
+                className="p-5 sm:p-6"
             >
                 <h2
                     id="confirm-title"
@@ -301,7 +279,7 @@ function ConfirmModal({
                     {description}
                 </p>
 
-                <div className="mt-6 flex justify-end gap-3">
+                <div className="rare-action-footer mt-6 flex flex-wrap justify-end gap-3">
                     <button
                         type="button"
                         onClick={onClose}
@@ -323,7 +301,7 @@ function ConfirmModal({
                     </button>
                 </div>
             </section>
-        </div>
+        </ApprovalModal>
     );
 }
 
@@ -498,9 +476,9 @@ function ChangePasswordModal({
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="password-modal-title"
-                    className="w-full max-w-127.5 overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_24px_70px_rgba(33,30,26,0.25)]"
+                    className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-127.5 flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_24px_70px_rgba(33,30,26,0.25)]"
                 >
-                    <div className="flex items-start justify-between gap-4 border-b border-[#EEE6DC] p-5 sm:p-6">
+                    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] p-5 sm:p-6">
                         <div className="flex items-start gap-3">
                             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F0EAF8] text-[#7C5BA4]">
                                 <KeyRound size={23} />
@@ -531,8 +509,8 @@ function ChangePasswordModal({
                         </button>
                     </div>
 
-                    <form onSubmit={handleSubmit} noValidate>
-                        <div className="space-y-5 p-5 sm:p-6">
+                    <form onSubmit={handleSubmit} noValidate className="flex min-h-0 flex-col">
+                        <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain p-5 sm:p-6">
                             <div className="flex items-start gap-3 rounded-xl bg-[#F5EFE7] p-4">
                                 <LockKeyhole
                                     size={19}
@@ -652,7 +630,7 @@ function ChangePasswordModal({
                             )}
                         </div>
 
-                        <footer className="flex justify-end gap-3 border-t border-[#EEE6DC] p-5 sm:p-6">
+                        <footer className="rare-action-footer flex shrink-0 flex-wrap justify-end gap-3 px-5 sm:px-6">
                             <button
                                 type="button"
                                 onClick={onClose}
@@ -690,7 +668,7 @@ function AssignedProjectCard({ project }) {
         <Link
             to={`/admin/projects/${project.id}`}
             className="
-        group flex min-h-40 overflow-hidden
+        group flex min-h-40 flex-col overflow-hidden sm:flex-row
         rounded-[20px] border border-[#E7DED2]
         bg-[#FFFDFA]
         transition-all duration-300
@@ -700,7 +678,7 @@ function AssignedProjectCard({ project }) {
         motion-reduce:transform-none
       "
         >
-            <div className="relative w-[37%] shrink-0 bg-[#E9DFD1]">
+            <div className="relative h-32 w-full shrink-0 bg-[#E9DFD1] sm:h-auto sm:w-[37%]">
                 {imageUrl && !imageFailed ? (
                     <img
                         src={imageUrl}
@@ -732,7 +710,7 @@ function AssignedProjectCard({ project }) {
                     </p>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-semibold uppercase text-[#716658]">
                         {statusLabel(project.status)}
                     </span>
@@ -992,7 +970,7 @@ export default function SupervisorDetails() {
             )}
 
             {/* BREADCRUMB */}
-            <nav className="flex flex-wrap items-center gap-2 text-xs text-[#716658]">
+            <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs text-[#716658]">
                 <Link to="/admin/dashboard">Dashboard</Link>
                 <span>/</span>
                 <Link to="/admin/supervisors">Supervisors</Link>
@@ -1050,7 +1028,7 @@ export default function SupervisorDetails() {
                                 Back to Supervisors
                             </Link>
 
-                            <div className="mt-6 flex flex-wrap items-start gap-4">
+                            <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap">
                                 <div className="flex h-17 w-17 shrink-0 items-center justify-center rounded-[22px] bg-linear-to-br from-[#D3C0A8] to-[#F1EADF] text-2xl font-bold text-[#514232] shadow-[0_8px_20px_rgba(33,30,26,0.08)]">
                                     {name.charAt(0).toUpperCase()}
                                 </div>
@@ -1143,7 +1121,7 @@ export default function SupervisorDetails() {
                                             htmlFor={`supervisor-${field.key}`}
                                             className="text-xs font-bold uppercase tracking-[0.09em] text-[#716658]"
                                         >
-                                            {field.label}
+                                            {field.label}{editing ? " *" : ""}
                                         </label>
 
                                         {editing ? (
@@ -1161,11 +1139,14 @@ export default function SupervisorDetails() {
                                                     }
                                                     disabled={Boolean(loadingMessage)}
                                                     aria-invalid={Boolean(fieldErrors[field.key])}
+                                                    aria-required="true"
+                                                    aria-describedby={fieldErrors[field.key] ? `supervisor-${field.key}-error` : undefined}
                                                     className={`${inputClass} mt-2`}
                                                 />
 
                                                 {fieldErrors[field.key] && (
                                                     <p
+                                                        id={`supervisor-${field.key}-error`}
                                                         role="alert"
                                                         className="mt-2 text-xs text-red-700"
                                                     >
@@ -1213,7 +1194,7 @@ export default function SupervisorDetails() {
                             )}
 
                             {editing && (
-                                <div className="mt-6 flex justify-end gap-3 border-t border-[#F0E9DF] pt-5">
+                                <div className="flex flex-wrap justify-end gap-3 border-t border-[#F0E9DF] mt-6 pt-5">
                                     <button
                                         type="button"
                                         onClick={() => {

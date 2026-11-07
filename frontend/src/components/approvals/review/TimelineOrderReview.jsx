@@ -13,7 +13,7 @@ export default function TimelineOrderReview({ record }) {
                     <ol className="space-y-2">{sequence.map((task, index) => {
                         const previous = positions.get(String(task.task_id));
                         const moved = column === 1 && previous !== index + 1;
-                        return <li key={task.task_id} className={`rounded-xl p-3 text-sm ${moved ? "bg-[#EDF3FC] text-[#284F83]" : "bg-[#F5F1EA]"}`}>
+                        return <li key={task.task_id} className={`wrap-anywhere rounded-xl p-3 text-sm ${moved ? "bg-[#EDF3FC] text-[#284F83]" : "bg-[#F5F1EA]"}`}>
                             <span className="mr-2 font-bold">{index + 1}.</span>{record.taskNames?.[task.task_id] || "Task unavailable"}
                             {moved && <span className="mt-1 block text-xs">Position {previous} → {index + 1}</span>}
                         </li>;

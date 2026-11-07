@@ -40,7 +40,7 @@ export default function RequestReview({ item, onClose, onSuccess, readOnly = fal
         <div className="space-y-6 p-5 sm:p-8">
             <div><h3 className="text-xl font-bold">{record?.task_title || record?.title || item.title || requestLabels[item.requestType]}</h3>
                 <p className="mt-2 text-sm text-[#716658]">{record?.project_name || item.projectName || "Project request"}</p>
-                <span className={`mt-3 inline-block rounded-full px-3 py-1 text-xs font-semibold ${status === "REJECTED" ? "bg-[#FCE9E6] text-[#B5473E]" : "bg-[#EDF3FC] text-[#3565A5]"}`}>{formatText(status)}</span>
+                <span className={`mt-3 inline-block rounded-full px-3 py-1 text-xs font-semibold ${status === "REJECTED" ? "bg-[#FCE9E6] text-[#B5473E]" : status === "PENDING" ? "bg-[#FFF2D8] text-[#94651D]" : ["APPROVED", "VERIFIED"].includes(status) ? "bg-[#E7F2E8] text-[#296F40]" : "bg-[#F1EADF] text-[#716658]"}`}>{formatText(status)}</span>
             </div>
             {loading ? <p role="status" className="flex items-center gap-2 text-sm"><RefreshCw size={17} className="animate-spin" />Loading request details…</p> : record ? <>
                 <div className="grid gap-4 rounded-2xl bg-[#F8F4EE] p-4 sm:grid-cols-2"><Meta label={item.historyId ? "Original task decision" : "Submitted by"} value={item.historyId ? "Historical approval cycle" : record.reported_by_name || record.requested_by_name || record.created_by_name || item.creator} /><Meta label="Submitted" value={formatDateTime(item.createdAt || record.reported_at || record.created_at)} /></div>
@@ -50,8 +50,8 @@ export default function RequestReview({ item, onClose, onSuccess, readOnly = fal
                 {status !== "PENDING" && <ApprovalHistory status={status} reviewer={item.historyId ? item.reviewedBy : decision.reviewer || item.reviewedBy} date={item.historyId ? item.reviewedAt : decision.date || item.reviewedAt} comment={item.historyId ? item.comment : decision.comment || item.comment} />}
                 {role === "ADMIN" && item.requestType === "delay" && record.extension_requested && record.extension_status === "PENDING" && <Link className="inline-block text-sm font-semibold text-[#3565A5]" to={`/admin/approvals?tab=delays&type=extension&request=${item.id}`}>Review deadline extension →</Link>}
                 {canDecide && <div className="rare-action-footer grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <button type="button" disabled={Boolean(busy) || approveBlocked} onClick={() => setAction("approve")} className="rare-button rare-button-success"><Check size={18} />{item.requestType === "work" ? "Verify" : "Approve"}</button>
-                    <button type="button" disabled={Boolean(busy)} onClick={() => setAction("reject")} className="rare-button rare-button-danger"><XCircle size={18} />Reject</button>
+                    <button type="button" disabled={Boolean(busy) || approveBlocked} onClick={() => setAction("approve")} className="rare-button rare-button-success"><Check size={18} />{item.requestType === "work" ? "Verify Work" : "Approve Request"}</button>
+                    <button type="button" disabled={Boolean(busy)} onClick={() => setAction("reject")} className="rare-button rare-button-danger"><XCircle size={18} />Reject Request</button>
                 </div>}
             </> : <button type="button" onClick={retry} className="rare-button rare-button-secondary">Retry loading details</button>}
         </div>
