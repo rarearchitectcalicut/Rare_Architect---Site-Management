@@ -7,9 +7,14 @@ from .views import (
     NotificationMarkAllReadView,
 )
 
+from .push_views import PushPublicKeyView, PushSubscriptionView, PushSubscriptionStatusView
+
 app_name = "notifications"
 
 urlpatterns = [
+    path("notifications/push/public-key/", PushPublicKeyView.as_view(), name="push-public-key"),
+    path("notifications/push/subscription/", PushSubscriptionView.as_view(), name="push-subscription"),
+    path("notifications/push/subscription/status/", PushSubscriptionStatusView.as_view(), name="push-subscription-status"),
     path(
         "notifications/",
         NotificationListView.as_view(),
