@@ -2174,7 +2174,9 @@ def approve_delay_extension(
 
     try:
         if extend_project:
-            project.full_clean()
+            # This operation changes dates only. Existing remote cover images can
+            # have extensionless storage keys; upload validation belongs to uploads.
+            project.full_clean(exclude=["cover_image"])
         task.full_clean()
 
     except DjangoValidationError as exc:
