@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowUpRight, FolderOpen, RefreshCw } from "lucide-react";
+import { ArrowUpRight, FolderOpen, RefreshCw, Search } from "lucide-react";
 import { projectApi } from "../../api/projectApi";
 import { validationMessage } from "../../hooks/useApprovalReview";
 
@@ -64,6 +64,7 @@ export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false
         <div className="relative min-w-0 flex-1 basis-52" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) { setOpen(false); setActive(-1); } }}>
             <label htmlFor={id} className="mb-2 block text-sm font-semibold text-[#817669]">{label}</label>
             <div className="relative">
+                <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]" />
                 <input id={id} type="search" maxLength={200} value={search} placeholder={placeholder} autoComplete="off"
                     role={suggestions !== undefined ? "combobox" : undefined} aria-autocomplete={suggestions !== undefined ? "list" : undefined}
                     aria-expanded={suggestions !== undefined ? expanded : undefined} aria-controls={expanded ? `${id}-list` : undefined}
@@ -77,7 +78,7 @@ export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false
                         }
                         if (event.key === "Enter") { event.preventDefault(); if (expanded && matches[active]) select(matches[active]); else commit(search.trim()); }
                     }}
-                    className="min-h-12 w-full min-w-0 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] py-3 pl-3 pr-14 text-base text-[#211E1A] outline-none placeholder:text-[#817669] focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]" />
+                    className="min-h-12 w-full min-w-0 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] py-3 pl-11 pr-14 text-base text-[#211E1A] outline-none placeholder:text-[#817669] focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]" />
                 {search && <button type="button" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => { change(""); setOpen(false); }} className="absolute right-0 top-0 flex h-12 w-12 items-center justify-center rounded-xl text-lg text-[#817669] focus-visible:outline-2 focus-visible:outline-[#A58A67]">×</button>}
             </div>
             {expanded && <ul id={`${id}-list`} role="listbox" aria-label={`${label} suggestions`} className="absolute left-0 right-0 z-40 mt-1 max-h-64 overflow-y-auto rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-1 shadow-lg">
@@ -161,9 +162,9 @@ export default function ReportProjectPicker({ role = "ADMIN" }) {
                     <p className="mt-2 text-sm text-[#716658]">{query ? "Try a different project name or clear the search." : admin ? "Projects will appear here once created." : "Your projects will appear here when an administrator assigns them to you."}</p>
                     {(query || page > 1) && <button type="button" className={`${button} mt-4`} onClick={() => applySearch("")}>Reset search and page</button>}
                 </div>}
-                <nav aria-label="Project pages" className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                <nav aria-label="Project pages" className="rare-pagination text-sm">
                     <button type="button" className={button} disabled={!data.previous || page === 1} onClick={() => changePage(page - 1)}>Previous</button>
-                    <span>Page {page} of {Math.max(1, Math.ceil(data.count / pageSize))}</span>
+                    <span aria-live="polite" aria-atomic="true">Page {page} of {Math.max(1, Math.ceil(data.count / pageSize))}</span>
                     <button type="button" className={button} disabled={!data.next} onClick={() => changePage(page + 1)}>Next</button>
                 </nav>
             </>}

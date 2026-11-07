@@ -274,7 +274,7 @@ function ScheduleTaskRow({
             <div
                 className="
           sticky left-0 z-10
-          flex w-[224px] min-w-[224px]
+          rare-schedule-label flex
           flex-col justify-center
           gap-1 border-r border-[#EEE6DC]
           bg-[#FFFDFA] px-4 py-3
@@ -438,7 +438,7 @@ export default function TimelineSchedule({
     }
 
     return (
-        <section className="overflow-hidden rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA]">
+        <section className="rare-schedule overflow-hidden rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA]">
             {/* HEADER */}
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#EEE6DC] p-5 sm:p-6">
                 <div>
@@ -554,13 +554,13 @@ export default function TimelineSchedule({
                     >
                         <div
                             style={{
-                                width: 224 + totalWidth,
+                                width: `calc(var(--rare-schedule-label-width) + ${totalWidth}px)`,
                                 minWidth: "100%",
                             }}
                         >
                             {/* MONTH HEADERS */}
                             <div className="flex border-b border-[#EEE6DC] bg-[#F8F4EE]">
-                                <div className="sticky left-0 z-20 flex w-[224px] min-w-[224px] items-center border-r border-[#EEE6DC] bg-[#F8F4EE] px-4 py-3">
+                                <div className="sticky left-0 z-20 rare-schedule-label flex items-center border-r border-[#EEE6DC] bg-[#F8F4EE] px-4 py-3">
                                     <span className="text-xs font-bold text-[#665E53]">
                                         Project Tasks
                                     </span>
@@ -584,7 +584,7 @@ export default function TimelineSchedule({
 
                             {/* DAY HEADERS */}
                             <div className="flex border-b border-[#EEE6DC] bg-[#FCF9F5]">
-                                <div className="sticky left-0 z-20 flex w-[224px] min-w-[224px] items-center border-r border-[#EEE6DC] bg-[#FCF9F5] px-4 py-3">
+                                <div className="sticky left-0 z-20 rare-schedule-label flex items-center border-r border-[#EEE6DC] bg-[#FCF9F5] px-4 py-3">
                                     <span className="text-xs text-[#716658]">
                                         Planned start / end
                                     </span>
@@ -651,7 +651,7 @@ export default function TimelineSchedule({
                                         aria-hidden="true"
                                         className="pointer-events-none absolute bottom-0 top-0 z-[5] w-px bg-[#3565A5]/70"
                                         style={{
-                                            left: 224 + todayLeft,
+                                            left: `calc(var(--rare-schedule-label-width) + ${todayLeft}px)`,
                                         }}
                                     />
                                 )}

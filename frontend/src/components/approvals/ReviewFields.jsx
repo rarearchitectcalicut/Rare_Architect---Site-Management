@@ -4,7 +4,7 @@ export default function Meta({ label, value }) {
             <p className="text-xs font-bold uppercase tracking-[0.11em] text-[#716658]">
                 {label}
             </p>
-            <p className="mt-1.5 wrap-break-word text-sm font-semibold text-[#211E1A]">
+            <p className="mt-1.5 whitespace-pre-wrap wrap-anywhere text-sm font-semibold text-[#211E1A]">
                 {value || "Not specified"}
             </p>
         </div>

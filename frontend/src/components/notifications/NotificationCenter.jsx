@@ -928,7 +928,7 @@ export default function NotificationCenter({
                     )}
 
                     {pageCount > 1 && (
-                        <div className="flex items-center justify-between gap-3 border-t border-[#EEE6DC] bg-[#FFFDFA] p-3 sm:px-5">
+                        <nav aria-label="Notification pages" className="rare-pagination border-t border-[#EEE6DC] bg-[#FFFDFA] p-3 sm:px-5">
                             <button
                                 type="button"
                                 disabled={safePage === 1}
@@ -941,7 +941,7 @@ export default function NotificationCenter({
                                 Previous
                             </button>
 
-                            <span className="text-sm text-[#716658]">
+                            <span aria-live="polite" aria-atomic="true" className="text-sm text-[#716658]">
                                 <span className="font-semibold text-[#211E1A]">
                                     {safePage}
                                 </span>{" "}
@@ -961,7 +961,7 @@ export default function NotificationCenter({
                                 Next
                                 <ChevronRight size={18} />
                             </button>
-                        </div>
+                        </nav>
                     )}
                 </section>
             )}

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import ApprovalModal from "../../components/approvals/ApprovalModal";
 import { delayTypes } from "../../components/approvals/queueData";
 import { formatDate, formatText } from "../../components/approvals/approvalUtils";
@@ -78,10 +78,10 @@ export default function DelayReportForm({ tasks, taskOptions, onClose, onSaved }
             <div className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-bold">Report a task delay</h2><p className="mt-2 text-sm text-[#716658]">The deadline changes only after a separate extension approval.</p></div><button type="button" aria-label="Close delay form" disabled={saving || confirming} onClick={close} className="rounded-full bg-[#F1EADF] p-2"><X size={18} /></button></div>
             <fieldset disabled={saving || confirming} className="min-w-0 space-y-5">
                 {taskOptions && <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-[#716658]">Find an eligible task<input type="search" value={taskOptions.search} maxLength={200} onChange={(event) => taskOptions.onSearch(event.target.value)} className={input} /></label>
+                    <label className="block text-xs font-semibold text-[#716658]">Find an eligible task<span className="relative block"><span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center pt-2 text-[#716658]"><Search size={18} /></span><input type="search" value={taskOptions.search} maxLength={200} onChange={(event) => taskOptions.onSearch(event.target.value)} className={`${input} pl-11`} /></span></label>
                     {taskOptions.loading && <p role="status" className="text-xs text-[#716658]">Loading eligible tasks...</p>}
                     {taskOptions.error && <p role="alert" className="text-xs text-red-700">{taskOptions.error} <button type="button" onClick={taskOptions.onRetry} className="underline">Retry</button></p>}
-                    {taskOptions.count > 20 && <div className="flex items-center gap-3 text-xs"><button type="button" disabled={taskOptions.loading || taskOptions.page === 1} onClick={() => taskOptions.onPage(taskOptions.page - 1)}>Previous tasks</button><span>Page {taskOptions.page} / {Math.ceil(taskOptions.count / 20)}</span><button type="button" disabled={taskOptions.loading || taskOptions.page * 20 >= taskOptions.count} onClick={() => taskOptions.onPage(taskOptions.page + 1)}>Next tasks</button></div>}
+                    {taskOptions.count > 20 && <nav aria-label="Delay task pages" className="rare-pagination text-xs"><button type="button" disabled={taskOptions.loading || taskOptions.page === 1} onClick={() => taskOptions.onPage(taskOptions.page - 1)}>Previous tasks</button><span aria-live="polite" aria-atomic="true">Page {taskOptions.page} / {Math.ceil(taskOptions.count / 20)}</span><button type="button" disabled={taskOptions.loading || taskOptions.page * 20 >= taskOptions.count} onClick={() => taskOptions.onPage(taskOptions.page + 1)}>Next tasks</button></nav>}
                 </div>}
                 <label className="block text-xs font-semibold text-[#716658]">Task *<select {...field("task")} autoFocus required value={form.task} onChange={(event) => chooseTask(event.target.value)} className={input}><option value="">Select an approved task</option>{task && !tasks.some((item) => String(item.id) === form.task) && <option value={form.task}>{task.title}</option>}{tasks.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select><FieldError name="task" errors={errors} /></label>
                 {!tasks.length && !taskOptions?.loading && !taskOptions?.error && <p className="text-sm text-[#716658]">No eligible tasks match this search.</p>}
