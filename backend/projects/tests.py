@@ -181,6 +181,25 @@ class ProjectCancellationTests(TestCase):
         self.assertEqual(self.client.get(self.url).status_code, 404)
         self.assertTrue(Project.objects.filter(pk=self.project.pk).exists())
 
+    def test_restoring_cancelled_project_notifies_assigned_supervisor_once(self):
+        from notifications.models import Notification
+
+        for status in ("ACTIVE", "MAINTENANCE", "ON_HOLD", "COMPLETED"):
+            with self.subTest(status=status):
+                Project.objects.filter(pk=self.project.pk).update(status="CANCELLED")
+                Notification.objects.all().delete()
+                response = self.client.patch(self.url, {"status": status}, format="json")
+                self.assertEqual(response.status_code, 200, response.data)
+                self.project.refresh_from_db()
+                self.assertEqual(self.project.status, status)
+                notification = Notification.objects.get(reference_id=self.project.pk)
+                self.assertEqual(notification.recipient_id, self.supervisor.pk)
+                self.assertEqual(notification.reference_type, "PROJECT")
+                self.assertIn(self.project.get_status_display(), notification.message)
+                self.assertEqual(notification.title, "Project reactivated" if status == "ACTIVE" else "Project status changed")
+                self.assertEqual(self.client.patch(self.url, {"status": status}, format="json").status_code, 200)
+                self.assertEqual(Notification.objects.filter(reference_id=self.project.pk).count(), 1)
+
     def test_operational_writes_are_blocked_after_cancellation(self):
         self.assertEqual(self.cancel().status_code, 200)
         self.client.force_authenticate(self.supervisor)

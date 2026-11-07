@@ -389,6 +389,15 @@ class ProjectDetailView(generics.RetrieveUpdateAPIView):
                     message=f"{project.name} has been cancelled by Admin. Existing project records remain available for reference.",
                     reference_type="PROJECT", reference_id=project.pk,
                 )
+            elif old_status == Project.Status.CANCELLED:
+                status_label = project.get_status_display()
+                create_notifications(
+                    recipient_ids=project.supervisor_assignments.values_list("supervisor_id", flat=True),
+                    project_id=project.pk, notification_type=Notification.Type.SYSTEM,
+                    title="Project reactivated" if project.status == Project.Status.ACTIVE else "Project status changed",
+                    message=f"{project.name} has been changed from Cancelled to {status_label} by Admin.",
+                    reference_type="PROJECT", reference_id=project.pk,
+                )
         detail_fields = sorted(set(changed_fields) - {"status"})
         if detail_fields:
             create_activity_log(

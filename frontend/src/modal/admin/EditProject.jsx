@@ -37,12 +37,11 @@ const initialValues = {
 
 const STATUS_OPTIONS = [
     { value: "ACTIVE", label: "Active" },
+    { value: "MAINTENANCE", label: "Maintenance" },
     { value: "COMPLETED", label: "Completed" },
     { value: "ON_HOLD", label: "On Hold" },
 ];
 
-// Add MAINTENANCE to STATUS_OPTIONS only if
-// your current Django Project model allows it.
 
 function listItems(response) {
     if (Array.isArray(response)) return response;

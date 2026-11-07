@@ -89,7 +89,6 @@ function EvidenceFile({ file, onRemove, busy, fileApi = dailyReportApi }) {
             <p className="break-all text-base font-bold leading-6 text-[#352D24]">{file.original_filename}</p>
             {preview?.type.startsWith("image/") && <button type="button" onClick={view} aria-label={`Enlarge ${file.original_filename}`} className="mt-4 flex min-h-32 items-center sm:min-h-44 justify-center rounded-xl border border-[#E9E1D6] bg-[#F8F4EE] p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3565A5]"><img src={preview.url} alt={file.caption || file.original_filename} className="max-h-40 max-w-full rounded-lg sm:max-h-48 object-contain" /></button>}
             {file.caption && <p className="mt-1 text-xs text-[#716658]">{file.caption}</p>}
-            {file.task_work && <p className="mt-1 break-all text-xs text-[#716658]">Task work reference: {file.task_work}</p>}
             {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
             <div className="mt-3 flex flex-wrap gap-2">{previewable && <button type="button" disabled={loading} onClick={view} className={`${button} !border-[#211E1A] !bg-[#211E1A] !text-[#FFFDFA] hover:!bg-[#39332B]`}>{loading ? "Loading…" : "Preview"}</button>}<button type="button" disabled={loading} onClick={download} className={button}>Download</button></div>
             {!previewable && <p className="mt-2 text-xs text-[#716658]">Download to open with a compatible application on your device.</p>}

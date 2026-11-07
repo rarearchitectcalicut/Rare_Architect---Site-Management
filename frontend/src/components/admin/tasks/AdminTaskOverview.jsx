@@ -6,7 +6,7 @@ export default function AdminTaskOverview({ task }) {
         { title: "Task essentials", icon: ClipboardList, fields: [["Title", task.title], ["Project", task.project_name], ["Worker / team", task.worker_name], ["Priority", formatText(task.priority)]] },
         { title: "Schedule & status", icon: CalendarDays, fields: [["Start date", formatDate(task.start_date)], ["End date", formatDate(task.end_date)], ["Display order", task.display_order], ["Approval status", formatText(task.approval_status)], ["Work status", formatText(task.work_status)]] },
         { title: "Measurement baseline", icon: Ruler, fields: [["Measurement method", formatText(task.measurement_method)], ["Planned quantity", task.planned_quantity], ["Measurement unit", formatText(task.measurement_unit)]] },
-        { title: "Approval & audit", icon: ShieldCheck, fields: [["Created by", task.created_by_name], ["Approved by", task.approved_by_name], ["Approval date", formatDate(task.approved_at)], ["Created date", formatDate(task.created_at)], ["Updated date", formatDate(task.updated_at)], ["Batch reference", task.batch]] },
+        { title: "Approval & audit", icon: ShieldCheck, fields: [["Created by", task.created_by_name], ["Approved by", task.approved_by_name], ["Approval date", formatDate(task.approved_at)], ["Created date", formatDate(task.created_at)], ["Updated date", formatDate(task.updated_at)]] },
     ];
     return <div className="space-y-6">
         <div className="grid items-start gap-5 xl:grid-cols-2">{groups.map(({ title, icon: Icon, fields }) => (
