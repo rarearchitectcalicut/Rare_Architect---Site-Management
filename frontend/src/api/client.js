@@ -21,7 +21,7 @@ const SESSION_KEY = "rare.auth.tokens";
 
 function readStoredTokens() {
   try {
-    return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || {};
+    return JSON.parse(localStorage.getItem(SESSION_KEY)) || {};
   } catch {
     return {};
   }
@@ -37,7 +37,7 @@ export function setAuthTokens(tokens) {
   accessToken = tokens?.access ?? null;
   refreshToken = tokens?.refresh ?? null;
   try {
-    sessionStorage.setItem(
+    localStorage.setItem(
       SESSION_KEY,
       JSON.stringify({ access: accessToken, refresh: refreshToken })
     );
@@ -50,7 +50,7 @@ export function clearAuthTokens() {
   accessToken = null;
   refreshToken = null;
   try {
-    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_KEY);
   } catch {
     // Browser storage may be unavailable.
   }
