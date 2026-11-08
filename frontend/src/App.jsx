@@ -142,7 +142,7 @@ export default function App() {
         onNeedReload: () => {
           reloadRequired.current = true;
           // Another tab can activate the worker. Never reload this tab's form.
-          if (reloadApproved.current && !document.querySelector('form, dialog[open], [role="dialog"], input, textarea, select, [contenteditable="true"]')) {
+          if (reloadApproved.current) {
             window.location.reload();
           } else {
             reloadApproved.current = false;
@@ -175,12 +175,6 @@ export default function App() {
   }, []);
 
   const applyUpdate = async () => {
-    // Existing forms do not share a dirty-state API. Conservatively require
-    // users to finish/close all editors, including uploads, before updating.
-    if (document.querySelector('form, dialog[open], [role="dialog"], input, textarea, select, [contenteditable="true"]')) {
-      setUpdateMessage("Save your work, wait for uploads to finish, then close forms and return to the dashboard to update.");
-      return;
-    }
     if (!navigator.onLine) {
       setConnectionError(true);
       return;

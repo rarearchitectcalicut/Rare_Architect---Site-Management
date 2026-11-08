@@ -5,6 +5,7 @@ import uuid
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 from .models import Notification
+from .push import send_notification_pushes
 
 
 # =====================================================
@@ -124,6 +125,8 @@ def create_notifications(
 
     if notifications:
         Notification.objects.bulk_create(notifications)
+        created = tuple((item.id, item.recipient_id) for item in notifications)
+        transaction.on_commit(lambda: send_notification_pushes(created), robust=True)
 
     return len(notifications)
 

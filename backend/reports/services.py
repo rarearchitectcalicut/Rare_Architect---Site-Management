@@ -45,6 +45,7 @@ from notifications.report_events import (
     notify_deadline_extension_approved,
     notify_deadline_extension_rejected,
 )
+from notifications.services import schedule_notifications
 
 # =====================================================
 # PROJECT ACCESS HELPERS
@@ -1041,16 +1042,23 @@ def upload_daily_report_attachment(
     supervisor,
     data,
 ):
-    lock_project_for_work(get_object_or_404(DailyReport.objects.only("project_id"), pk=report_id).project_id)
+    import hashlib
+
+    from common.image_compression import compress_image
+
+    lock_project_for_work(
+        get_object_or_404(
+            DailyReport.objects.only("project_id"),
+            pk=report_id,
+        ).project_id
+    )
+
     report = get_object_or_404(
         DailyReport.objects.select_for_update().select_related("project"),
         pk=report_id,
     )
 
-    validate_daily_report_draft(
-        report,
-        supervisor,
-    )
+    validate_daily_report_draft(report, supervisor)
 
     serializer = DailyReportAttachmentUploadSerializer(
         data=data,
@@ -1060,37 +1068,88 @@ def upload_daily_report_attachment(
 
     uploaded_file = serializer.validated_data["file"]
 
+    # Capture metadata before compression.
     original_filename = Path(uploaded_file.name).name[:255]
+    original_size = uploaded_file.size
+
+    # Hash the original upload, not the compressed file.
+    digest = hashlib.sha256()
+    uploaded_file.seek(0)
+
+    for chunk in uploaded_file.chunks():
+        digest.update(chunk)
+
+    original_sha256 = digest.hexdigest()
+    uploaded_file.seek(0)
+
     client_id = serializer.validated_data.get("client_id")
+
     if client_id:
         existing = DailyReportAttachment.objects.filter(pk=client_id).first()
+
         if existing:
-            if existing.daily_report_id != report.id or existing.file_size != uploaded_file.size or existing.original_filename != original_filename or existing.caption != serializer.validated_data.get("caption", "") or existing.task_work_id != getattr(serializer.validated_data.get("task_work"), "id", None):
-                raise ValidationError({"client_id": "This retry identifier belongs to different evidence."})
-            with existing.file.storage.open(existing.file.name, "rb") as saved:
-                matches = saved.read(uploaded_file.size + 1) == uploaded_file.read()
-            uploaded_file.seek(0)
+            same_metadata = (
+                existing.daily_report_id == report.id
+                and existing.file_size == original_size
+                and existing.original_filename == original_filename
+                and existing.caption == serializer.validated_data.get("caption", "")
+                and existing.task_work_id
+                == getattr(
+                    serializer.validated_data.get("task_work"),
+                    "id",
+                    None,
+                )
+            )
+
+            if not same_metadata:
+                raise ValidationError(
+                    {
+                        "client_id": (
+                            "This retry identifier belongs " "to different evidence."
+                        )
+                    }
+                )
+
+            if existing.original_sha256:
+                # New attachments: compare original checksums.
+                matches = existing.original_sha256 == original_sha256
+            else:
+                # Legacy attachments saved before checksums existed.
+                with existing.file.storage.open(existing.file.name, "rb") as saved:
+                    matches = saved.read(original_size + 1) == uploaded_file.read()
+
+                uploaded_file.seek(0)
+
             if not matches:
-                raise ValidationError({"client_id": "This retry identifier belongs to a different file."})
+                raise ValidationError(
+                    {
+                        "client_id": (
+                            "This retry identifier belongs " "to a different file."
+                        )
+                    }
+                )
+
             return existing
+
+    # Compress supported images only.
+    # PDFs pass through unchanged.
+    file_to_store = compress_image(uploaded_file)
 
     attachment = DailyReportAttachment(
         **({"id": client_id} if client_id else {}),
         daily_report=report,
         task_work=serializer.validated_data.get("task_work"),
         original_filename=original_filename,
-        file_size=uploaded_file.size,
+        file_size=original_size,
+        original_sha256=original_sha256,
         caption=serializer.validated_data.get("caption", ""),
         uploaded_by=supervisor,
     )
 
-    # FileField saves the file to private storage.
-    # If DB validation or saving fails, remove
-    # the newly written file.
     try:
         attachment.file.save(
             uploaded_file.name,
-            uploaded_file,
+            file_to_store,
             save=False,
         )
 
@@ -1107,14 +1166,20 @@ def upload_daily_report_attachment(
                 "daily_report_id": str(report.id),
                 "project_id": str(report.project_id),
                 "file_size": attachment.file_size,
-                "task_work_id": str(attachment.task_work_id) if attachment.task_work_id else None,
+                "task_work_id": (
+                    str(attachment.task_work_id) if attachment.task_work_id else None
+                ),
             },
         )
 
     except IntegrityError:
         if attachment.file.name:
             attachment.file.delete(save=False)
-        raise ValidationError({"client_id": "This retry identifier is already in use."})
+
+        raise ValidationError(
+            {"client_id": ("This retry identifier is already in use.")}
+        )
+
     except Exception:
         if attachment.file.name:
             attachment.file.delete(save=False)
@@ -2072,6 +2137,9 @@ def approve_delay_extension(
 
     old_end_date = task.end_date
     new_end_date = report.requested_end_date
+    project = task.project
+    old_project_end_date = project.end_date
+    extend_project = old_project_end_date is not None and new_end_date > old_project_end_date
 
     if old_end_date is not None and new_end_date <= old_end_date:
         raise ValidationError(
@@ -2084,13 +2152,17 @@ def approve_delay_extension(
         )
 
     from tasks.serializers import validate_task_schedule
+    # Approval extends the locked project window only when necessary. Validate
+    # against the new window while preserving all other task date restrictions.
+    if extend_project:
+        project.end_date = new_end_date
     try:
-        validate_task_schedule(task.project, task.start_date, new_end_date)
+        validate_task_schedule(project, task.start_date, new_end_date)
     except ValidationError as exc:
         raise ValidationError({
             "requested_end_date": [
                 *exc.detail.values(),
-                "Review and update the project schedule first through project editing.",
+                "Review the task and project start dates before approving this extension.",
             ],
         })
 
@@ -2101,6 +2173,10 @@ def approve_delay_extension(
     task.end_date = new_end_date
 
     try:
+        if extend_project:
+            # This operation changes dates only. Existing remote cover images can
+            # have extensionless storage keys; upload validation belongs to uploads.
+            project.full_clean(exclude=["cover_image"])
         task.full_clean()
 
     except DjangoValidationError as exc:
@@ -2108,6 +2184,9 @@ def approve_delay_extension(
             raise ValidationError(exc.message_dict)
 
         raise ValidationError(exc.messages)
+
+    if extend_project:
+        project.save(update_fields=["end_date", "updated_at"])
 
     task.save(
         update_fields=[
@@ -2144,6 +2223,9 @@ def approve_delay_extension(
                 old_end_date.isoformat() if old_end_date is not None else None
             ),
             "new_end_date": new_end_date.isoformat(),
+            "project_deadline_extended": extend_project,
+            "old_project_end_date": old_project_end_date.isoformat() if old_project_end_date else None,
+            "new_project_end_date": project.end_date.isoformat() if project.end_date else None,
             "admin_comment": admin_comment.strip(),
         },
     )
@@ -2162,9 +2244,31 @@ def approve_delay_extension(
             "new_status": report.extension_status,
             "old_end_date": old_end_date.isoformat() if old_end_date else None,
             "new_end_date": new_end_date.isoformat(),
+            "project_deadline_extended": extend_project,
+            "old_project_end_date": old_project_end_date.isoformat() if old_project_end_date else None,
+            "new_project_end_date": project.end_date.isoformat() if project.end_date else None,
             "comment": report.extension_admin_comment,
         },
     )
+
+    if extend_project:
+        create_activity_log(
+            actor=admin_user, action="PROJECT_UPDATED", entity_type="PROJECT", entity_id=project.pk,
+            description=f"Project '{project.name}' finish date extended by an approved task extension.",
+            metadata={
+                "project_id": str(project.pk), "task_id": str(task.pk),
+                "delay_report_id": str(report.pk), "changed_fields": ["end_date"],
+                "old_end_date": old_project_end_date.isoformat(),
+                "new_end_date": new_end_date.isoformat(), "source": "EXTENSION_APPROVED",
+            },
+        )
+        schedule_notifications(
+            recipient_ids=project.supervisor_assignments.values_list("supervisor_id", flat=True),
+            project_id=project.pk, notification_type="SYSTEM", title="Project dates changed",
+            message=(f"{project.name}: Project finish date extended from {old_project_end_date:%d %B %Y} "
+                     f"to {new_end_date:%d %B %Y} following an approved task deadline extension."),
+            reference_type="PROJECT", reference_id=project.pk,
+        )
 
     notify_deadline_extension_approved(report)
 

@@ -972,11 +972,17 @@ class DailyReportAttachment(models.Model):
         related_name="attachments",
     )
 
-    
     file = models.FileField(
         upload_to=daily_report_attachment_path,
         storage=private_report_storage,
         max_length=500,
+    )
+
+    original_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        editable=False,
     )
 
     original_filename = models.CharField(

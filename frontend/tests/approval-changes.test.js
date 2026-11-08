@@ -58,23 +58,47 @@ async function reviewFixture(item, record, props = {}) {
 
 test("extension approval remains disabled until its delay report is approved", async () => {
     const html = await reviewFixture({ id: "delay", requestType: "extension", status: "PENDING" }, { status: "PENDING", extension_status: "PENDING", requested_end_date: "2026-11-10" });
-    const approve = [...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)].find((match) => match[2].endsWith("Approve"));
+    const approve = [...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)].find((match) => match[2].endsWith("Approve Request"));
     assert.ok(approve && /\sdisabled=/.test(approve[1]));
     assert.ok(html.includes("must be approved"));
+});
+
+test("extension review makes automatic project finish-date changes explicit before approval", async () => {
+    const { exports } = await loadSource("components/approvals/review/ExtensionReview.jsx");
+    const record = { extension_status: "PENDING", status: "APPROVED", project_end_date: "2026-11-02", requested_end_date: "2026-11-10" };
+    const html = render(exports.default, { record });
+    assert.ok(html.includes("This approval also extends the project."));
+    assert.ok(html.includes("Current project finish date"));
+    for (const project_end_date of ["2026-11-10", "2026-11-20", null]) {
+        assert.ok(!render(exports.default, { record: { ...record, project_end_date } }).includes("This approval also extends the project."));
+    }
+});
+
+test("approved extension review displays the recorded project date change after subsequent schedule changes", async () => {
+    const { exports } = await loadSource("components/approvals/review/ExtensionReview.jsx");
+    const html = render(exports.default, { record: {
+        extension_status: "APPROVED", status: "APPROVED", project_end_date: "2026-12-20",
+        deadline_history: { project_deadline_extended: true, previous_project_deadline: "2026-11-02", new_project_deadline: "2026-11-10" },
+    } });
+    assert.ok(html.includes("Project finish date extended"));
+    assert.ok(html.includes("Previous project finish date"));
+    assert.ok(html.includes("Approved project finish date"));
+    assert.ok(html.includes("02 Nov 2026"));
+    assert.ok(html.includes("10 Nov 2026"));
 });
 
 test("decision history is read-only and exposes reviewer, reason and decision", async () => {
     const html = await reviewFixture({ id: "task", requestType: "tasks", historyId: "decision", status: "REJECTED", reviewedBy: "Reviewing Admin", comment: "Correct quantities", reviewedAt: "2026-10-23T08:00:00Z" }, { title: "Current task", approval_status: "PENDING" }, { readOnly: true });
     for (const value of ["Reviewing Admin", "Correct quantities", "Rejected", "historical"]) assert.ok(html.toLowerCase().includes(value.toLowerCase()));
-    assert.ok(!/>Approve<\/button>/.test(html));
-    assert.ok(!/>Reject<\/button>/.test(html));
+    assert.ok(!/>Approve Request<\/button>/.test(html));
+    assert.ok(!/>Reject Request<\/button>/.test(html));
 });
 
 test("supervisor delay review has no admin actions or admin navigation", async () => {
     const html = await reviewFixture({ id: "delay", requestType: "delay", status: "PENDING" }, { status: "PENDING", project_id: "project", task: "task", reason: "Rain" }, { readOnly: true, role: "SUPERVISOR" });
     assert.ok(html.includes("/supervisor/projects/project"));
     assert.ok(!html.includes("/admin/"));
-    assert.ok(!/>Approve<\/button>/.test(html));
+    assert.ok(!/>Approve Request<\/button>/.test(html));
 });
 
 test("daily work review shows approved baseline, submitted work and verified quantity", async () => {
@@ -623,8 +647,10 @@ test("delay form validates dates, clears disabled extension dates and prevents d
     await ui.submit(); ui.draw();
     assert.equal(ui.confirmations.length, 0);
     assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props["aria-invalid"], true);
-    ui.change("requested_end_date", "2026-11-10"); ui.change("extension_requested", false); ui.change("extension_requested", true);
-    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "");
+    ui.change("requested_end_date", "2026-11-10"); ui.change("extension_requested", false);
+    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date"), undefined);
+    ui.change("extension_requested", true);
+    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "2026-11-10");
     ui.change("requested_end_date", "2026-11-10");
     const first = ui.submit(); await ui.submit(); ui.draw();
     assert.equal(ui.confirmations.length, 1); assert.equal(ui.find((node) => node.type === "fieldset").props.disabled, true);
@@ -634,6 +660,49 @@ test("delay form validates dates, clears disabled extension dates and prevents d
     assert.equal(ui.requests[0].payload.end_date, undefined);
     ui.requests[0].resolve({ id: "report", status: "PENDING", extension_status: "PENDING" }); await first;
     assert.equal(ui.saved[0].status, "PENDING");
+});
+
+test("extension date prefills from the forecast regardless of which field is chosen first", async () => {
+    for (const extensionFirst of [true, false]) {
+        const ui = await delayFormHarness();
+        ui.change("task", "task");
+        if (extensionFirst) ui.change("extension_requested", true);
+        ui.change("expected_completion_date", "2026-11-10");
+        if (!extensionFirst) ui.change("extension_requested", true);
+        assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "2026-11-10");
+        ui.change("expected_completion_date", "2026-11-12");
+        assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "2026-11-12");
+    }
+});
+
+test("a manually edited extension date survives forecast changes and is sent independently", async () => {
+    const ui = await delayFormHarness();
+    ui.change("task", "task"); ui.change("reason", "Materials delayed");
+    ui.change("expected_completion_date", "2026-11-10"); ui.change("extension_requested", true);
+    ui.change("requested_end_date", "2026-11-15");
+    ui.change("expected_completion_date", "2026-11-12");
+    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "2026-11-15");
+    const pending = ui.submit(); ui.confirmations[0](true); await flushDelay();
+    assert.equal(ui.requests[0].payload.expected_completion_date, "2026-11-12");
+    assert.equal(ui.requests[0].payload.requested_end_date, "2026-11-15");
+    assert.equal(ui.requests[0].payload.end_date, undefined);
+    ui.requests[0].resolve({ id: "report", status: "PENDING", extension_status: "PENDING" }); await pending;
+});
+
+test("toggling extension off and on starts from the current forecast and respects pending task requests", async () => {
+    const ui = await delayFormHarness();
+    ui.tasks.push({ ...ui.tasks[0], id: "pending-task", has_pending_extension: true });
+    ui.change("task", "task"); ui.change("expected_completion_date", "2026-11-10");
+    ui.change("extension_requested", true); ui.change("requested_end_date", "2026-11-15");
+    ui.change("extension_requested", false); ui.change("expected_completion_date", "2026-11-12");
+    ui.change("extension_requested", true);
+    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "2026-11-12");
+    ui.change("task", "pending-task");
+    const checkbox = ui.find((node) => node.props?.id === "delay-extension_requested");
+    assert.equal(checkbox.props.checked, false);
+    assert.equal(checkbox.props.disabled, true);
+    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date"), undefined);
+    assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props.value, "2026-11-12");
 });
 
 test("delay form preserves backend field errors and can retry after failure or cancelled confirmation", async () => {
@@ -673,11 +742,11 @@ test("Admin delay register reviews pending reports in place and Supervisors stay
     } });
     const html = render(exports.default, { role: "ADMIN" }, "/admin/delays?project=project&request=report");
     assert.ok(html.includes("Site Alpha")); assert.ok(html.includes("/admin/approvals?tab=delays"));
-    assert.ok(/>Approve<\/button>/.test(html)); assert.ok(/>Reject<\/button>/.test(html));
+    assert.ok(/>Approve Request<\/button>/.test(html)); assert.ok(/>Reject Request<\/button>/.test(html));
     assert.ok(!html.includes("Review delay in Approval Center"));
     assert.ok(!html.includes("Report delay</button>"));
     const supervisor = render(exports.default, { role: "SUPERVISOR" }, "/supervisor/delays?project=project&request=report");
-    assert.ok(!/>Approve<\/button>/.test(supervisor)); assert.ok(!/>Reject<\/button>/.test(supervisor));
+    assert.ok(!/>Approve Request<\/button>/.test(supervisor)); assert.ok(!/>Reject Request<\/button>/.test(supervisor));
 });
 
 
@@ -799,11 +868,11 @@ test("project library uses server filters and pages, discards stale data and hid
     assert.ok(find((node) => node.props?.role === "status"));
     calls[1].resolve({ results: [{ id: "document", title: "Site plan", document_type: "DRAWING", current_version: { id: "version", original_filename: "plan.pdf", file_size: 100, version_number: 2 } }], count: 17, upload_rules: documentRules, next: "ignored" }); await flushDelay(); draw();
     assert.equal(calls.length, 2);
-    assert.ok(find((node) => node.type === "button" && node.props.children === "Upload document"));
-    assert.ok(find((node) => node.type === "button" && node.props.children === "New version"));
+    assert.ok(find((node) => node.type === "button" && Array.isArray(node.props.children) && node.props.children.includes("Upload Document")));
+    assert.ok(find((node) => node.type === "button" && Array.isArray(node.props.children) && node.props.children.includes("New version")));
     role = "SUPERVISOR"; draw();
-    assert.equal(find((node) => node.type === "button" && node.props.children === "Upload document"), undefined);
-    assert.equal(find((node) => node.type === "button" && node.props.children === "New version"), undefined);
+    assert.equal(find((node) => node.type === "button" && Array.isArray(node.props.children) && node.props.children.includes("Upload Document")), undefined);
+    assert.equal(find((node) => node.type === "button" && Array.isArray(node.props.children) && node.props.children.includes("New version")), undefined);
     assert.ok(find((node) => node.type === "button" && node.props.children === "Version history"));
     find((node) => node.type === "button" && node.props.children === "Next").props.onClick(); draw();
     assert.equal(calls[2].params.page, 2); assert.equal(calls[2].params.search, "plan");
@@ -908,7 +977,7 @@ test("cancelled projects disable operational approval while keeping the request 
     } });
     const html = render(exports.default, { item: { id: "delay", requestType: "extension" } });
     assert.match(html, /Operational changes cannot be approved/);
-    assert.match(html, /disabled=""[^>]*>[\s\S]*?>Approve<\/button>/);
+    assert.match(html, /disabled=""[^>]*>[\s\S]*?>Approve Request<\/button>/);
     assert.ok(html.includes("Requested new deadline"));
 });
 

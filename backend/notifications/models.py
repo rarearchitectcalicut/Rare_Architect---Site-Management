@@ -98,6 +98,9 @@ class Notification(models.Model):
         auto_now_add=True,
     )
 
+    # At-most-once best-effort push attempt; not a durable delivery queue.
+    push_attempted_at = models.DateTimeField(null=True, blank=True, editable=False)
+
     class Meta:
         ordering = [
             "-created_at",
@@ -123,3 +126,18 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.recipient_id}"
+
+
+class PushSubscription(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="push_subscriptions",
+    )
+    endpoint = models.CharField(max_length=2048, unique=True)
+    p256dh = models.CharField(max_length=87)
+    auth = models.CharField(max_length=24)
+    # Changes on reassignment/key rotation, so stale cleanup cannot delete a new owner.
+    revision = models.UUIDField(default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

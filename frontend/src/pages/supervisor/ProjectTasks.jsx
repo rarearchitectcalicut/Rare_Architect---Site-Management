@@ -376,9 +376,9 @@ function ExpandedTask({
                     <p className="mt-3 whitespace-pre-wrap break-words text-sm text-[#211E1A]">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
                 </article>)}
                 {decisionState?.data?.count === 0 && <p className="text-sm text-[#716658]">No Admin decision has been recorded yet.</p>}
-                {decisionState?.data && (decisionState.data.next || decisionState.data.previous) && <nav aria-label="Decision history pages" className="flex flex-wrap items-center justify-between gap-3">
+                {decisionState?.data && (decisionState.data.next || decisionState.data.previous) && <nav aria-label="Decision history pages" className="rare-pagination">
                     <button type="button" className="rare-button rare-button-secondary" disabled={!decisionState.data.previous} onClick={() => setDecisionPage((page) => page - 1)}>Previous decisions</button>
-                    <span className="text-xs text-[#716658]">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
+                    <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
                     <button type="button" className="rare-button rare-button-secondary" disabled={!decisionState.data.next} onClick={() => setDecisionPage((page) => page + 1)}>Next decisions</button>
                 </nav>}
             </section>
@@ -392,9 +392,9 @@ function ExpandedTask({
                 {delayState?.error && <p role="alert" className="text-sm text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
                 {delayState?.data?.count === 0 && <p className="text-sm text-[#716658]">No delays have been reported for this task.</p>}
                 {delayState?.data?.results.map((report) => <article key={report.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article>)}
-                {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="flex flex-wrap items-center justify-between gap-3">
+                {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="rare-pagination">
                     <button type="button" className="rare-button rare-button-secondary" disabled={!delayState.data.previous} onClick={() => setDelayPage((page) => page - 1)}>Previous reports</button>
-                    <span className="text-xs text-[#716658]">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
+                    <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
                     <button type="button" className="rare-button rare-button-secondary" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
                 </nav>}
             </section>
@@ -1221,8 +1221,9 @@ export default function SupervisorProjectTasks() {
                                     type="button"
                                     onClick={openCreate}
                                     disabled={project?.status === "CANCELLED"}
-                                    className="mt-5 rounded-xl bg-[#211E1A] px-4 py-2.5 text-sm font-semibold text-white"
+                                    className="rare-button rare-button-primary mt-5"
                                 >
+                                    <Plus size={18} aria-hidden="true" />
                                     Create First Task
                                 </button>
                             )}
@@ -1233,7 +1234,7 @@ export default function SupervisorProjectTasks() {
                     {pageCount > 1 && (
                         <nav
                             aria-label="Task pagination"
-                            className="flex items-center justify-between gap-3 rounded-[20px] border border-[#E7DED2] bg-[#FFFDFA] p-3"
+                            className="rare-pagination rounded-[20px] border border-[#E7DED2] bg-[#FFFDFA] p-3"
                         >
                             <button
                                 type="button"
@@ -1249,7 +1250,7 @@ export default function SupervisorProjectTasks() {
                                 Previous
                             </button>
 
-                            <span className="text-xs font-semibold text-[#716658]">
+                            <span aria-live="polite" aria-atomic="true" className="text-xs font-semibold text-[#716658]">
                                 Page {safePage} of {pageCount}
                             </span>
 

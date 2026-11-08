@@ -55,7 +55,7 @@ export default function TaskChangeReview({ record }) {
                                             <p className="text-xs font-bold uppercase tracking-wider text-[#74695D]">
                                                 Current
                                             </p>
-                                            <p className="mt-1 wrap-break-word text-xs text-[#211E1A]">
+                                            <p className="mt-1 wrap-anywhere text-xs text-[#211E1A]">
                                                 {oldValue == null
                                                     ? "See current task"
                                                     : String(oldValue)}
@@ -66,7 +66,7 @@ export default function TaskChangeReview({ record }) {
                                             <p className="text-xs font-bold uppercase tracking-wider text-[#3565A5]">
                                                 Proposed
                                             </p>
-                                            <p className="mt-1 wrap-break-word text-xs text-[#211E1A]">
+                                            <p className="mt-1 wrap-anywhere text-xs text-[#211E1A]">
                                                 {newValue == null
                                                     ? "Empty"
                                                     : String(newValue)}

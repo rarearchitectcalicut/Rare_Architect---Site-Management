@@ -1160,11 +1160,15 @@ class DelayReportDetailSerializer(serializers.ModelSerializer):
             "deadline_at_submission": submission.get("deadline_at_submission"),
             "previous_approved_deadline": approved.get("old_end_date"),
             "new_approved_deadline": approved.get("new_end_date"),
+            "project_deadline_extended": approved.get("project_deadline_extended", False),
+            "previous_project_deadline": approved.get("old_project_end_date"),
+            "new_project_deadline": approved.get("new_project_end_date"),
             "deadline_at_rejection": rejected.get("current_end_date"),
         }
 
     project_name = serializers.CharField(source="task.project.name", read_only=True)
     current_end_date = serializers.DateField(source="task.end_date", read_only=True, allow_null=True)
+    project_end_date = serializers.DateField(source="task.project.end_date", read_only=True, allow_null=True)
     reviewed_by_name = serializers.CharField(source="reviewed_by.username", read_only=True, allow_null=True)
     extension_reviewed_by_name = serializers.CharField(source="extension_reviewed_by.username", read_only=True, allow_null=True)
 
@@ -1194,6 +1198,7 @@ class DelayReportDetailSerializer(serializers.ModelSerializer):
             "project_id",
             "project_name",
             "current_end_date",
+            "project_end_date",
             "project_status",
             "deadline_history",
             "reported_by",

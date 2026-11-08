@@ -64,23 +64,103 @@ class ApprovalWorkflowTests(TestCase):
         report = DailyReport.objects.create(project=self.project, reported_by=self.supervisor, report_date=date(2026, 10, 23), work_summary="Plastered walls", status="SUBMITTED" if submitted else "DRAFT", submitted_at=timezone.now() if submitted else None)
         return DailyTaskWork.objects.create(daily_report=report, task=self.task, work_description="Wall plastering", quantity_completed_today=Decimal(quantity))
 
-    def test_extension_cannot_exceed_current_project_deadline(self):
+    def test_approved_extension_automatically_extends_project_finish_date(self):
         self.project.end_date = date(2026, 11, 2)
         self.project.save(update_fields=["end_date"])
         report = self.delay()
         self.assertEqual(self.post_decision("delay-report-approve", report).status_code, 200)
-        history_count = self.task.history.count()
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.end_date, date(2026, 11, 2))
         response = self.post_decision("delay-extension-approve", report)
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("requested_end_date", response.data)
+        self.assertEqual(response.status_code, 200, response.data)
         report.refresh_from_db()
         self.task.refresh_from_db()
-        self.assertEqual(report.extension_status, "PENDING")
+        self.project.refresh_from_db()
+        self.assertEqual(report.extension_status, "APPROVED")
+        self.assertEqual(self.task.end_date, date(2026, 11, 10))
+        self.assertEqual(self.project.end_date, date(2026, 11, 10))
+        self.assertEqual(response.data["project_end_date"], "2026-11-10")
+        history = response.data["deadline_history"]
+        self.assertTrue(history["project_deadline_extended"])
+        self.assertEqual(history["previous_project_deadline"], "2026-11-02")
+        self.assertEqual(history["new_project_deadline"], "2026-11-10")
+        event = ActivityLog.objects.get(action="PROJECT_UPDATED", entity_id=self.project.pk)
+        self.assertEqual(event.metadata["changed_fields"], ["end_date"])
+        self.assertEqual(event.metadata["source"], "EXTENSION_APPROVED")
+        notifications = Notification.objects.filter(reference_id=self.project.pk, notification_type="SYSTEM")
+        self.assertEqual(notifications.count(), 1)
+        self.assertIn("10 November 2026", notifications.get().message)
+        self.assertEqual(self.post_decision("delay-extension-approve", report).status_code, 400)
+        self.assertEqual(notifications.count(), 1)
+
+    def test_extension_does_not_shorten_equal_later_or_unset_project_finish_dates(self):
+        for project_end in (date(2026, 11, 10), date(2026, 11, 20), None):
+            with self.subTest(project_end=project_end):
+                Task.objects.filter(pk=self.task.pk).update(end_date=date(2026, 10, 30))
+                Project.objects.filter(pk=self.project.pk).update(end_date=project_end)
+                report = self.delay()
+                self.post_decision("delay-report-approve", report)
+                response = self.post_decision("delay-extension-approve", report)
+                self.assertEqual(response.status_code, 200, response.data)
+                self.project.refresh_from_db()
+                self.assertEqual(self.project.end_date, project_end)
+                self.assertFalse(response.data["deadline_history"]["project_deadline_extended"])
+        self.assertFalse(ActivityLog.objects.filter(action="PROJECT_UPDATED", entity_id=self.project.pk).exists())
+
+    def test_project_extension_still_validates_task_start_and_rolls_back_failed_validation(self):
+        Project.objects.filter(pk=self.project.pk).update(start_date=date(2026, 10, 5), end_date=date(2026, 11, 2))
+        report = self.delay()
+        self.post_decision("delay-report-approve", report)
+        response = self.post_decision("delay-extension-approve", report)
+        self.assertEqual(response.status_code, 400)
+        self.project.refresh_from_db(); self.task.refresh_from_db(); report.refresh_from_db()
+        self.assertEqual(self.project.end_date, date(2026, 11, 2))
         self.assertEqual(self.task.end_date, date(2026, 10, 30))
-        self.assertEqual(self.task.history.count(), history_count)
-        self.project.end_date = date(2026, 11, 10)
-        self.project.save(update_fields=["end_date"])
+        self.assertEqual(report.extension_status, "PENDING")
+        self.assertFalse(ActivityLog.objects.filter(action="PROJECT_UPDATED", entity_id=self.project.pk).exists())
+
+    def test_later_project_deadline_is_preserved_when_another_task_extension_is_approved(self):
+        Project.objects.filter(pk=self.project.pk).update(end_date=date(2026, 11, 2))
+        first = self.delay()
+        self.post_decision("delay-report-approve", first)
+        second_task = Task.objects.create(project=self.project, created_by=self.supervisor,
+            title="Second task", approval_status="APPROVED", start_date=date(2026, 10, 1), end_date=date(2026, 10, 30))
+        self.client.force_authenticate(self.supervisor)
+        response = self.client.post(reverse("reports:task-delay-report-create", args=[second_task.pk]), {
+            "delay_type": "WEATHER", "reason": "Rain", "expected_completion_date": "2026-11-20",
+            "extension_requested": True, "requested_end_date": "2026-11-20",
+        }, format="json")
+        self.assertEqual(response.status_code, 201, response.data)
+        second = DelayReport.objects.get(pk=response.data["id"])
+        self.client.force_authenticate(self.admin)
+        self.post_decision("delay-report-approve", second)
+        self.assertEqual(self.post_decision("delay-extension-approve", second).status_code, 200)
+        self.assertEqual(self.post_decision("delay-extension-approve", first).status_code, 200)
+        self.project.refresh_from_db(); self.task.refresh_from_db(); second_task.refresh_from_db()
+        self.assertEqual(self.project.end_date, date(2026, 11, 20))
+        self.assertEqual(self.task.end_date, date(2026, 11, 10))
+        self.assertEqual(second_task.end_date, date(2026, 11, 20))
+        self.assertEqual(ActivityLog.objects.filter(action="PROJECT_UPDATED", entity_id=self.project.pk).count(), 1)
+
+    def test_project_extension_notifies_the_assigned_team_and_rolls_back_notification_failure(self):
+        Project.objects.filter(pk=self.project.pk).update(end_date=date(2026, 11, 2))
+        ProjectSupervisor.objects.create(project=self.project, supervisor=self.other, assigned_by=self.admin)
+        report = self.delay()
+        self.post_decision("delay-report-approve", report)
+        before = Notification.objects.count()
+        with patch("reports.services.schedule_notifications", side_effect=RuntimeError("Notifications unavailable")):
+            with self.assertRaises(RuntimeError):
+                self.post_decision("delay-extension-approve", report)
+        self.project.refresh_from_db(); self.task.refresh_from_db(); report.refresh_from_db()
+        self.assertEqual(self.project.end_date, date(2026, 11, 2))
+        self.assertEqual(self.task.end_date, date(2026, 10, 30))
+        self.assertEqual(report.extension_status, "PENDING")
+        self.assertEqual(Notification.objects.count(), before)
+        self.assertFalse(ActivityLog.objects.filter(action="PROJECT_UPDATED", entity_id=self.project.pk).exists())
+        self.assertFalse(self.task.history.filter(action="EXTENSION_APPROVED").exists())
         self.assertEqual(self.post_decision("delay-extension-approve", report).status_code, 200)
+        notified = set(Notification.objects.filter(reference_id=self.project.pk, notification_type="SYSTEM").values_list("recipient_id", flat=True))
+        self.assertEqual(notified, {self.supervisor.pk, self.other.pk})
 
     def test_cancelled_project_blocks_extension_without_mutating_deadline_or_decision(self):
         report = self.delay()
@@ -97,13 +177,15 @@ class ApprovalWorkflowTests(TestCase):
 
     def test_extension_audit_failure_rolls_back_deadline_and_decision_together(self):
         from unittest.mock import patch
+        Project.objects.filter(pk=self.project.pk).update(end_date=date(2026, 11, 2))
         report = self.delay()
         self.assertEqual(self.post_decision("delay-report-approve", report).status_code, 200)
         history_count = self.task.history.count()
         with patch("reports.services.create_activity_log", side_effect=RuntimeError("Audit unavailable")):
             with self.assertRaises(RuntimeError):
                 self.post_decision("delay-extension-approve", report)
-        self.task.refresh_from_db(); report.refresh_from_db()
+        self.task.refresh_from_db(); report.refresh_from_db(); self.project.refresh_from_db()
+        self.assertEqual(self.project.end_date, date(2026, 11, 2))
         self.assertEqual(self.task.end_date, date(2026, 10, 30))
         self.assertEqual(report.extension_status, "PENDING")
         self.assertIsNone(report.extension_reviewed_at)
@@ -683,7 +765,6 @@ class ApprovalWorkflowTests(TestCase):
         self.assertEqual(len(response.data["results"]), 20)
 
 
-
 @skipUnless(connection.vendor == "postgresql", "Report row-lock tests require PostgreSQL")
 class DailyReportDeleteConcurrencyTests(TransactionTestCase):
     def setUp(self):
@@ -987,6 +1068,152 @@ class DailyReportsWorkspaceTests(TestCase):
         self.assertTrue(DailyReport.objects.filter(pk=report.id).exists())
         self.assertTrue(DailyTaskWork.objects.filter(pk=work.id).exists())
         self.assertTrue(DailyReportAttachment.objects.filter(pk=attachment.id).exists())
+
+    def test_attachment_upload_failure_cleans_only_new_file(self):
+        report = self.create_report(work_summary="Upload cleanup")
+        field = DailyReportAttachment._meta.get_field("file")
+
+        with TemporaryDirectory() as root, patch.object(
+            field,
+            "storage",
+            FileSystemStorage(location=root),
+        ):
+            storage = field.storage
+
+            # Simulate an existing attachment that must survive.
+            existing = report.attachments.create(
+                original_filename="existing.pdf",
+                file_size=16,
+                uploaded_by=self.supervisor,
+            )
+            existing.file.save(
+                "existing.pdf",
+                SimpleUploadedFile(
+                    "existing.pdf",
+                    b"%PDF-1.4\nExisting",
+                ),
+            )
+
+            existing_name = existing.file.name
+
+            # Simulate database failure after uploading a new file.
+            with patch(
+                "reports.services.create_activity_log",
+                side_effect=RuntimeError("Simulated audit failure"),
+            ):
+                with self.assertRaises(RuntimeError):
+                    self.client.post(
+                        reverse(
+                            "reports:daily-report-attachment-upload",
+                            args=[report.id],
+                        ),
+                        {
+                            "file": SimpleUploadedFile(
+                                "new.pdf",
+                                b"%PDF-1.4\nNew evidence",
+                                content_type="application/pdf",
+                            ),
+                        },
+                        format="multipart",
+                    )
+
+            # Existing evidence must remain available.
+            self.assertTrue(storage.exists(existing_name))
+
+            # Only the original attachment should remain.
+            self.assertEqual(report.attachments.count(), 1)
+
+    def test_image_compression_and_checksum_retry(self):
+        import hashlib
+
+        report = self.create_report(work_summary="Photo evidence")
+        field = DailyReportAttachment._meta.get_field("file")
+        url = reverse(
+            "reports:daily-report-attachment-upload",
+            args=[report.id],
+        )
+
+        # Create a large JPEG to trigger compression.
+        buffer = BytesIO()
+        Image.effect_noise((2400, 1600), 80).convert("RGB").save(
+            buffer,
+            format="JPEG",
+            quality=95,
+        )
+
+        # The trailing marker lets us test that two
+        # different original files cannot share a retry ID.
+        original_bytes = buffer.getvalue() + b"A"
+        changed_bytes = buffer.getvalue() + b"B"
+        client_id = str(uuid4())
+
+        def make_upload(content):
+            return SimpleUploadedFile(
+                "site-photo.jpg",
+                content,
+                content_type="image/jpeg",
+            )
+
+        with TemporaryDirectory() as root, patch.object(
+            field,
+            "storage",
+            FileSystemStorage(location=root),
+        ):
+            response = self.client.post(
+                url,
+                {
+                    "client_id": client_id,
+                    "file": make_upload(original_bytes),
+                },
+                format="multipart",
+            )
+            self.assertEqual(response.status_code, 201, response.data)
+
+            attachment = DailyReportAttachment.objects.get(pk=response.data["id"])
+
+            self.assertEqual(
+                attachment.original_sha256,
+                hashlib.sha256(original_bytes).hexdigest(),
+            )
+            self.assertEqual(
+                attachment.file_size,
+                len(original_bytes),
+            )
+
+            with attachment.file.open("rb") as saved:
+                stored_bytes = saved.read()
+
+            self.assertLess(len(stored_bytes), len(original_bytes))
+
+            with Image.open(BytesIO(stored_bytes)) as image:
+                self.assertEqual(image.format, "JPEG")
+                self.assertEqual(image.size, (1920, 1280))
+
+            # Same original file and retry ID: no duplicate.
+            retry = self.client.post(
+                url,
+                {
+                    "client_id": client_id,
+                    "file": make_upload(original_bytes),
+                },
+                format="multipart",
+            )
+            self.assertEqual(retry.status_code, 201, retry.data)
+            self.assertEqual(retry.data["id"], response.data["id"])
+            self.assertEqual(report.attachments.count(), 1)
+
+            # Same filename and size, different original bytes:
+            # the checksum must reject this retry.
+            different = self.client.post(
+                url,
+                {
+                    "client_id": client_id,
+                    "file": make_upload(changed_bytes),
+                },
+                format="multipart",
+            )
+            self.assertEqual(different.status_code, 400)
+            self.assertEqual(report.attachments.count(), 1)
 
     def test_previews_verify_mime_inline_allowlist_and_keep_download(self):
         report = self.create_report(work_summary="Evidence")

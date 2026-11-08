@@ -118,6 +118,9 @@ export default defineConfig(({ mode }) => {
         workbox: {
           cacheId: 'rare-static',
 
+          // Extend the one generated worker without altering its update lifecycle.
+          importScripts: ['push-events.js'],
+
           // Cache only public frontend build files.
           // Do not cache authenticated API responses,
           // private documents, or report attachments.

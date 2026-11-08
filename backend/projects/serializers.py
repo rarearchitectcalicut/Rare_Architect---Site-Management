@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import validate_image_file_extension
 from rest_framework import serializers
 from .models import ProjectCategory, MAX_IMAGE_SIZE , Project , ProjectSupervisor
-
+from common.image_compression import compress_image
 
 User = get_user_model()
 
@@ -87,7 +87,7 @@ class ProjectCategorySerializer(serializers.ModelSerializer):
         if Path(value.name).suffix.lower() not in allowed_extensions:
             raise serializers.ValidationError("Allowed formats: JPG, JPEG, PNG, WEBP.")
 
-        return value
+        return compress_image(value)
 
 
 # ============================================================
@@ -192,6 +192,23 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
             )
 
         return attrs
+
+    def validate_cover_image(self, value):
+        if value is None:
+            return value
+
+        # Check the original upload before compression.
+        if value.size > MAX_IMAGE_SIZE:
+            raise serializers.ValidationError("Image size must not exceed 5 MB.")
+
+        # DRF's ImageField already validates image readability.
+        # Preserve the uploaded file format.
+        allowed_extensions = {".jpg", ".jpeg", ".png", ".webp"}
+
+        if Path(value.name).suffix.lower() not in allowed_extensions:
+            raise serializers.ValidationError("Allowed formats: JPG, JPEG, PNG, WEBP.")
+
+        return compress_image(value)
 
 
 # ===========================================
