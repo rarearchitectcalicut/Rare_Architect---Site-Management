@@ -12,7 +12,7 @@ function Metadata({ value }) {
     if (value == null || value === "") return <span className="text-[#716658]">Not recorded</span>;
     if (typeof value === "boolean") return <span>{value ? "Yes" : "No"}</span>;
     if (Array.isArray(value)) return value.length ? <ul className="space-y-2">{value.map((item, i) => <li key={i}><Metadata value={item} /></li>)}</ul> : <span>None</span>;
-    if (typeof value === "object") return <dl className="space-y-3">{Object.entries(value).map(([key, item]) => (
+    if (typeof value === "object") return <dl className="space-y-3">{Object.entries(value).filter(([key]) => !/(^id$|_ids?$)/i.test(key)).map(([key, item]) => (
         <div key={key} className="min-w-0 border-l-2 border-[#E7DED2] pl-3"><dt className="mb-1 text-xs font-medium text-[#716658]">{formatText(key)}</dt><dd className="min-w-0"><Metadata value={item} /></dd></div>
     ))}</dl>;
     return <span className="whitespace-pre-wrap break-words">{String(value)}</span>;
@@ -56,7 +56,7 @@ export default function ActivityEntry({ entry }) {
             <summary className="flex w-fit cursor-pointer list-none items-center gap-2 rounded-lg px-1 py-1 text-xs font-semibold text-[#8B6944] focus-visible:outline-2 focus-visible:outline-[#A58A67] [&::-webkit-details-marker]:hidden">Event details<ChevronDown size={14} className="transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" /></summary>
             <div className="mt-4 space-y-5 rounded-2xl border border-[#EAE1D5] bg-[#F8F5F0] p-4 sm:p-5">
                 <dl className="grid gap-4 text-xs sm:grid-cols-2">
-                    {[["Activity reference", entry.id], ["Actor reference", entry.actor_id || entry.actor], ["Entity reference", entry.entity_id], ["Subject", entry.subject_name]].map(([label, value]) => <div key={label} className="min-w-0"><dt className="mb-1 text-xs text-[#716658]">{label}</dt><dd className="break-words leading-5 text-[#665C50]">{value || "Not recorded"}</dd></div>)}
+                    {[["Subject", entry.subject_name]].map(([label, value]) => <div key={label} className="min-w-0"><dt className="mb-1 text-xs text-[#716658]">{label}</dt><dd className="break-words leading-5 text-[#665C50]">{value || "Not recorded"}</dd></div>)}
                 </dl>
                 {entry.metadata && Object.keys(entry.metadata).length > 0 && <div className="text-xs leading-6 text-[#665C50]"><h3 className="mb-3 font-semibold text-[#211E1A]">Recorded context</h3><Metadata value={entry.metadata} /></div>}
                 {link && <Link to={link.to} className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-3 py-2.5 text-xs font-semibold text-[#FFFDFA] hover:bg-[#44382B]">{link.label}<ArrowUpRight size={14} aria-hidden="true" /></Link>}
