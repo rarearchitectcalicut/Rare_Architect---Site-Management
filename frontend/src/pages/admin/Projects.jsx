@@ -29,7 +29,7 @@ function ProjectFilters({ filters, categories, categoryLoading, onChange, onRese
     const categoryName = categories.find((item) => String(item.id) === filters.category)?.name;
     return <section aria-label="Project search and filters" className="rounded-[24px] border border-[#E2D6C6] bg-[#FFFDFA] shadow-[0_5px_22px_-20px_rgba(61,42,20,0.3)]">
         <div className="space-y-4 p-4 sm:p-5">
-            <ProjectSearch key={searchReset} query={search} onSearch={setSearch} suggestions={suggestions} loading={loading} label="Find a project" placeholder="Name, client or location" />
+            <ProjectSearch suggestionsFiltered key={searchReset} query={search} onSearch={setSearch} suggestions={suggestions} loading={loading} label="Find a project" placeholder="Name, client or location" />
             <details className="rare-filter-disclosure"><summary>Filters and sorting ({Number(Boolean(filters.category)) + Number(Boolean(filters.status)) + Number(filters.ordering !== "-created_at")})</summary>
             <div className="grid gap-4 pt-3 sm:grid-cols-2">
             <label className="text-sm font-bold text-[#4F473D]">Category<select aria-label="Filter by category" value={filters.category} disabled={categoryLoading} onChange={(event) => onChange({ category: event.target.value })} className={`${control} mt-2`}><option value="">{categoryLoading ? "Loading categories..." : "All categories"}</option>{filters.category && !categoryName && <option value={filters.category}>Selected category</option>}{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>

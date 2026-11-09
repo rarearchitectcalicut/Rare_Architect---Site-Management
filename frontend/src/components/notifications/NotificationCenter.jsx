@@ -268,6 +268,10 @@ async function resolveDestination(notification, role) {
 
     if (kind === "TASK_BATCH" && projectId) return `/${supervisor ? "supervisor" : "admin"}/projects/${projectId}/tasks`;
 
+    if (!supervisor && notification.event === "TASK_COMPLETED" && projectId && taskId) {
+        return `/admin/projects/${projectId}/tasks/${taskId}`;
+    }
+
     if (supervisor) {
         if (taskRelated && projectId) {
             return (

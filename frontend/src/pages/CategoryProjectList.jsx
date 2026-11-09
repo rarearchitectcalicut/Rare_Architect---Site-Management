@@ -333,7 +333,7 @@ export default function CategoryProjectList() {
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_170px_190px]">
               {/* SEARCH */}
               <div className="relative">
-                <ProjectSearch query={search} onSearch={(value) => { setSearch(value); setPage(1); }} loading={loading} label="Search projects" placeholder="Project, client or location" suggestions={loading ? [] : projects.map((project) => ({ id: project.id, name: project.name, context: project.location, to: `/${isAdmin ? "admin" : "supervisor"}/projects/${project.id}` }))} />
+                <ProjectSearch suggestionsFiltered query={search} onSearch={(value) => { setSearch(value); setPage(1); }} loading={loading} label="Search projects" placeholder="Project, client or location" suggestions={loading ? [] : projects.map((project) => ({ id: project.id, name: project.name, context: project.location, to: `/${isAdmin ? "admin" : "supervisor"}/projects/${project.id}` }))} />
               </div>
 
               {/* STATUS */}

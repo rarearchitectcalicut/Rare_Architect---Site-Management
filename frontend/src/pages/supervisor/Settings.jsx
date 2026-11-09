@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { settingsApi } from "../../api/settingsApi";
+import { formatLastLogin } from "../../utils/lastLogin";
 import { useAuth } from "../../hooks/useAuth";
 import ChangePasswordForm from "../../components/settings/ChangePasswordForm";
 import PushPreferences from "../../components/settings/PushPreferences";
@@ -317,6 +318,12 @@ export default function SupervisorSettings() {
 
                             <div className="mt-6 grid gap-4 border-t border-[#EEE6DC] pt-5 sm:grid-cols-3">
                                 {[
+                                    {
+                                        icon: CalendarDays,
+                                        label: "Last Login",
+                                        value: formatLastLogin(profile.last_login),
+                                        tone: "bg-[#F0EAF8] text-[#7C5BA4]",
+                                    },
                                     {
                                         icon: Phone,
                                         label: "Mobile",

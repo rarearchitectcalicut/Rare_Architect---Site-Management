@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { settingsApi } from "../../api/settingsApi";
+import { formatLastLogin } from "../../utils/lastLogin";
 import { useAuth } from "../../hooks/useAuth";
 import LoadingScreen from "../LoadingScreen";
 
@@ -414,6 +415,12 @@ export default function AccountProfile({ role = "ADMIN" }) {
 
                             {/* QUICK INFORMATION */}
                             <div className="mt-6 grid gap-5 border-t border-[#EEE6DC] pt-6 sm:grid-cols-2 xl:grid-cols-3">
+                                <ProfileInfo
+                                    icon={CalendarDays}
+                                    label="Last Login"
+                                    value={formatLastLogin(profile.last_login)}
+                                    tone="bg-[#F0EAF8] text-[#7C5BA4]"
+                                />
                                 <ProfileInfo
                                     icon={Phone}
                                     label="Phone"

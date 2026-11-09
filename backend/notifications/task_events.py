@@ -4,6 +4,18 @@ from .services import (
     schedule_notifications,
 )
 
+
+def notify_admins_task_completed(task):
+    schedule_notifications(
+        recipient_ids=get_active_admin_ids(),
+        project_id=task.project_id,
+        notification_type=Notification.Type.SYSTEM,
+        title="Task completed",
+        message=f"Task '{task.title}' in project '{task.project.name}' was completed.",
+        reference_type="TASK",
+        reference_id=task.id,
+    )
+
 # =====================================================
 # TASK SUBMITTED FOR ADMIN APPROVAL
 # =====================================================
