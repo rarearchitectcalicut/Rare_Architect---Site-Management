@@ -63,6 +63,8 @@ class ProjectCategory(models.Model):
 
     image = models.ImageField(
         upload_to=category_image_upload_path,
+        # Cloudinary adds a media prefix and unique suffix to this path.
+        max_length=255,
         null=True,
         blank=True,
         validators=[
