@@ -165,6 +165,16 @@ test("notification deep links resolve separate extensions and daily-report conte
     assert.equal(await graph.exports.resolveDestination({ notification_type: "DAILY_REPORT", reference_type: "DAILY_REPORT", reference_id: "report" }, "ADMIN"), "/admin/reports?report=report");
 });
 
+test("completion notification opens the Admin task detail without an approval request", async () => {
+    const { exports } = await loadSource("components/notifications/NotificationCenter.jsx", {
+        append: "\nexport { resolveDestination };",
+    });
+    assert.equal(await exports.resolveDestination({
+        notification_type: "SYSTEM", event: "TASK_COMPLETED",
+        reference_type: "TASK", reference_id: "task", project_id: "project",
+    }, "ADMIN"), "/admin/projects/project/tasks/task");
+});
+
 test("daily-report API uses existing project, draft, section and correction endpoints", async () => {
     const calls = [];
     const api = Object.fromEntries(["get", "post", "patch", "delete"].map((method) => [method, async (...args) => { calls.push({ method, args }); return { data: {} }; }]));

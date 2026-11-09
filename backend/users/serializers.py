@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from rest_framework import serializers
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import update_last_login
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.password_validation import validate_password
@@ -131,6 +132,7 @@ class PhoneLoginSerializer(serializers.Serializer):
             description="Signed in successfully.",
             metadata={"user_id": str(user.id)},
         )
+        update_last_login(None, user)
 
         return {
             "refresh": str(refresh),
@@ -178,8 +180,9 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "must_change_password",
             "last_name",
             "role",
+            "last_login",
         ]
-        read_only_fields = ("id", "role", "must_change_password")
+        read_only_fields = ("id", "role", "must_change_password", "last_login")
         extra_kwargs = {"first_name": {"allow_blank": False}}
 
 

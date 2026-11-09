@@ -19,7 +19,7 @@ function projectPage(data, page) {
 
 // Reused by listing toolbars. Suggestions use only records already loaded by the
 // authorized listing; searching never starts a separate, unbounded name fetch.
-export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false, suggestions, delay = 300, label = "Search projects", placeholder = "Project name", className = "" }) {
+export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false, suggestions, suggestionsFiltered = false, delay = 300, label = "Search projects", placeholder = "Project name", className = "" }) {
     const [search, setSearch] = useState(query);
     const [open, setOpen] = useState(false);
     const [active, setActive] = useState(-1);
@@ -39,7 +39,8 @@ export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false
     }, [query]);
     useEffect(() => () => clearTimeout(timer.current), []);
     const pending = search.trim() !== query;
-    const matches = !pending && !loading ? [...new Map((suggestions || []).filter((item) => item.name?.toLowerCase().includes(search.trim().toLowerCase())).map((item) => [item.id ?? item.name, item])).values()].slice(0, 6) : [];
+    // Server-filtered project results also match client, location and description.
+    const matches = !pending && !loading ? [...new Map((suggestions || []).filter((item) => suggestionsFiltered || item.name?.toLowerCase().includes(search.trim().toLowerCase())).map((item) => [item.id ?? item.name, item])).values()].slice(0, 6) : [];
     const expanded = open && search.trim().length > 0 && suggestions !== undefined;
     function commit(value) {
         clearTimeout(timer.current);
@@ -139,7 +140,7 @@ export default function ReportProjectPicker({ role = "ADMIN" }) {
             {admin && <Link className={button} to="/admin/approvals?tab=work">Open Daily Work Verification</Link>}
         </header>
 
-        <ProjectSearch query={query} onSearch={applySearch} onRefresh={() => setRevision((value) => value + 1)} loading={!current} suggestions={(data?.results || []).map((project) => ({ id: project.id, name: project.name, to: `${prefix}/projects/${project.id}/daily-reports` }))} className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4" />
+        <ProjectSearch suggestionsFiltered query={query} onSearch={applySearch} onRefresh={() => setRevision((value) => value + 1)} loading={!current} suggestions={(data?.results || []).map((project) => ({ id: project.id, name: project.name, to: `${prefix}/projects/${project.id}/daily-reports` }))} className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4" />
 
         <section aria-label="Daily report projects" aria-busy={!current} className="space-y-4">
             {!current && <p role="status" className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-6 text-sm text-[#716658]">Loading projects...</p>}

@@ -192,3 +192,28 @@ test("pointer selection uses an existing detail route without sending another se
     ui.options()[0].props.onClick(); ui.draw(); assert.equal(prevented, true);
     assert.deepEqual(ui.navigations, ["/supervisor/projects/1"]); assert.equal(ui.calls.length, 0); assert.equal(ui.jobs.size, 0); ui.cleanup();
 });
+
+test("server-filtered project suggestions retain matches by client, location and other fields", async () => {
+    for (const query of ["Calicut", "Acme", "interior commercial"]) {
+        const ui = await searchControl({
+            query, suggestionsFiltered: true,
+            suggestions: [{ id: "1", name: "Lake House", context: "Calicut", to: "/admin/projects/1" }],
+        });
+        ui.input().props.onFocus(); ui.draw();
+        assert.equal(ui.options().length, 1);
+        ui.key("ArrowDown"); ui.key("Enter");
+        assert.deepEqual(ui.navigations, ["/admin/projects/1"]);
+        ui.cleanup();
+    }
+});
+
+test("server-filtered suggestions still suppress stale and loading results", async () => {
+    const ui = await searchControl({ query: "Acme", suggestionsFiltered: true, suggestions: [{ id: "1", name: "Lake House" }] });
+    ui.input().props.onFocus(); ui.draw({ loading: true });
+    assert.equal(ui.options().length, 0);
+    ui.draw({ loading: false }); ui.type("Calicut");
+    assert.equal(ui.options().length, 0);
+    ui.tick(); ui.draw({ query: "Calicut" });
+    assert.equal(ui.options().length, 1);
+    ui.cleanup();
+});

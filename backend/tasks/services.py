@@ -16,6 +16,7 @@ from .serializers import TaskCreateSerializer, TaskResubmissionSerializer, valid
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from notifications.task_events import (
+    notify_admins_task_completed,
     notify_admins_task_created,
     notify_admins_bulk_tasks_created,
     notify_task_approved,
@@ -463,6 +464,7 @@ def complete_task(*, task_id, user, comment=""):
         },
     )
 
+    notify_admins_task_completed(task)
     return task
 
 

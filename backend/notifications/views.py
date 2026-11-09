@@ -48,7 +48,7 @@ class NotificationListView(generics.ListAPIView):
             "DELAY_REPORT": ["DELAY_REPORT_SUBMITTED", "DELAY_REPORT_APPROVED", "DELAY_REPORT_REJECTED"],
             "EXTENSION_REQUEST": ["EXTENSION_APPROVED", "EXTENSION_REJECTED"],
             "PROJECT_ASSIGNMENT": ["SUPERVISOR_ASSIGNED"],
-            "SYSTEM": ["PROJECT_UPDATED", "PROJECT_STATUS_CHANGED"],
+            "SYSTEM": ["PROJECT_UPDATED", "PROJECT_STATUS_CHANGED", "TASK_COMPLETED"],
         }
         queryset = queryset.annotate(project_id=Subquery(events.values("metadata__project_id")[:1]), event=Case(*[
             When(notification_type=kind, then=Subquery(events.filter(action__in=allowed).values("code")[:1]))
