@@ -5,7 +5,7 @@ RARE remains a responsive React website. Its production build also includes an i
 ## Build and local checks
 
 Use Node `^20.19.0 || >=22.12.0`, as required by Vite 8. Validated with Node 24.21.0, Vite 8.3.4 and vite-plugin-pwa 2.0.0. Install with `npm ci`.
-Set `VITE_API_BASE_URL` to the existing Django API URL, including `/api/v1/` and its trailing slash. All `VITE_` variables are public; do not include secrets.
+Set `VITE_API_BASE_URL` to the existing Django API URL, including `/api/v1/` and its trailing slash. All `VITE_` variables are public; do not include secrets. During local development, a loopback API URL on port `8000` is routed through Vite's `/api` proxy so phones and other LAN devices reach Django on the development host rather than their own `localhost`. Production builds retain the configured URL.
 
 The frontend defaults to `/`. For subdirectory hosting, set `VITE_BASE_PATH` to an absolute pathname with a trailing slash (for example `/rare/`) at build time. Vite assets, BrowserRouter, manifest URLs and the worker navigation allowlist follow this path. Keep that path stable after users install the app.
 

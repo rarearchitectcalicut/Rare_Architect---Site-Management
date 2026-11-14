@@ -49,11 +49,13 @@ export function TaskBadges({ task }) {
 
 export default function AdminTaskCard({ task, to, showProject = false, actionLabel = "Open Details", approvalTo }) {
     const overdue = typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task);
+    const displayOrder = Number(task.display_order);
+    const hasDisplayOrder = Number.isInteger(displayOrder) && displayOrder > 0;
     return <article className="task-panel task-lift group relative flex min-w-0 flex-col overflow-hidden p-4 transition-colors duration-150 sm:p-5">
         <div aria-hidden="true" className={`absolute inset-x-6 top-0 h-0.5 rounded-b-full ${overdue ? "bg-[#C78576]" : "bg-[#B8A181]/50"}`} />
         {showProject && <p className="mb-3 break-words text-xs font-semibold text-[#8B6944]">{task.project_name}</p>}
         <div className="mb-3 flex items-start justify-between gap-3">
-            <div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#716658]">Timeline order {task.display_order ?? "Not assigned"}</p>
+            <div className="min-w-0">{hasDisplayOrder && <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#716658]">Timeline order {displayOrder}</p>}
                 <h2 className="mt-2 break-words text-lg font-semibold leading-7 tracking-tight"><Link to={to} className="hover:text-[#8B6944]">{task.title}</Link></h2></div>
             <span className="rounded-xl border border-[#E7DED2] bg-[#F8F4EE] p-2 text-[#716658] transition-colors group-hover:bg-[#EDE2D2]"><ArrowUpRight size={17} aria-hidden="true" /></span>
         </div>

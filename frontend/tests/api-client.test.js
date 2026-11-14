@@ -4,8 +4,10 @@ import test from "node:test";
 import vm from "node:vm";
 import axios from "axios";
 
-async function createClient(adapter) {
+async function createClient(adapter, { baseUrl = "https://api.test/", dev = false } = {}) {
     const context = vm.createContext({
+        URL,
+        location: { origin: "http://localhost:5173" },
         sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     });
     const axiosModule = new vm.SyntheticModule(["default"], function () {
@@ -16,13 +18,37 @@ async function createClient(adapter) {
     const source = await readFile(new URL("../src/api/client.js", import.meta.url), "utf8");
     const module = new vm.SourceTextModule(source, {
         context,
-        initializeImportMeta: (meta) => { meta.env = { VITE_API_BASE_URL: "https://api.test/" }; },
+        initializeImportMeta: (meta) => { meta.env = { VITE_API_BASE_URL: baseUrl, DEV: dev }; },
     });
     await module.link(() => axiosModule);
     await module.evaluate();
     module.namespace.setAuthTokens({ access: "expired", refresh: "refresh-token" });
     return module.namespace;
 }
+
+test("routes a local development API through the Vite proxy", async () => {
+    let requestBaseUrl;
+    const client = await createClient(async (config) => {
+        requestBaseUrl = config.baseURL;
+        return response(config, {});
+    }, { baseUrl: "http://127.0.0.1:8000/api/v1/", dev: true });
+
+    await client.api.get("projects/");
+
+    assert.equal(requestBaseUrl, "/api/v1/");
+});
+
+test("keeps the configured API URL for production builds", async () => {
+    let requestBaseUrl;
+    const client = await createClient(async (config) => {
+        requestBaseUrl = config.baseURL;
+        return response(config, {});
+    }, { baseUrl: "http://127.0.0.1:8000/api/v1/" });
+
+    await client.api.get("projects/");
+
+    assert.equal(requestBaseUrl, "http://127.0.0.1:8000/api/v1/");
+});
 
 function unauthorized(config) {
     return new axios.AxiosError("Unauthorized", "ERR_BAD_REQUEST", config, null, {

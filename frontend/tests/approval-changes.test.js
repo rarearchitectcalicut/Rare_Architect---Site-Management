@@ -745,6 +745,17 @@ test("delay details distinguish original, current and approved deadlines with se
     assert.ok(!html.includes("Extension rejection is available independently"));
 });
 
+test("Admin dashboard quick actions include a direct Delay Reports link", async () => {
+    const { exports } = await loadSource("components/dashboard/AdminQuickActions.jsx", { overrides: {
+        "modal/admin/AddProject.jsx": { default: () => null },
+        "modal/admin/AddSupervisor.jsx": { default: () => null },
+    } });
+    const html = render(exports.default, {}, "/admin/dashboard");
+    assert.match(html, /Delay Reports/);
+    assert.match(html, /href="\/admin\/delays"/);
+    assert.match(html, /Approvals/);
+});
+
 test("Admin delay register reviews pending reports in place and Supervisors stay read-only", async () => {
     const { exports } = await loadSource("pages/supervisor/ProjectDelays.jsx", { overrides: {
         "hooks/useDelayReports.js": { useDelayReports: () => ({ reports: [{ id: "report", status: "PENDING", project_id: "project", task_title: "Wall work" }], projects: [{ id: "project", name: "Site Alpha" }], project: { id: "project", name: "Site Alpha", status: "ACTIVE" }, summary: { total: 1, pending: 1, approved: 0, rejected: 0, pending_extensions: 0 }, count: 1, page: 1, pageCount: 1, filters: { search: "", status: "", sort: "newest", project: "", extension: "", delayType: "" }, loading: false, error: "", refresh() {}, setPage() {}, updateFilter() {}, clear() {} }) },
@@ -757,6 +768,17 @@ test("Admin delay register reviews pending reports in place and Supervisors stay
     assert.ok(!html.includes("Report delay</button>"));
     const supervisor = render(exports.default, { role: "SUPERVISOR" }, "/supervisor/delays?project=project&request=report");
     assert.ok(!/>Approve Request<\/button>/.test(supervisor)); assert.ok(!/>Reject Request<\/button>/.test(supervisor));
+    assert.ok(supervisor.includes("aspect-square"));
+    assert.ok(!html.includes("aspect-square"));
+});
+
+test("Supervisor delay shortcut opens the report form for the selected project", async () => {
+    const { exports } = await loadSource("pages/supervisor/ProjectDelays.jsx", { overrides: {
+        "hooks/useDelayReports.js": { useDelayReports: () => ({ reports: [], projects: [], project: { id: "project", name: "Site Alpha", status: "ACTIVE" }, projectLoading: false, summary: { total: 0, pending: 0, approved: 0, rejected: 0, pending_extensions: 0 }, count: 0, page: 1, pageCount: 1, filters: {}, loading: false, error: "", refresh() {}, setPage() {}, updateFilter() {}, clear() {}, tasks: [], taskOptions: {} }) },
+        "modal/supervisor/DelayReportForm.jsx": { default: () => createElement("div", null, "New delay report form") },
+    } });
+    const html = render(exports.default, { role: "SUPERVISOR" }, "/supervisor/projects/project/delays?create=true");
+    assert.ok(html.includes("New delay report form"));
 });
 
 
@@ -1253,22 +1275,79 @@ function quickFind(node, predicate) {
     return predicate(node) ? node : quickFind(node.props?.children, predicate);
 }
 
-test("Supervisor Quick Actions match the Admin card pattern and provide direct project/task links", async () => {
+test("Supervisor Quick Actions keep delay reporting and omit a redundant delays shortcut", async () => {
     const state = delayHooks();
     const { exports } = await loadSource("pages/Dashboard.jsx", { overrides: { react: { ...React, ...state.hooks }, "components/dashboard/AdminQuickActions.jsx": { default: () => null } }, append: "\nexport { SupervisorQuickActions };" });
     let tree;
     const draw = () => { tree = state.render(() => exports.SupervisorQuickActions()); };
     draw();
     const contents = JSON.stringify(tree);
-    for (const text of ["My Projects", "My Tasks", "Daily Report", "Create Task", "grid-cols-2", "sm:grid-cols-4", "/supervisor/projects", "/supervisor/tasks"]) assert.ok(contents.includes(text));
-    quickFind(tree, (node) => node.type === "button" && JSON.stringify(node.props.children).includes("Daily Report")).props.onClick(); draw();
+    for (const text of ["Submit today's report", "My Projects", "My Tasks", "Report Delay", "Create Task", "grid-cols-2", "sm:grid-cols-4", "/supervisor/projects", "/supervisor/tasks"]) assert.ok(contents.includes(text));
+    assert.ok(!contents.includes(">Delays<"));
+    assert.ok(!contents.includes("/supervisor/delays"));
+    quickFind(tree, (node) => node.type === "button" && JSON.stringify(node.props.children).includes("Submit today's report")).props.onClick(); draw();
     assert.ok(quickFind(tree, (node) => node.type?.name === "SupervisorProjectSelector" && node.props.action === "report"));
+    quickFind(tree, (node) => node.type === "button" && JSON.stringify(node.props.children).includes("Report Delay")).props.onClick(); draw();
+    assert.ok(quickFind(tree, (node) => node.type?.name === "SupervisorProjectSelector" && node.props.action === "delay"));
     state.cleanup();
 });
 
-test("one Supervisor project selector handles eligible projects, errors, search and both create destinations without mutations", async () => {
+test("Supervisor Quick Actions link directly to an existing daily report draft", async () => {
+    const { exports } = await loadSource("pages/Dashboard.jsx", {
+        overrides: { "components/dashboard/AdminQuickActions.jsx": { default: () => null } },
+        append: "\nexport { SupervisorQuickActions };",
+    });
+    const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorQuickActions, {
+        draftGroup: { count: 1, items: [{ id: "draft-id", project_id: "project-id" }] },
+    })));
+    assert.ok(html.includes("Continue today"));
+    assert.ok(html.includes('href="/supervisor/projects/project-id/daily-reports?report=draft-id"'));
+    assert.ok(!html.includes("Submit today"));
+});
+
+test("Supervisor dashboard shows one compact All clear row when action queues are empty", async () => {
+    const { exports } = await loadSource("pages/Dashboard.jsx", {
+        overrides: {
+            "components/dashboard/ProjectCategories.jsx": { default: () => null },
+            "components/dashboard/AdminQuickActions.jsx": { default: () => null },
+        },
+        append: "\nexport { SupervisorDashboard };",
+    });
+    const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorDashboard, { summary: {}, actionItems: {} })));
+    assert.equal((html.match(/All clear: no rejected tasks, corrections, change requests, delays or extensions\./g) || []).length, 1);
+    assert.ok(!html.includes("Nothing pending in this section."));
+    assert.ok(!html.includes("py-10 text-center"));
+    const withDraft = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorDashboard, {
+        summary: {},
+        actionItems: { draft_daily_reports: { count: 1, items: [{ id: "draft", project_id: "project", report_date: "2026-11-14", status: "DRAFT" }] } },
+    })));
+    assert.ok(withDraft.includes("Draft Daily Reports"));
+    assert.ok(withDraft.includes("All clear: no rejected tasks, corrections, change requests, delays or extensions."));
+});
+
+test("Supervisor dashboard combines duplicate pending delay and extension reports", async () => {
+    const { exports } = await loadSource("pages/Dashboard.jsx", {
+        overrides: {
+            "components/dashboard/ProjectCategories.jsx": { default: () => null },
+            "components/dashboard/AdminQuickActions.jsx": { default: () => null },
+        },
+        append: "\nexport { SupervisorDashboard };",
+    });
+    const actionItems = {
+        pending_delay_reports: { count: 1, items: [{ id: "same-report", task_title: "Rain delay", status: "PENDING", delay_type: "WEATHER" }] },
+        pending_extensions: { count: 1, items: [{ id: "same-report", task_title: "Rain delay", extension_status: "PENDING", requested_end_date: "2026-12-01" }] },
+    };
+    const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorDashboard, { summary: {}, actionItems })));
+    assert.equal((html.match(/Pending Delays &amp; Extensions/g) || []).length, 1);
+    assert.equal((html.match(/Rain delay/g) || []).length, 1);
+    assert.ok(html.includes("Delay report and extension pending"));
+    assert.ok(!html.includes("Pending Delay Reports"));
+    assert.ok(!html.includes("Pending Extensions"));
+});
+
+test("one Supervisor project selector handles eligible projects, errors, search and all create destinations without mutations", async () => {
     const Router = await import("react-router-dom");
-    for (const action of ["report", "task"]) {
+    for (const action of ["report", "task", "delay"]) {
         const state = delayHooks(), requests = [], routes = [];
         const { exports } = await loadSource("pages/Dashboard.jsx", { overrides: {
             react: { ...React, ...state.hooks },
@@ -1298,7 +1377,8 @@ test("one Supervisor project selector handles eligible projects, errors, search 
         quickFind(tree, (node) => node.type === "button" && node.props.children === "Retry").props.onClick(); draw();
         requests[2].resolve({ results: [], next: false, previous: false }); await flushDelay(); draw();
         submit(); submit();
-        assert.deepEqual(routes, [`/supervisor/projects/maintenance/${action === "report" ? "daily-reports" : "tasks"}?create=true`]);
+        const section = action === "report" ? "daily-reports" : action === "delay" ? "delays" : "tasks";
+        assert.deepEqual(routes, [`/supervisor/projects/maintenance/${section}?create=true`]);
         assert.equal(closed, 1);
         state.cleanup(); assert.equal(requests[2].signal.aborted, true);
     }

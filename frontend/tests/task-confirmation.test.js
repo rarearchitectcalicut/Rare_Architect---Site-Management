@@ -586,6 +586,8 @@ test("project directory uses one server page for both roles and keeps Supervisor
         assert.equal(ui.requests[0].params.page_size, 12);
         const card = ui.find((node) => node.props?.project?.id === directoryProject.id);
         assert.equal(card.props.to, `/${role.toLowerCase()}/projects/project-1`);
+        assert.equal(card.props.layout, "grid");
+        assert.equal(ui.find((node) => node.type === "button" && node.props.children?.[1] === "Gallery").props["aria-pressed"], true);
         const add = ui.find((node) => node.type === "button" && node.props.children?.[1] === "Add Project");
         assert.equal(Boolean(add), role === "ADMIN");
         ui.cleanup();
@@ -642,6 +644,22 @@ test("project card renders accessible list and gallery links with fallback dates
         for (const text of ["Cedar residence", "Cedar client", "Kochi", "Active", "Residential", "Not scheduled", "Expected completion", 'href="/supervisor/projects/project-1"']) assert(html.includes(text));
         assert(!html.includes("<button"));
     }
+});
+
+test("Admin task cards hide missing and zero timeline order but retain meaningful positions", async () => {
+    const { exports } = await loadSource("components/admin/tasks/AdminTaskCard.jsx", { overrides: {
+        "components/tasks/TaskExecutionActions.js": { TaskProgress: () => null },
+        "approvals/approvalUtils.js": { formatDate: () => "Date", formatText: (value) => String(value || "Not specified") },
+        "api/taskApi.js": { isTaskOverdue: () => false },
+    } });
+    const base = { id: "task-id", title: "Prepare site", priority: "MEDIUM", approval_status: "APPROVED", work_status: "PENDING" };
+    for (const display_order of [0, "0", null, undefined]) {
+        const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.default, { task: { ...base, display_order }, to: "/admin/tasks/task-id" })));
+        assert.ok(!html.includes("Timeline order"));
+        assert.ok(!html.includes("Timeline order 0"));
+    }
+    const ordered = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.default, { task: { ...base, display_order: "3" }, to: "/admin/tasks/task-id" })));
+    assert.ok(ordered.includes("Timeline order 3"));
 });
 
 for (const filename of ["TaskForm", "BulkAddTasks"]) {

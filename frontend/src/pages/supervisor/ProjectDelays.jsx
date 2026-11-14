@@ -24,6 +24,26 @@ export default function ProjectDelays({ role = "SUPERVISOR" }) {
     const admin = role === "ADMIN";
     const prefix = admin ? "/admin" : "/supervisor";
     const data = useDelayReports(projectId, { tasksEnabled: formOpen && !admin });
+    const createRequested = params.get("create") === "true";
+    const canReportDelay = data.project && ["ACTIVE", "MAINTENANCE"].includes(data.project.status);
+    const autoOpenForm = !admin && createRequested && !data.projectLoading && canReportDelay;
+    function closeForm() {
+        setFormOpen(false);
+        if (createRequested) {
+            const next = new URLSearchParams(params);
+            next.delete("create");
+            setParams(next, { replace: true });
+        }
+    }
+    const createError = createRequested && !data.projectLoading && !data.project && data.error;
+    const createIneligible = createRequested && !data.projectLoading && data.project && !canReportDelay;
+    useEffect(() => {
+        if (!admin && createRequested && projectId && !data.projectLoading && !data.project) {
+            const next = new URLSearchParams(params);
+            next.delete("create");
+            setParams(next, { replace: true });
+        }
+    }, [admin, createRequested, projectId, data.projectLoading, data.project, params, setParams]);
     const items = useMemo(() => data.reports.map((report) => normalizeRequest("delay", report)), [data.reports]);
     const id = params.get("request");
     const type = params.get("type") === "extension" ? "extension" : "delay";
@@ -40,7 +60,7 @@ export default function ProjectDelays({ role = "SUPERVISOR" }) {
             <h1 className="mt-4 text-2xl font-semibold">Delay Reports</h1>
             <p className="mt-3 text-sm text-[#716658]">{data.project?.name || (projectId ? "Project delays" : "All authorized projects")} / Track site issues and deadline-extension decisions.</p>
             <div className="mt-5 flex flex-wrap gap-3">
-                {!admin && projectId && <button type="button" disabled={data.loading || Boolean(data.error) || !data.project || !["ACTIVE", "MAINTENANCE"].includes(data.project.status)} onClick={() => { data.refresh(); setFormOpen(true); }} className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-[#FFFDFA] disabled:opacity-40"><Plus size={17} />Report delay</button>}
+                {!admin && projectId && <button type="button" disabled={data.loading || Boolean(data.error) || !canReportDelay} onClick={() => { data.refresh(); setFormOpen(true); }} className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-[#FFFDFA] disabled:opacity-40"><Plus size={17} />Report delay</button>}
                 {!admin && !projectId && <Link to="/supervisor/projects" className="rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-[#FFFDFA]">Choose a project to report a delay</Link>}
                 <button type="button" disabled={data.loading} onClick={data.refresh} className="inline-flex items-center gap-2 rounded-xl border border-[#E7DED2] px-4 py-3 text-sm"><RefreshCw size={16} />Refresh</button>
                 {admin && <Link to="/admin/approvals?tab=delays" className="rounded-xl border border-[#E7DED2] px-4 py-3 text-sm">Open Approval Center</Link>}
@@ -48,10 +68,12 @@ export default function ProjectDelays({ role = "SUPERVISOR" }) {
         </header>
         <DelaySummary summary={data.summary} loading={data.loading} />
         {notice && <p role="status" className="rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
+        {createError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{createError}</p>}
+        {createIneligible && <p role="alert" className="rounded-xl bg-[#FFF2D8] p-4 text-sm text-[#795016]">Delay reports can only be created for Active or Maintenance projects.</p>}
         {data.error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{data.error}</p>}
         <section className="rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
             <ApprovalFilters suggestions={items.map((item) => ({ id: item.id, name: item.title, context: item.projectName }))} loading={data.loading} mode="delays" filters={data.filters} onChange={data.updateFilter} onClear={data.clear} projects={data.projects} />
-            <RequestList list={list} loading={data.loading} onOpen={select} />
+            <RequestList list={list} loading={data.loading} onOpen={select} compactCards={!admin} />
         </section>
         {data.initialLoading && <LoadingScreen message="Loading delay reports..." />}
         {selected && <RequestReview key={selected.queueKey} item={selected} onClose={() => select(null)} readOnly={!admin} role={role} onSuccess={(reviewed, action) => {
@@ -60,6 +82,6 @@ export default function ProjectDelays({ role = "SUPERVISOR" }) {
             setNotice(`${extension ? "Deadline extension" : "Delay report"} ${action === "approve" ? "approved" : "rejected"}. ${extension && action === "approve" ? "The task deadline was updated." : "The task deadline was not changed by this decision."}`);
             data.refresh();
         }} />}
-        {formOpen && !admin && <DelayReportForm key={projectId} tasks={data.tasks} taskOptions={data.taskOptions} onClose={() => setFormOpen(false)} onSaved={(report) => { setFormOpen(false); setNotice(`Delay report submitted: ${report.status === "PENDING" ? "Pending Admin review" : report.status}.`); data.refresh(); }} />}
+        {(formOpen || autoOpenForm) && !admin && <DelayReportForm key={projectId} tasks={data.tasks} taskOptions={data.taskOptions} onClose={closeForm} onSaved={(report) => { closeForm(); setNotice(`Delay report submitted: ${report.status === "PENDING" ? "Pending Admin review" : report.status}.`); data.refresh(); }} />}
     </div>;
 }

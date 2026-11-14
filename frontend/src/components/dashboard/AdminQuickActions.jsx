@@ -6,6 +6,7 @@ import {
     FolderPlus,
     UserRoundPlus,
     ClipboardCheck,
+    Clock3,
 } from "lucide-react";
 
 import AddProject from "../../modal/admin/AddProject";
@@ -36,6 +37,13 @@ const quickActions = [
         icon: ClipboardCheck,
         tile: "bg-[#FFF3E0] text-[#EA8A12] group-hover:bg-[#EA8A12]",
         ring: "focus-visible:ring-[#EA8A12]/40",
+    },
+    {
+        label: "Delay Reports",
+        path: "/admin/delays",
+        icon: Clock3,
+        tile: "bg-[#FCE9E6] text-[#B5473E] group-hover:bg-[#B5473E]",
+        ring: "focus-visible:ring-[#B5473E]/40",
     },
 ];
 
@@ -83,7 +91,7 @@ export default function AdminQuickActions() {
                     Quick Actions
                 </h2>
 
-                <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
                     {quickActions.map((action) => {
                         const Icon = action.icon;
 

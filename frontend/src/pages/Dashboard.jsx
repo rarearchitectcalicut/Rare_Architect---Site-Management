@@ -243,16 +243,38 @@ function StatusPill({ status }) {
 
 function EmptyState({ message }) {
   return (
-    <div className="rare-fade py-8 text-center sm:py-10">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#E6F4EA] text-[#16A34A]">
-        <CheckCircle2 size={26} strokeWidth={1.6} />
+    <div className="rare-fade flex items-center gap-3 rounded-xl bg-[#E9F6EF] px-3 py-3 text-left text-[#176647]">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6F4EA] text-[#16A34A]">
+        <CheckCircle2 size={20} strokeWidth={1.6} />
       </div>
-
-      <p className="text-sm text-[#716658]">
-        {message}
-      </p>
+      <p className="text-sm">{message}</p>
     </div>
   );
+}
+
+function AllClearRow() {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-[#B5DCCB] bg-[#E9F6EF] px-4 py-3 text-sm text-[#176647]">
+      <CheckCircle2 size={20} strokeWidth={1.8} className="shrink-0" aria-hidden="true" />
+      <p>All clear: no rejected tasks, corrections, change requests, delays or extensions.</p>
+    </div>
+  );
+}
+
+function mergePendingDelayItems(actionItems) {
+  const pendingById = new Map();
+  for (const [type, group] of [["delay", actionItems.pending_delay_reports], ["extension", actionItems.pending_extensions]]) {
+    for (const item of group?.items || []) {
+      const key = String(item.id);
+      const existing = pendingById.get(key);
+      if (existing) {
+        existing.pendingTypes.push(type);
+        existing.status = "PENDING";
+      }
+      else pendingById.set(key, { ...item, pendingTypes: [type] });
+    }
+  }
+  return [...pendingById.values()];
 }
 
 function Panel({ title, subtitle, children, action, delay = 0 }) {
@@ -730,8 +752,20 @@ function SupervisorActionPanel({ title, group, type, delay = 0 }) {
             return `Report date: ${item.report_date}`;
           }
 
+          if (item.pendingTypes?.length > 1) {
+            return "Delay report and extension pending";
+          }
+
+          if (item.pendingTypes?.[0] === "extension") {
+            return `Extension pending${item.requested_end_date ? ` · Requested end: ${item.requested_end_date}` : ""}`;
+          }
+
           if (item.requested_end_date) {
             return `Requested end: ${item.requested_end_date}`;
+          }
+
+          if (item.pendingTypes?.[0] === "delay") {
+            return `Delay report pending · ${item.delay_type || "Type not specified"}`;
           }
 
           if (item.change_type) {
@@ -769,7 +803,7 @@ function SupervisorProjectSelector({ action, onClose }) {
   const navigating = useRef(false);
   const key = JSON.stringify([query, page, revision]);
   const current = result?.key === key ? result : null;
-  const title = action === "report" ? "Create Daily Report" : "Create Task";
+  const title = action === "report" ? "Create Daily Report" : action === "delay" ? "Report a Delay" : "Create Task";
   useEffect(() => {
     const controller = new AbortController();
     projectApi.getProjects({ search: query, page, page_size: 20 }, controller.signal).then((data) => {
@@ -785,7 +819,8 @@ function SupervisorProjectSelector({ action, onClose }) {
     event.preventDefault();
     if (!selected || !current?.data || navigating.current || !["ACTIVE", "MAINTENANCE"].includes(selected.status)) return;
     navigating.current = true;
-    navigate(`/supervisor/projects/${encodeURIComponent(selected.id)}/${action === "report" ? "daily-reports" : "tasks"}?create=true`);
+    const section = action === "report" ? "daily-reports" : action === "delay" ? "delays" : "tasks";
+    navigate(`/supervisor/projects/${encodeURIComponent(selected.id)}/${section}?create=true`);
     onClose();
   }
   return <ApprovalModal label={`${title}: choose project`} onClose={onClose}>
@@ -809,23 +844,46 @@ function SupervisorProjectSelector({ action, onClose }) {
   </ApprovalModal>;
 }
 
-function SupervisorQuickActions() {
+function SupervisorQuickActions({ draftGroup } = {}) {
   const [action, setAction] = useState(null);
-  const actions = [
+  const reportAction = {
+    label: "Submit today's report",
+    action: "report",
+    icon: FileText,
+    tile: "bg-[#E6F4EA] text-[#16A34A] group-hover:bg-[#16A34A]",
+  };
+  const secondaryActions = [
     { label: "My Projects", path: "/supervisor/projects", icon: FolderKanban, tile: "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB]" },
     { label: "My Tasks", path: "/supervisor/tasks", icon: ListTodo, tile: "bg-[#EDE9FE] text-[#7C3AED] group-hover:bg-[#7C3AED]" },
-    { label: "Daily Report", action: "report", icon: FileText, tile: "bg-[#E6F4EA] text-[#16A34A] group-hover:bg-[#16A34A]" },
+    { label: "Report Delay", action: "delay", icon: AlertTriangle, tile: "bg-[#FCE9E6] text-[#B5473E] group-hover:bg-[#B5473E]" },
     { label: "Create Task", action: "task", icon: Plus, tile: "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB]" },
   ];
+  const primaryClass = "group flex min-h-24 w-full items-center gap-4 rounded-2xl border border-[#B5DCCB] bg-[#F8FCF9] px-5 py-5 text-left transition-colors hover:bg-[#E9F6EF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176647]";
+  const secondaryClass = "group flex min-h-14 items-center justify-center gap-2 rounded-xl border border-[#E7DED2] bg-transparent px-3 py-3 text-center text-sm font-medium text-[#665E53] transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]";
+  const draftItems = draftGroup?.items || [];
+  const draft = draftItems.find((item) => item?.id && item?.project_id);
+  const primaryLabel = draft ? "Continue today's draft" : reportAction.label;
+  const PrimaryIcon = reportAction.icon;
+  const draftPath = draft
+    ? `/supervisor/projects/${encodeURIComponent(draft.project_id)}/daily-reports?report=${encodeURIComponent(draft.id)}`
+    : null;
   return <>
     <section aria-label="Supervisor Quick Actions" className="rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] px-4 py-5 sm:px-6">
       <h2 className="mb-4 text-base font-bold text-[#211E1A] sm:mb-5">Quick Actions</h2>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">{actions.map((item) => {
+      <div className="space-y-3">
+        {draftPath ? <Link to={draftPath} className={primaryClass}>
+          <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${reportAction.tile}`}><PrimaryIcon size={25} strokeWidth={1.8} aria-hidden="true" /></span>
+          <span className="min-w-0"><span className="block text-base font-bold text-[#211E1A] sm:text-lg">{primaryLabel}</span><span className="mt-1 block text-sm text-[#665E53]">Open your saved daily report draft</span></span>
+        </Link> : <button type="button" onClick={() => setAction("report")} className={primaryClass}>
+          <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${reportAction.tile}`}><PrimaryIcon size={25} strokeWidth={1.8} aria-hidden="true" /></span>
+          <span className="min-w-0"><span className="block text-base font-bold text-[#211E1A] sm:text-lg">{primaryLabel}</span><span className="mt-1 block text-sm text-[#665E53]">Record today's site progress</span></span>
+        </button>}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">{secondaryActions.map((item) => {
         const Icon = item.icon;
-        const className = "group flex flex-col items-center justify-center gap-2.5 rounded-2xl px-2 py-3 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A]/40 sm:py-4";
-        const content = <><span className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${item.tile}`}><Icon size={23} strokeWidth={1.8} aria-hidden="true" /></span><span className="text-xs font-medium text-[#665E53] group-hover:text-[#211E1A] sm:text-sm">{item.label}</span></>;
-        return item.path ? <Link key={item.label} to={item.path} className={className}>{content}</Link> : <button key={item.label} type="button" onClick={() => setAction(item.action)} className={className}>{content}</button>;
+        const content = <><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white ${item.tile}`}><Icon size={17} strokeWidth={1.8} aria-hidden="true" /></span><span>{item.label}</span></>;
+        return item.path ? <Link key={item.label} to={item.path} className={secondaryClass}>{content}</Link> : <button key={item.label} type="button" onClick={() => setAction(item.action)} className={secondaryClass}>{content}</button>;
       })}</div>
+      </div>
     </section>
     {action && <SupervisorProjectSelector action={action} onClose={() => setAction(null)} />}
   </>;
@@ -838,6 +896,15 @@ function SupervisorDashboard({ summary, actionItems }) {
   const work = summary.project_daily_task_work || {};
   const delays = summary.my_delay_reports || {};
   const notifications = summary.notifications || {};
+  const pendingItems = mergePendingDelayItems(actionItems);
+  const draftGroup = actionItems.draft_daily_reports;
+  const hasDrafts = (draftGroup?.count ?? draftGroup?.items?.length ?? 0) > 0;
+  const actionGroups = [
+    { title: "Rejected Tasks", group: actionItems.rejected_tasks, delay: 6 },
+    { title: "Work to Correct", group: actionItems.rejected_work_to_correct, delay: 7 },
+    { title: "Pending Change Requests", group: actionItems.pending_change_requests, delay: 9 },
+    { title: "Pending Delays & Extensions", group: { count: pendingItems.length, items: pendingItems }, delay: 10 },
+  ].filter(({ group }) => (group?.count ?? group?.items?.length ?? 0) > 0);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -894,7 +961,7 @@ function SupervisorDashboard({ summary, actionItems }) {
       </section>
 
       {/* STATUS OVERVIEW */}
-      <SupervisorQuickActions />
+      <SupervisorQuickActions draftGroup={actionItems.draft_daily_reports} />
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
         <Panel delay={stagger(4)} title="My Tasks">
           <CountRow
@@ -970,44 +1037,10 @@ function SupervisorDashboard({ summary, actionItems }) {
           subtitle="Items needing correction and requests awaiting decisions."
         />
 
-        <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
-          <SupervisorActionPanel
-            delay={stagger(6)}
-            title="Rejected Tasks"
-            group={actionItems.rejected_tasks}
-          />
-
-          <SupervisorActionPanel
-            delay={stagger(7)}
-            title="Work to Correct"
-            group={actionItems.rejected_work_to_correct}
-          />
-
-          <SupervisorActionPanel
-            delay={stagger(8)}
-            title="Draft Daily Reports"
-            group={actionItems.draft_daily_reports}
-            type="draft"
-          />
-
-          <SupervisorActionPanel
-            delay={stagger(9)}
-            title="Pending Change Requests"
-            group={actionItems.pending_change_requests}
-          />
-
-          <SupervisorActionPanel
-            delay={stagger(10)}
-            title="Pending Delay Reports"
-            group={actionItems.pending_delay_reports}
-          />
-
-          <SupervisorActionPanel
-            delay={stagger(11)}
-            title="Pending Extensions"
-            group={actionItems.pending_extensions}
-          />
-        </div>
+        {hasDrafts && <div className="mb-3"><SupervisorActionPanel title="Draft Daily Reports" group={draftGroup} type="draft" delay={8} /></div>}
+        {actionGroups.length
+          ? <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">{actionGroups.map((item) => <SupervisorActionPanel key={item.title} {...item} />)}</div>
+          : <AllClearRow />}
       </section>
     </div>
   );
