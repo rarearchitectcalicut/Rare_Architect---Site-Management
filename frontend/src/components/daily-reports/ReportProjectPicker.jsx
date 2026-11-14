@@ -19,7 +19,7 @@ function projectPage(data, page) {
 
 // Reused by listing toolbars. Suggestions use only records already loaded by the
 // authorized listing; searching never starts a separate, unbounded name fetch.
-export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false, suggestions, suggestionsFiltered = false, delay = 300, label = "Search projects", placeholder = "Project name", className = "" }) {
+export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false, suggestions, suggestionsFiltered = false, delay = 300, label = "Search projects", labelClassName = "mb-2 block text-sm font-semibold text-[#817669]", placeholder = "Project name", className = "" }) {
     const [search, setSearch] = useState(query);
     const [open, setOpen] = useState(false);
     const [active, setActive] = useState(-1);
@@ -63,7 +63,7 @@ export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false
     }
     return <div className={`flex min-w-0 flex-wrap items-end gap-3 ${className}`}>
         <div className="relative min-w-0 flex-1 basis-52" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) { setOpen(false); setActive(-1); } }}>
-            <label htmlFor={id} className="mb-2 block text-sm font-semibold text-[#817669]">{label}</label>
+            <label htmlFor={id} className={labelClassName}>{label}</label>
             <div className="relative">
                 <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]" />
                 <input id={id} type="search" maxLength={200} value={search} placeholder={placeholder} autoComplete="off"
