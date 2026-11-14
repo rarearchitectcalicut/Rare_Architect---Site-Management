@@ -121,23 +121,22 @@ test("Admin and Supervisor dashboard stat cards link to their role's existing pa
         },
         append: "\nexport { AdminDashboard, SupervisorDashboard };",
     });
-    for (const [Component, props, destinations] of [
+    for (const [Component, props, destinations, expectedCardCount] of [
         [exports.AdminDashboard, { summary: {}, reviewQueue: {} }, [
             ["Total Projects", "/admin/projects"],
             ["Pending Tasks", "/admin/approvals?tab=tasks"],
             ["Daily Reports", "/admin/reports"],
             ["Pending Delays", "/admin/approvals?tab=delays"],
-        ]],
-        [exports.SupervisorDashboard, { summary: {}, actionItems: {} }, [
+        ], 4],
+        [exports.SupervisorDashboard, { summary: {}, actionItems: {}, now: new Date("2026-11-23T12:00:00") }, [
             ["Assigned Projects", "/supervisor/projects"],
             ["My Tasks", "/supervisor/tasks"],
             ["Project Reports", "/supervisor/reports"],
-            ["My Pending Delays", "/supervisor/delays"],
-        ]],
+        ], 3],
     ]) {
         const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(Component, props)));
         const cards = [...html.matchAll(/<a\b[^>]*class="[^"]*rare-rise[^"]*"[^>]*>[\s\S]*?<\/a>/g)].map(([card]) => card);
-        assert.equal(cards.length, 4);
+        assert.equal(cards.length, expectedCardCount);
         for (const [label, path] of destinations) {
             const card = cards.find((markup) => markup.includes(`>${label}</p>`));
             assert(card, `Missing stat card for ${label}`);
@@ -428,6 +427,7 @@ async function registerHarness(role = "ADMIN") {
     let cursor = 0, effects = [], query = new URLSearchParams(), tree;
     const hooks = {
         useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = initial; return [slots[i], (next) => { slots[i] = typeof next === "function" ? next(slots[i]) : next; }]; },
+        useRef(initial) { const i = cursor++; if (!(i in slots)) slots[i] = { current: initial }; return slots[i]; },
         useEffect(create, deps) { const i = cursor++; const previous = slots[i]; if (!previous || deps.some((value, j) => value !== previous.deps[j])) effects.push(() => { previous?.cleanup?.(); slots[i] = { deps, cleanup: create() }; }); },
     };
     const { exports: helpers } = await loadSource("api/taskApi.js", { overrides: { "api/client.js": { api: {} } } });
@@ -458,7 +458,7 @@ test("Admin register uses server-wide totals and links to existing detail and ap
     assert.equal(card.props.to, `/admin/projects/${registerTask.project}/tasks/${registerTask.id}`);
     assert.equal(card.props.actionLabel, "View Details");
     assert.match(card.props.approvalTo, /\/admin\/approvals\?tab=tasks&task=/);
-    assert(ui.find((node) => node.type === "p" && node.props.children === "100"));
+    assert.match(ui.find((node) => node.props?.role === "status" && typeof node.props.children === "string")?.props.children || "", /^100 tasks$/);
     assert.equal(ui.requests.length, 1);
     assert.equal(ui.requests[0].params.page_size, 12);
     ui.cleanup();
@@ -471,7 +471,9 @@ test("Supervisor register links to the existing selected-task workflow without A
     assert.equal(card.props.to, `/supervisor/projects/${registerTask.project}/tasks?task=${registerTask.id}`);
     assert.equal(card.props.actionLabel, "View Task");
     assert.equal(card.props.approvalTo, undefined);
-    const filters = ui.find((node) => node.type?.name === "GlobalTaskFilters");
+    assert.equal(ui.find((node) => node.type === "h1").props.children, "My Tasks");
+    assert.equal(ui.find((node) => node.type === "button" && node.props["aria-label"] === "Refresh tasks").props.disabled, false);
+    const filters = ui.find((node) => node.type?.name === "MobileTaskFilterSheet");
     assert.equal(filters.props.role, "SUPERVISOR");
     assert.equal(filters.props.options.supervisors.length, 0);
     ui.cleanup();
@@ -480,7 +482,7 @@ test("Supervisor register links to the existing selected-task workflow without A
 test("register filters, reset and pagination use server parameters without following next URLs", async () => {
     const ui = await registerHarness();
     ui.requests[0].resolve(registerResponse()); await flushExecution(); ui.render();
-    const filters = ui.find((node) => node.type?.name === "GlobalTaskFilters");
+    const filters = ui.find((node) => node.type?.name === "MobileTaskFilterSheet");
     filters.props.onApply({ ...filters.props.filters, search: "concrete", project: registerTask.project, work_status: "NOT_STARTED", overdue: "true" });
     ui.render();
     assert.equal(ui.requests[1].params.search, "concrete");
@@ -492,7 +494,7 @@ test("register filters, reset and pagination use server parameters without follo
     next.props.onClick(); ui.render();
     assert.equal(ui.requests[2].params.page, 2);
     assert.equal(ui.requests[2].params.search, "concrete");
-    ui.find((node) => node.type?.name === "GlobalTaskFilters").props.onReset(); ui.render();
+    ui.find((node) => node.type?.name === "MobileTaskFilterSheet").props.onReset(); ui.render();
     assert.equal(ui.requests[3].params.page, 1);
     assert.equal(ui.requests[3].params.search, undefined);
     assert.equal(ui.requests[3].params.project, undefined);
@@ -538,7 +540,7 @@ test("global filter UI exposes actual Supervisor selection only to Admin", async
     assert(admin.includes("Site Supervisor"));
     assert(!supervisor.includes("Assigned Supervisor"));
     assert(supervisor.includes("Assigned project"));
-    for (const label of ["Approval status", "Work status", "Priority", "Planned start date", "Planned end date", "Overdue only", "Clear All Filters"]) assert(supervisor.includes(label));
+    for (const label of ["Approval status", "Work status", "Priority", "Planned start date", "Planned end date", "Overdue only", "Clear all filters"]) assert(supervisor.includes(label));
 });
 
 test("sidebar Tasks destinations and all existing project-task routes stay registered once", async () => {
@@ -584,11 +586,14 @@ test("project directory uses one server page for both roles and keeps Supervisor
         assert.equal(ui.requests.length, 1);
         assert.equal(ui.requests[0].params.page, 1);
         assert.equal(ui.requests[0].params.page_size, 12);
+        const pageTitle = ui.find((node) => node.type === "h1");
+        assert.equal(pageTitle.props.children, role === "ADMIN" ? "All Projects" : "My Projects");
+        assert.equal(ui.find((node) => node.type === "button" && node.props["aria-label"] === "Refresh projects").props.disabled, false);
         const card = ui.find((node) => node.props?.project?.id === directoryProject.id);
         assert.equal(card.props.to, `/${role.toLowerCase()}/projects/project-1`);
         assert.equal(card.props.layout, "grid");
-        assert.equal(ui.find((node) => node.type === "button" && node.props.children?.[1] === "Gallery").props["aria-pressed"], true);
-        const add = ui.find((node) => node.type === "button" && node.props.children?.[1] === "Add Project");
+        assert.equal(ui.find((node) => node.type === "button" && node.props["aria-label"] === "Gallery view").props["aria-pressed"], true);
+        const add = ui.find((node) => node.type === "button" && node.props["aria-label"] === "Add project");
         assert.equal(Boolean(add), role === "ADMIN");
         ui.cleanup();
     }
@@ -598,7 +603,7 @@ test("project filters, page size and pagination preserve URL state while view sw
     const ui = await projectDirectoryHarness("ADMIN", { search: "Cedar", category: "category-1", status: "ACTIVE", page: "2", ordering: "name", view: "list" });
     assert.equal(ui.requests[0].params.search, "Cedar"); assert.equal(ui.requests[0].params.page, 2);
     ui.requests[0].resolve({ ...directoryResponse(), previous: "page-one" }); await flushExecution(); ui.render();
-    ui.find((node) => node.type === "button" && node.props.children?.[1] === "Gallery").props.onClick(); ui.render();
+    ui.find((node) => node.type === "button" && node.props["aria-label"] === "Gallery view").props.onClick(); ui.render();
     assert.equal(ui.requests.length, 1); assert.equal(ui.query.get("view"), "grid");
     assert.equal(ui.find((node) => node.props?.project).props.layout, "grid");
     ui.find((node) => node.type === "button" && node.props.children?.[0] === "Next").props.onClick(); ui.render();
@@ -641,9 +646,56 @@ test("project card renders accessible list and gallery links with fallback dates
     const { exports } = await loadSource("components/projects/HorizontalProjectCard.jsx");
     for (const layout of ["list", "grid"]) {
         const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.default, { project: { ...directoryProject, cover_image: null, start_date: null }, layout, to: "/supervisor/projects/project-1" })));
-        for (const text of ["Cedar residence", "Cedar client", "Kochi", "Active", "Residential", "Not scheduled", "Expected completion", 'href="/supervisor/projects/project-1"']) assert(html.includes(text));
+        for (const text of ["Cedar residence", "Cedar client", "Kochi", 'aria-label="Open project: Cedar residence"', 'href="/supervisor/projects/project-1"']) assert(html.includes(text));
+        if (layout === "grid") for (const text of ["Active", "Residential", "Not scheduled", "Expected completion"]) assert(html.includes(text));
+        else assert(!html.includes("Start date"));
         assert(!html.includes("<button"));
     }
+    const mobileGallery = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.default, { project: { ...directoryProject, status: "COMPLETED", cover_image: "cover.jpg" }, layout: "grid", to: "/projects/project-1" })));
+    assert(mobileGallery.includes("aspect-video"));
+    assert(mobileGallery.includes("max-h-[120px]"));
+    assert(mobileGallery.includes("Due 01 Dec 2026"));
+    const mobileStart = mobileGallery.indexOf("hidden max-[480px]:flex");
+    const desktopStart = mobileGallery.indexOf("min-[481px]:block", mobileStart);
+    assert(mobileStart >= 0 && desktopStart > mobileStart);
+    assert(!mobileGallery.slice(mobileStart, desktopStart).includes("Start date"));
+    assert(!mobileGallery.slice(mobileStart, desktopStart).includes("Project workspace"));
+    assert(mobileGallery.includes("Completed"));
+});
+
+test("mobile task card is one compact accessible link and only shows available progress and details", async () => {
+    const { exports } = await loadSource("components/admin/tasks/AdminTaskCard.jsx", {
+        overrides: { "components/tasks/TaskExecutionActions.jsx": { TaskProgress: () => null } },
+    });
+    const task = {
+        id: "task-id",
+        title: "Pour foundation",
+        project_name: "Cedar House",
+        priority: "HIGH",
+        work_status: "IN_PROGRESS",
+        approval_status: "APPROVED",
+        end_date: "2026-11-20",
+        is_overdue: false,
+        supervisors: [{ name: "Laya" }],
+        progress: { progress_percentage: "40.00" },
+    };
+    const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.MobileTaskCard, { task, to: "/supervisor/projects/project/tasks?task=task-id" })));
+    assert.equal((html.match(/<a\b/g) || []).length, 1);
+    assert.ok(html.includes('href="/supervisor/projects/project/tasks?task=task-id"'));
+    assert.ok(html.includes("Pour foundation"));
+    assert.ok(html.includes("Cedar House"));
+    assert.ok(html.includes("Work: In Progress"));
+    assert.ok(html.includes("Approval: Approved"));
+    assert.ok(html.includes("Laya"));
+    assert.ok(html.includes("Due 20 Nov 2026"));
+    assert.ok(html.includes('role="progressbar"'));
+    assert.ok(!html.includes("Priority:"));
+    assert.ok(!html.includes("View Task"));
+    assert.ok(!html.includes("Not specified"));
+
+    const withoutProgress = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.MobileTaskCard, { task: { ...task, progress: { progress_percentage: "0" }, end_date: null, supervisors: [] }, to: "/task" })));
+    assert.ok(!withoutProgress.includes('role="progressbar"'));
+    assert.ok(!withoutProgress.includes("Not specified"));
 });
 
 test("Admin task cards hide missing and zero timeline order but retain meaningful positions", async () => {

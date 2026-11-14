@@ -936,8 +936,8 @@ export default function SupervisorProjectTasks() {
             </nav>
 
             {/* HEADER */}
-            <header className="rare-page-header flex flex-wrap items-end justify-between gap-4">
-                <div>
+            <header className="rare-page-header flex flex-wrap items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold uppercase tracking-widest text-[#716658]">
                         Supervisor / Project Workspace
                     </p>
@@ -953,12 +953,12 @@ export default function SupervisorProjectTasks() {
                     </p>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                     <button
                         type="button"
                         onClick={() => setBulkOpen(true)}
                         disabled={loading || Boolean(error) || !["ACTIVE", "MAINTENANCE"].includes(project?.status)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#D6C6B2] bg-[#F1EADF] px-5 py-3 text-sm font-semibold text-[#66513D] hover:bg-[#E8DCCB] disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#D6C6B2] bg-[#F1EADF] px-3 py-2 text-sm font-semibold text-[#66513D] hover:bg-[#E8DCCB] disabled:opacity-50"
                     >
                         <Layers3 size={18} />
                         Bulk Add Tasks
@@ -968,10 +968,20 @@ export default function SupervisorProjectTasks() {
                         type="button"
                         onClick={openCreate}
                         disabled={loading || Boolean(error) || !["ACTIVE", "MAINTENANCE"].includes(project?.status)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white hover:bg-[#39332B] disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#211E1A] px-3 py-2 text-sm font-semibold text-white hover:bg-[#39332B] disabled:opacity-50"
                     >
                         <Plus size={18} />
                         Create Task
+                    </button>
+                    <button
+                        type="button"
+                        onClick={refreshTasks}
+                        disabled={loading}
+                        aria-label="Refresh tasks"
+                        className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-3 py-2 text-sm font-semibold text-[#514538] hover:bg-[#F1EADF] disabled:opacity-50"
+                    >
+                        <RefreshCw size={18} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />
+                        Refresh
                     </button>
                 </div>
             </header>
@@ -1123,8 +1133,8 @@ export default function SupervisorProjectTasks() {
             </section>
 
             {/* DIRECTORY HEADER */}
-            <div className="flex items-center justify-between gap-3">
-                <div>
+            <div className="flex w-full items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                     <h2 className="text-lg font-bold text-[#211E1A]">
                         Task Directory
                     </h2>
@@ -1134,15 +1144,6 @@ export default function SupervisorProjectTasks() {
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={refreshTasks}
-                    disabled={loading}
-                    aria-label="Refresh tasks"
-                    className="rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] p-3 hover:bg-[#F1EADF] disabled:opacity-50"
-                >
-                    <RefreshCw size={18} />
-                </button>
             </div>
 
             {/* ERROR */}

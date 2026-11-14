@@ -1,5 +1,5 @@
 import { TaskProgress } from "../../tasks/TaskExecutionActions";
-import { ArrowUpRight, CalendarDays, UserRound } from "lucide-react";
+import { ArrowUpRight, CalendarDays, ChevronRight, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDate, formatText } from "../../approvals/approvalUtils";
 
@@ -47,27 +47,68 @@ export function TaskBadges({ task }) {
     </div>;
 }
 
-export default function AdminTaskCard({ task, to, showProject = false, actionLabel = "Open Details", approvalTo }) {
+export function MobileTaskCard({ task, to }) {
+    const overdue = typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task);
+    const priorityTone = {
+        URGENT: "bg-[#B5473E]",
+        HIGH: "bg-[#94651D]",
+        MEDIUM: "bg-[#74614D]",
+        LOW: "bg-[#3565A5]",
+    };
+    const supervisors = Array.isArray(task.supervisors)
+        ? task.supervisors.map((supervisor) => supervisor.name).filter(Boolean).join(", ")
+        : "";
+    const dueDate = task.end_date ? formatDate(task.end_date) : "";
+    const progress = Number(task.progress?.progress_percentage);
+    const showProgress = Number.isFinite(progress) && progress > 0;
+    const statusClass = (value) => tones[value] || "bg-[#F1EADF] text-[#74614D]";
+    return <Link
+        to={to}
+        aria-label={`${task.title}, ${task.project_name || "Project"}`}
+        className="group flex min-h-11 min-w-0 flex-col gap-1.5 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+    >
+        <span className="flex min-w-0 items-center gap-2">
+            <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${priorityTone[task.priority] || "bg-[#74614D]"}`} />
+            <span className="min-w-0 flex-1 truncate text-base font-semibold leading-5 text-[#211E1A]">{task.title}</span>
+            <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-[#716658]" />
+        </span>
+        <span className="truncate text-[12px] font-medium leading-4 text-[#716658]">{task.project_name}</span>
+        <span className="flex min-w-0 flex-wrap gap-1.5">
+            {[["Work", task.work_status], ["Approval", task.approval_status]].filter(([, value]) => value).map(([label, value]) =>
+                <span key={label} className={`max-w-full truncate rounded-full px-2 py-1 text-[12px] font-semibold leading-4 ${statusClass(value)}`}>{label}: {formatText(value)}</span>)}
+        </span>
+        {(overdue || supervisors || dueDate) && <span className="flex min-w-0 items-center gap-1 truncate text-[12px] font-medium leading-4">
+            {overdue && <span className="shrink-0 font-semibold text-red-700">Overdue</span>}
+            {supervisors && <span className="truncate text-[#716658]">{supervisors}</span>}
+            {dueDate && <span className="shrink-0 text-[#716658]">{supervisors ? "· " : ""}Due {dueDate}</span>}
+        </span>}
+        {showProgress && <span role="progressbar" aria-label={`${task.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(progress, 100)} className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-[#E7DED2]">
+            <span className="block h-full rounded-full bg-[#211E1A]" style={{ width: `${Math.min(progress, 100)}%` }} />
+        </span>}
+    </Link>;
+}
+
+export default function AdminTaskCard({ task, to, showProject = false, actionLabel = "Open Details", approvalTo, compact = false }) {
     const overdue = typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task);
     const displayOrder = Number(task.display_order);
     const hasDisplayOrder = Number.isInteger(displayOrder) && displayOrder > 0;
-    return <article className="task-panel task-lift group relative flex min-w-0 flex-col overflow-hidden p-4 transition-colors duration-150 sm:p-5">
+    return <article className={`task-panel task-lift group relative flex min-w-0 flex-col overflow-hidden p-4 transition-colors duration-150 ${compact ? "gap-2 sm:p-4" : "sm:p-5"}`}>
         <div aria-hidden="true" className={`absolute inset-x-6 top-0 h-0.5 rounded-b-full ${overdue ? "bg-[#C78576]" : "bg-[#B8A181]/50"}`} />
-        {showProject && <p className="mb-3 break-words text-xs font-semibold text-[#8B6944]">{task.project_name}</p>}
-        <div className="mb-3 flex items-start justify-between gap-3">
+        {showProject && <p className={`break-words font-semibold text-[#8B6944] ${compact ? "text-xs" : "mb-3 text-xs"}`}>{task.project_name}</p>}
+        <div className={`flex items-start justify-between gap-3 ${compact ? "" : "mb-3"}`}>
             <div className="min-w-0">{hasDisplayOrder && <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#716658]">Timeline order {displayOrder}</p>}
-                <h2 className="mt-2 break-words text-lg font-semibold leading-7 tracking-tight"><Link to={to} className="hover:text-[#8B6944]">{task.title}</Link></h2></div>
+                <h2 className={`break-words font-semibold tracking-tight ${compact ? "text-base leading-5" : "mt-2 text-lg leading-7"}`}><Link to={to} className="hover:text-[#8B6944]">{task.title}</Link></h2></div>
             <span className="rounded-xl border border-[#E7DED2] bg-[#F8F4EE] p-2 text-[#716658] transition-colors group-hover:bg-[#EDE2D2]"><ArrowUpRight size={17} aria-hidden="true" /></span>
         </div>
         <TaskBadges task={task} />
         <TaskProgress progress={task.progress} />
         {showProject && Array.isArray(task.supervisors) && <p className="mt-3 break-words text-xs leading-5 text-[#716658]">Assigned Supervisor: {task.supervisors.map((supervisor) => supervisor.name).join(", ") || "Not assigned"}</p>}
-        {task.description && <p className="mt-4 line-clamp-2 break-words text-sm leading-6 text-[#716658]">{task.description}</p>}
-        <div className="mb-4 mt-4 space-y-2 rounded-xl bg-[#F8F5F0] p-4">
+        {task.description && <p className={`line-clamp-2 break-words text-sm leading-5 text-[#716658] ${compact ? "" : "mt-4 leading-6"}`}>{task.description}</p>}
+        <div className={`${compact ? "grid grid-cols-2 gap-2 rounded-lg bg-[#F8F5F0] px-3 py-2" : "mb-4 mt-4 space-y-2 rounded-xl bg-[#F8F5F0] p-4"}`}>
             <p className="flex items-center gap-2.5 break-words text-sm text-[#665C50]"><UserRound size={16} className="shrink-0 text-[#A38D72]" aria-hidden="true" />{task.worker_name || "Worker/team not assigned"}</p>
             <p className="flex items-start gap-2.5 text-xs leading-5 text-[#716658]"><CalendarDays size={16} className="mt-0.5 shrink-0 text-[#A38D72]" aria-hidden="true" />{formatDate(task.start_date)} – {formatDate(task.end_date)}</p>
         </div>
-        <Link to={to} className="task-primary mt-auto inline-flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-semibold">{actionLabel}<span className="sr-only">: {task.title}</span><ArrowUpRight size={16} aria-hidden="true" /></Link>
+        <Link to={to} className={`task-primary mt-auto inline-flex items-center justify-between gap-3 rounded-xl px-4 text-sm font-semibold ${compact ? "min-h-11 py-2" : "py-3"}`}>{actionLabel}<span className="sr-only">: {task.title}</span><ArrowUpRight size={16} aria-hidden="true" /></Link>
         {approvalTo && <Link to={approvalTo} className="mt-3 rounded-lg py-1 text-center text-xs font-semibold text-[#8B6944] hover:underline">Open in Approval Center</Link>}
     </article>;
 }

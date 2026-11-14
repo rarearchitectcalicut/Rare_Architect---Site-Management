@@ -1,11 +1,11 @@
 import { TaskProgress } from "../../components/tasks/TaskExecutionActions";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Layers3, ListOrdered, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Filter, LayoutGrid, Layers3, List, ListOrdered, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import { projectApi } from "../../api/projectApi";
 import { isTaskId, isTaskOverdue, taskApi, taskRegisterPage } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
-import AdminTaskCard, { TaskPageStyles } from "../../components/admin/tasks/AdminTaskCard";
+import AdminTaskCard, { MobileTaskCard, TaskPageStyles } from "../../components/admin/tasks/AdminTaskCard";
 import TimelineSchedule from "../../components/timeline/TimelineSchedule";
 import { formatDate, formatText, getError } from "../../components/approvals/approvalUtils";
 
@@ -82,12 +82,11 @@ const registerDefaults = {
     start_from: "", start_to: "", end_from: "", end_to: "", overdue: "", sort: "order",
 };
 
-function GlobalTaskFilters({ filters, options, role, onApply, onReset, suggestions, loading }) {
+function GlobalTaskFilters({ filters, options, role, onApply, onReset }) {
     const [draft, setDraft] = useState(filters);
     const appliedKey = JSON.stringify(filters);
     const [previousAppliedKey, setPreviousAppliedKey] = useState(appliedKey);
     if (appliedKey !== previousAppliedKey) { setPreviousAppliedKey(appliedKey); setDraft(JSON.parse(appliedKey)); }
-    const [searchReset, setSearchReset] = useState(0);
     const [error, setError] = useState("");
     function change(key, value) {
         const next = { ...draft, [key]: value };
@@ -114,14 +113,8 @@ function GlobalTaskFilters({ filters, options, role, onApply, onReset, suggestio
             <option value="">{allLabel}</option>{choices.map(([value, title]) => <option key={value} value={value}>{title}</option>)}
         </select></label>;
     }
-    return <form onSubmit={submit} className="task-panel space-y-5 p-4 sm:p-6">
-        <div className="flex items-center gap-2.5 border-b border-[#EEE6DC] pb-4"><SlidersHorizontal size={17} className="text-[#A38D72]" aria-hidden="true" /><h2 className="text-sm font-semibold">Find a task</h2></div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="sm:col-span-2"><ProjectSearch key={searchReset} query={filters.search} onSearch={(value) => change("search", value)} suggestions={suggestions} loading={loading} label="Search all tasks" placeholder="Task, description, worker/team or project" /></div>
-        </div>
-        <details className="rare-filter-disclosure">
-            <summary>Filters and sorting ({Object.entries(draft).filter(([key, value]) => key !== "search" && value && (key !== "sort" || value !== "order")).length})</summary>
-            <div className="grid gap-4 pt-3 sm:grid-cols-2 xl:grid-cols-3">
+    return <form onSubmit={submit} className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
             {select(role === "ADMIN" ? "Project" : "Assigned project", "project", options.projects.map((project) => [project.id, project.name]), "All projects")}
             {role === "ADMIN" && select("Assigned Supervisor", "supervisor", options.supervisors.map((supervisor) => [supervisor.id, supervisor.name]), "All Supervisors")}
             {select("Approval status", "approval_status", ["PENDING", "APPROVED", "REJECTED"].map((value) => [value, formatText(value)]))}
@@ -129,19 +122,73 @@ function GlobalTaskFilters({ filters, options, role, onApply, onReset, suggestio
             {select("Priority", "priority", priorities.map((value) => [value, formatText(value)]))}
             <label className="text-xs font-medium text-[#716658]">Sort by<select className={`${control} mt-2`} value={draft.sort} onChange={(event) => change("sort", event.target.value)}>{[["order", "Timeline order within project"], ["newest", "Newest"], ["oldest", "Oldest"], ["start_date", "Start date"], ["end_date", "End date"], ["priority", "Priority"], ["title", "Task name"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         </div>
-        <div className="grid gap-4 border-t border-[#EEE6DC] pt-4 lg:grid-cols-2">
+        <div className="grid gap-3 border-t border-[#EEE6DC] pt-3 lg:grid-cols-2">
             {[["start", "Planned start date"], ["end", "Planned end date"]].map(([prefix, title]) => <fieldset key={prefix} className="grid min-w-0 gap-3 sm:grid-cols-2"><legend className="mb-2 text-xs font-semibold text-[#665C50]">{title}</legend>
                 <label className="text-xs text-[#716658]">From<input type="date" value={draft[`${prefix}_from`]} onChange={(event) => change(`${prefix}_from`, event.target.value)} className={`${control} mt-1`} /></label>
                 <label className="text-xs text-[#716658]">To<input type="date" min={draft[`${prefix}_from`] || undefined} value={draft[`${prefix}_to`]} onChange={(event) => change(`${prefix}_to`, event.target.value)} className={`${control} mt-1`} /></label>
             </fieldset>)}
         </div>
-        </details>
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#EEE6DC] pt-4">
-            <label className="flex items-center gap-2 text-xs font-medium text-[#665C50]"><input type="checkbox" checked={draft.overdue === "true"} onChange={(event) => change("overdue", event.target.checked ? "true" : "")} className="h-4 w-4 accent-[#211E1A]" />Overdue only</label>
-            <div className="flex flex-wrap gap-2"><button type="button" className="task-secondary px-4 py-3 text-xs font-semibold" onClick={() => { setDraft(registerDefaults); setSearchReset((value) => value + 1); setError(""); onReset(); }}>Clear All Filters</button></div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#EEE6DC] pt-3">
+            <label className="flex min-h-11 items-center gap-2 text-xs font-medium text-[#665C50]"><input type="checkbox" checked={draft.overdue === "true"} onChange={(event) => change("overdue", event.target.checked ? "true" : "")} className="h-4 w-4 accent-[#211E1A]" />Overdue only</label>
+            <div className="flex flex-wrap gap-2"><button type="button" className="task-secondary min-h-11 px-4 py-2 text-xs font-semibold" onClick={() => { setDraft(registerDefaults); setError(""); onReset(); }}>Clear all filters</button></div>
         </div>
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
     </form>;
+}
+
+function MobileTaskFilterSheet({ open, onClose, filters, options, role, onApply, onReset, triggerRef }) {
+    const dialogRef = useRef(null);
+    const closeRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const dialog = dialogRef.current;
+        const trigger = triggerRef.current;
+        const previousFocus = document.activeElement;
+        const previousOverflow = document.body.style.overflow;
+        if (dialog && !dialog.open) dialog.showModal();
+        document.body.style.overflow = "hidden";
+        closeRef.current?.focus();
+        return () => {
+            dialog?.close();
+            document.body.style.overflow = previousOverflow;
+            if (trigger?.isConnected) trigger.focus();
+            else previousFocus?.focus?.();
+        };
+    }, [open, triggerRef]);
+
+    function trapFocus(event) {
+        if (event.key !== "Tab") return;
+        const focusable = [...event.currentTarget.querySelectorAll(
+            'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )];
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+
+    return <dialog
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mobile-task-filters-title"
+        onCancel={(event) => { event.preventDefault(); onClose(); }}
+        onKeyDown={trapFocus}
+        className="fixed inset-x-0 bottom-0 top-auto m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-[#211E1A] shadow-[0_-12px_36px_rgba(33,30,26,0.18)] backdrop:bg-[#211E1A]/45 min-[768px]:inset-y-4 min-[768px]:right-4 min-[768px]:left-auto min-[768px]:top-4 min-[768px]:bottom-4 min-[768px]:m-0 min-[768px]:h-auto min-[768px]:max-h-none min-[768px]:w-[min(32rem,calc(100vw-2rem))] min-[768px]:rounded-2xl min-[768px]:shadow-[0_12px_36px_rgba(33,30,26,0.18)]"
+    >
+        <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 id="mobile-task-filters-title" className="text-base font-semibold">Filters and sorting</h2>
+            <button ref={closeRef} type="button" onClick={onClose} aria-label="Close filters" className="flex h-11 w-11 items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"><X size={20} aria-hidden="true" /></button>
+        </div>
+        <GlobalTaskFilters filters={filters} options={options} role={role} onApply={onApply} onReset={onReset} />
+    </dialog>;
 }
 
 export function GlobalTaskRegister({ role = "ADMIN" }) {
@@ -153,6 +200,9 @@ function GlobalTaskRegisterPage({ role }) {
     const [result, setResult] = useState(null);
     const [options, setOptions] = useState({ projects: [], supervisors: [] });
     const [revision, setRevision] = useState(0);
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+    const [layout, setLayout] = useState("grid");
+    const filterButtonRef = useRef(null);
     const requestedPage = Number(params.get("page") || 1);
     const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
     const requestedSize = Number(params.get("page_size") || 12);
@@ -198,28 +248,60 @@ function GlobalTaskRegisterPage({ role }) {
         setParams(query, { replace: true });
     }
     function changePage(next) { const query = new URLSearchParams(params); query.set("page", String(next)); setParams(query); }
-    const summaries = admin
-        ? [["Total Tasks", "total"], ["Pending Approval", "pending_approval"], ["In Progress", "in_progress"], ["Completed", "completed"], ["Overdue", "overdue"]]
-        : [["Total Tasks", "total"], ["Not Started", "not_started"], ["In Progress", "in_progress"], ["Completed", "completed"], ["Overdue", "overdue"]];
+    const pageCount = data ? Math.max(1, Math.ceil(data.count / pageSize)) : 1;
+    const activeFilterCount = Object.entries(filters).filter(([key, value]) => key !== "search" && value && !(key === "sort" && value === "order")).length;
+    const mobileChips = [
+        { label: "All", count: data?.summary.total ?? 0, selected: !filters.work_status && filters.overdue !== "true", apply: () => applyFilters({ ...filters, work_status: "", overdue: "" }) },
+        { label: "Not started", count: data?.summary.not_started ?? 0, selected: filters.work_status === "NOT_STARTED", apply: () => applyFilters({ ...filters, work_status: "NOT_STARTED", approval_status: "", overdue: "" }) },
+        { label: "In progress", count: data?.summary.in_progress ?? 0, selected: filters.work_status === "IN_PROGRESS", apply: () => applyFilters({ ...filters, work_status: "IN_PROGRESS", approval_status: "", overdue: "" }) },
+        { label: "Completed", count: data?.summary.completed ?? 0, selected: filters.work_status === "COMPLETED", apply: () => applyFilters({ ...filters, work_status: "COMPLETED", approval_status: "", overdue: "" }) },
+        { label: "Overdue", count: data?.summary.overdue ?? 0, selected: filters.overdue === "true", apply: () => applyFilters({ ...filters, work_status: "", approval_status: "", overdue: filters.overdue === "true" ? "" : "true" }) },
+    ];
+    const taskHref = (task) => admin
+        ? `/admin/projects/${task.project}/tasks/${task.id}`
+        : `/supervisor/projects/${task.project}/tasks?task=${encodeURIComponent(task.id)}`;
 
-    return <div className="rare-tasks mx-auto min-w-0 max-w-[1600px] space-y-6 pb-8 text-[#211E1A] sm:space-y-7">
+    const projectSuggestions = (data?.results || []).map((task) => ({ id: task.id, name: task.title, context: task.project_name, to: taskHref(task) }));
+    return <div className="rare-tasks mx-auto w-full min-w-0 max-w-[1200px] space-y-4 overflow-x-hidden px-4 pb-8 text-[#211E1A] md:px-6 lg:px-8 sm:space-y-5">
         <TaskPageStyles />
         {!result && loading && <LoadingScreen message={admin ? "Loading all tasks..." : "Loading your assigned-project tasks..."} />}
-        <header className="rare-page-header task-hero task-enter rounded-[28px] border border-black p-6 text-[#211E1A] sm:p-5">
-            <div className="flex flex-wrap items-start justify-between gap-5"><div className="min-w-0 flex-1 basis-64"><p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#716658]"><Layers3 size={14} aria-hidden="true" />{admin ? "Project oversight" : "Your workspace"}</p><h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{admin ? "All Tasks" : "My Tasks"}</h1><p className="mt-3 text-sm leading-6 text-[#716658]">{admin ? "Manage and monitor tasks across all projects" : "Track tasks across your assigned projects."}</p></div>
-                <button type="button" disabled={loading} onClick={() => setRevision((value) => value + 1)} className="flex items-center gap-2 rounded-xl border border-[#887258]/50 bg-[#F1EADF] px-4 py-3 text-xs font-semibold text-[#716658] hover:bg-[#E7DED2] disabled:opacity-50"><RefreshCw size={15} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />Refresh tasks</button>
-            </div>
+        <header className="flex w-full items-center justify-between gap-3">
+            <h1 className="min-w-0 truncate text-xl font-bold tracking-tight text-[#211E1A]">{admin ? "All Tasks" : "My Tasks"}</h1>
+            <button type="button" aria-label="Refresh tasks" disabled={loading} onClick={() => setRevision((value) => value + 1)} className="rare-button rare-button-secondary ml-auto flex h-11 min-h-11 shrink-0 items-center gap-2 px-3 py-2 text-xs font-semibold">
+                <RefreshCw size={16} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />Refresh
+            </button>
         </header>
-        {data && <div><p className="mb-3 text-xs text-[#716658]">{data.summary_scope === "results" ? "Totals for all matching tasks" : `Totals across ${admin ? "all accessible" : "your assigned"} projects`}</p><div className="rare-compact-stats grid grid-cols-2 gap-3 lg:grid-cols-5">{summaries.map(([label, key], index) => <div key={key} className="task-panel task-enter task-lift p-4 transition-all duration-300 sm:p-5" style={{ "--task-delay": `${index * 40}ms` }}><p className="text-xs font-medium text-[#716658]">{label}</p><p className={`mt-3 text-3xl font-semibold tracking-tight ${key === "overdue" && data.summary[key] ? "text-[#AA6554]" : "text-[#211E1A]"}`}>{data.summary[key].toLocaleString("en-IN")}</p></div>)}</div></div>}
-        <GlobalTaskFilters suggestions={(data?.results || []).map((task) => ({ id: task.id, name: task.title, context: task.project_name, to: admin ? `/admin/projects/${task.project}/tasks/${task.id}` : `/supervisor/projects/${task.project}/tasks?task=${encodeURIComponent(task.id)}` }))} loading={loading} filters={filters} options={options} role={role} onApply={applyFilters} onReset={() => setParams({})} />
+        <div className="flex w-full min-w-0 items-center gap-2">
+            <ProjectSearch query={filters.search} onSearch={(value) => applyFilters({ ...filters, search: value })} suggestions={projectSuggestions} loading={loading} delay={250} label="Search tasks" labelClassName="sr-only" placeholder="Search tasks" className="min-w-0 flex-1" />
+            <button ref={filterButtonRef} type="button" onClick={() => setMobileFiltersOpen(true)} aria-label={`Filters and sorting, ${activeFilterCount} active filters`} className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#E7DED2] bg-[#FFFDFA] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]">
+                <Filter size={18} aria-hidden="true" />
+                {activeFilterCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#211E1A] px-1 text-xs font-semibold text-[#FFFDFA]">{activeFilterCount}</span>}
+            </button>
+            <MobileTaskFilterSheet open={mobileFiltersOpen} onClose={() => setMobileFiltersOpen(false)} filters={filters} options={options} role={role} onApply={applyFilters} onReset={() => applyFilters(registerDefaults)} triggerRef={filterButtonRef} />
+        </div>
+        {!admin && data && <div aria-label="Filter tasks by status" className="flex min-w-0 gap-2 overflow-x-auto pb-1">
+            {mobileChips.map((chip) => <button key={chip.label} type="button" aria-pressed={chip.selected} onClick={chip.apply} className={`min-h-11 shrink-0 rounded-full border px-3 text-xs font-semibold ${chip.selected ? "border-[#211E1A] bg-[#211E1A] text-[#FFFDFA]" : "border-[#E7DED2] bg-[#FFFDFA] text-[#665C50]"}`}>{chip.label} {chip.count}</button>)}
+        </div>}
+        <div className="flex w-full min-w-0 items-center justify-between gap-3">
+            <p role="status" aria-live="polite" className="min-w-0 truncate text-sm font-medium text-[#716658]">{loading ? "Updating tasks..." : visible?.error ? "Tasks are unavailable" : `${data.count.toLocaleString("en-IN")} ${data.count === 1 ? "task" : "tasks"}`}</p>
+            <div role="group" aria-label="Task view" className="ml-auto inline-flex shrink-0 gap-1 rounded-2xl border border-[#D8C7B2] bg-[#F1EADF] p-1">
+                {[["list", "List", List], ["grid", "Gallery", LayoutGrid]].map(([value, label, Icon]) => <button key={value} type="button" aria-label={`${label} view`} aria-pressed={layout === value} onClick={() => setLayout(value)} className={`inline-flex h-11 w-11 min-h-11 items-center justify-center rounded-xl p-0 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#94651D] ${layout === value ? "bg-[#FFFDFA] text-[#352D24] shadow-sm" : "text-[#66543D] hover:bg-white/60"}`}><Icon size={18} aria-hidden="true" /></button>)}
+            </div>
+        </div>
         {visible?.error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700"><p>{visible.error}</p><p className="mt-2">Task results and totals are unavailable. Please retry or clear the filters.</p><div className="mt-4 flex flex-wrap gap-2"><button type="button" className="task-secondary px-4 py-2 text-xs font-semibold" onClick={() => setRevision((value) => value + 1)}>Retry</button>{page > 1 && <button type="button" className="task-secondary px-4 py-2 text-xs font-semibold" onClick={() => changePage(1)}>Return to first page</button>}</div></div>}
         {data && <>
-            <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold tracking-tight">Task register</h2><p role="status" className="mt-1 text-xs text-[#716658]">{data.count.toLocaleString("en-IN")} matching tasks</p></div><label className="flex items-center gap-2 text-xs text-[#716658]">Per page<select value={pageSize} onChange={(event) => { const query = new URLSearchParams(params); query.set("page_size", event.target.value); query.delete("page"); setParams(query); }} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] px-3 py-2 text-[#211E1A]">{[12, 24, 48].map((size) => <option key={size} value={size}>{size}</option>)}</select></label></div>
-            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">{data.results.map((task) => <AdminTaskCard key={task.id} task={task} showProject actionLabel={admin ? "View Details" : "View Task"}
-                to={admin ? `/admin/projects/${task.project}/tasks/${task.id}` : `/supervisor/projects/${task.project}/tasks?task=${encodeURIComponent(task.id)}`}
-                approvalTo={admin && task.approval_status === "PENDING" ? `/admin/approvals?tab=tasks&task=${task.id}&type=tasks` : undefined} />)}</div>
+            <div className={`grid gap-4 ${layout === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1 gap-3"}`}>
+                {data.results.map((task) => admin
+                    ? <AdminTaskCard key={task.id} task={task} showProject compact={layout === "list"} actionLabel="View Details" to={`/admin/projects/${task.project}/tasks/${task.id}`} approvalTo={task.approval_status === "PENDING" ? `/admin/approvals?tab=tasks&task=${task.id}&type=tasks` : undefined} />
+                    : layout === "list"
+                        ? <MobileTaskCard key={task.id} task={task} to={taskHref(task)} />
+                        : <div key={task.id} className="contents"><div className="hidden min-[481px]:block"><AdminTaskCard task={task} showProject actionLabel="View Task" to={taskHref(task)} /></div><div className="min-[481px]:hidden"><MobileTaskCard task={task} to={taskHref(task)} /></div></div>)}
+            </div>
             {!data.results.length && <div className="task-panel px-6 py-12 text-center"><span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1EADF] text-[#A38D72]"><Layers3 size={25} aria-hidden="true" /></span><h3 className="mt-5 font-semibold">No tasks found</h3><p className="mt-2 text-sm text-[#716658]">Try changing your filters. Tasks appear here when they are submitted for {admin ? "a project" : "one of your assigned projects"}.</p></div>}
-            <nav aria-label="Task register pages" className="rare-pagination border-t border-[#E0D5C6] pt-5 text-xs"><button type="button" disabled={!data.previous} onClick={() => changePage(page - 1)} className="task-secondary flex items-center gap-1 px-3 py-3 font-semibold disabled:opacity-40"><ChevronLeft size={15} aria-hidden="true" />Previous</button><span aria-live="polite" aria-atomic="true" className="text-[#716658]">Page <strong className="text-[#211E1A]">{page}</strong> of {Math.max(1, Math.ceil(data.count / pageSize))}</span><button type="button" disabled={!data.next} onClick={() => changePage(page + 1)} className="task-secondary flex items-center gap-1 px-3 py-3 font-semibold disabled:opacity-40">Next<ChevronRight size={15} aria-hidden="true" /></button></nav>
+            {pageCount > 1 && <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E0D5C6] pt-4">
+                <label className="flex items-center gap-2 text-xs font-medium text-[#716658]">Per page<select aria-label="Tasks per page" value={pageSize} onChange={(event) => { const query = new URLSearchParams(params); query.set("page_size", event.target.value); query.delete("page"); setParams(query); }} className="min-h-11 rounded-lg border border-[#E7DED2] bg-[#FFFDFA] px-2 py-2 text-[#211E1A]">{[12, 24, 48].map((size) => <option key={size} value={size}>{size}</option>)}</select></label>
+                <nav aria-label="Task register pages" className="rare-pagination flex-1 text-xs"><button type="button" disabled={!data.previous} onClick={() => changePage(page - 1)} className="task-secondary flex items-center gap-1 px-3 py-3 font-semibold disabled:opacity-40"><ChevronLeft size={15} aria-hidden="true" />Previous</button><span aria-live="polite" aria-atomic="true" className="text-[#716658]">Page <strong className="text-[#211E1A]">{page}</strong> of {pageCount}</span><button type="button" disabled={!data.next} onClick={() => changePage(page + 1)} className="task-secondary flex items-center gap-1 px-3 py-3 font-semibold disabled:opacity-40">Next<ChevronRight size={15} aria-hidden="true" /></button></nav>
+            </div>}
         </>}
     </div>;
 }
