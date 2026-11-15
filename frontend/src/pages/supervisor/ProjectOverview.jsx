@@ -3,21 +3,18 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
     ArrowLeft,
-    ArrowRight,
-    ArrowUpRight,
     Building2,
     CalendarDays,
+    ChevronDown,
+    ChevronUp,
     ClipboardList,
     Clock3,
     FileText,
     FolderKanban,
-    HardHat,
     MapPin,
     Phone,
     RefreshCw,
     ScrollText,
-    ShieldCheck,
-    UsersRound,
 } from "lucide-react";
 
 import { projectApi } from "../../api/projectApi";
@@ -42,6 +39,17 @@ function formatDate(value) {
     });
 }
 
+function daysLeft(endDate) {
+    if (!endDate) return "";
+    const end = new Date(`${String(endDate).slice(0, 10)}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((end - today) / 86400000);
+    if (diff < 0) return `${Math.abs(diff)} days ago`;
+    if (diff === 0) return "Today";
+    return `${diff} days left`;
+}
+
 function statusLabel(value) {
     return String(value || "UNKNOWN").replaceAll("_", " ");
 }
@@ -60,103 +68,6 @@ function statusClasses(value) {
         default:
             return "bg-[#F1EADF] text-[#665E53]";
     }
-}
-
-function DetailCard({ icon: Icon, label, value, tone }) {
-    return (
-        <div className="group flex min-w-0 items-start gap-3 rounded-[18px] border border-[#EEE6DC] bg-[#FFFDFA] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#D5C6B5] hover:shadow-[0_8px_20px_rgba(33,30,26,0.05)] motion-reduce:transform-none">
-            <span
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:rotate-[-5deg] group-hover:scale-105 motion-reduce:transform-none ${tone}`}
-            >
-                <Icon size={21} strokeWidth={1.8} />
-            </span>
-
-            <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#716658]">
-                    {label}
-                </p>
-                <p className="mt-2 break-words text-sm font-semibold text-[#211E1A]">
-                    {value || "Not provided"}
-                </p>
-            </div>
-        </div>
-    );
-}
-
-const workspaceItems = [
-    {
-        key: "tasks",
-        title: "Project Tasks",
-        description: "View assigned project tasks and their progress.",
-        icon: ClipboardList,
-        tone: "bg-[#E9F0FC] text-[#3565A5]",
-        hover: "hover:border-[#C7D8EF]",
-    },
-    {
-        key: "timeline",
-        title: "Project Timeline",
-        description: "Review task order and the project work schedule.",
-        icon: CalendarDays,
-        tone: "bg-[#FFF2D8] text-[#9A6D20]",
-        hover: "hover:border-[#EBD5A7]",
-    },
-    {
-        key: "daily-reports",
-        title: "Daily Reports",
-        description: "Review site reports, work and daily observations.",
-        icon: ScrollText,
-        tone: "bg-[#E7F2E8] text-[#368250]",
-        hover: "hover:border-[#C5DFC9]",
-    },
-    {
-        key: "delays",
-        title: "Delay Reports",
-        description: "Review reported delays and extension requests.",
-        icon: Clock3,
-        tone: "bg-[#FCE9E6] text-[#B45E52]",
-        hover: "hover:border-[#EFCAC5]",
-    },
-    {
-        key: "documents",
-        title: "Project Documents",
-        description: "Browse authorized project files and drawings.",
-        icon: FileText,
-        tone: "bg-[#F0EAF8] text-[#7C5BA4]",
-        hover: "hover:border-[#D9C9EB]",
-    },
-];
-
-function WorkspaceCard({ item, projectId }) {
-    const Icon = item.icon;
-
-    return (
-        <Link
-            to={`/supervisor/projects/${projectId}/${item.key}`}
-            className={`group flex min-h-[155px] flex-col justify-between rounded-[21px] border border-[#E7DED2] bg-[#FFFDFA] p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_14px_32px_rgba(33,30,26,0.08)] motion-reduce:transform-none ${item.hover}`}
-        >
-            <div className="flex items-start justify-between gap-3">
-                <span
-                    className={`flex h-13 w-13 items-center justify-center rounded-2xl p-3 transition-all duration-300 group-hover:rotate-[-5deg] group-hover:scale-105 motion-reduce:transform-none ${item.tone}`}
-                >
-                    <Icon size={24} strokeWidth={1.7} />
-                </span>
-
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F6F0E8] text-[#665E53] transition-colors group-hover:bg-[#211E1A] group-hover:text-white">
-                    <ArrowUpRight size={18} />
-                </span>
-            </div>
-
-            <div className="mt-5">
-                <h3 className="text-base font-bold text-[#211E1A]">
-                    {item.title}
-                </h3>
-
-                <p className="mt-1.5 text-xs leading-5 text-[#716658]">
-                    {item.description}
-                </p>
-            </div>
-        </Link>
-    );
 }
 
 function getSupervisorName(item) {
@@ -182,6 +93,85 @@ function getSupervisorPhone(item) {
 }
 
 // =====================================================
+// WORKSPACE ITEMS
+// =====================================================
+
+const workspaceItems = [
+    {
+        key: "tasks",
+        title: "Project Tasks",
+        icon: ClipboardList,
+        tone: "bg-[#E9F0FC] text-[#3565A5]",
+        hover: "hover:border-[#C7D8EF]",
+    },
+    {
+        key: "timeline",
+        title: "Timeline",
+        icon: CalendarDays,
+        tone: "bg-[#FFF2D8] text-[#9A6D20]",
+        hover: "hover:border-[#EBD5A7]",
+    },
+    {
+        key: "daily-reports",
+        title: "Daily Reports",
+        icon: ScrollText,
+        tone: "bg-[#E7F2E8] text-[#368250]",
+        hover: "hover:border-[#C5DFC9]",
+    },
+    {
+        key: "delays",
+        title: "Delay Reports",
+        icon: Clock3,
+        tone: "bg-[#FCE9E6] text-[#B45E52]",
+        hover: "hover:border-[#EFCAC5]",
+    },
+    {
+        key: "documents",
+        title: "Documents",
+        icon: FileText,
+        tone: "bg-[#F0EAF8] text-[#7C5BA4]",
+        hover: "hover:border-[#D9C9EB]",
+    },
+];
+
+// =====================================================
+// SUB-COMPONENTS
+// =====================================================
+
+function WorkspaceTile({ item, projectId }) {
+    const Icon = item.icon;
+    return (
+        <Link
+            to={`/supervisor/projects/${projectId}/${item.key}`}
+            className={`group flex flex-col items-center gap-1.5 rounded-[18px] border border-[#E7DED2] bg-[#FFFDFA] p-3 text-center transition-colors hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] ${item.hover}`}
+        >
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.tone}`}>
+                <Icon size={20} strokeWidth={1.7} />
+            </span>
+            <span className="text-[14px] font-semibold leading-4 text-[#211E1A] [overflow-wrap:anywhere]">
+                {item.title}
+            </span>
+        </Link>
+    );
+}
+
+function InfoRow({ label, value, hint }) {
+    return (
+        <div className="min-w-0">
+            <dt className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#716658]">
+                {label}
+            </dt>
+            <dd className="mt-0.5 break-words text-sm font-medium text-[#211E1A]">
+                {value || "Not specified"}
+                {hint && (
+                    <span className="ml-1.5 text-xs text-[#716658]">({hint})</span>
+                )}
+            </dd>
+        </div>
+    );
+}
+
+// =====================================================
 // SUPERVISOR PROJECT OVERVIEW
 // =====================================================
 
@@ -193,6 +183,7 @@ export default function SupervisorProjectOverview() {
     const [error, setError] = useState("");
     const [imageFailed, setImageFailed] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -204,14 +195,11 @@ export default function SupervisorProjectOverview() {
             setImageFailed(false);
 
             try {
-                const data =
-                    await projectApi.getProjectOverview(projectId);
-
+                const data = await projectApi.getProjectOverview(projectId);
                 if (!cancelled) setProject(data);
             } catch (err) {
                 if (!cancelled) {
                     const status = err.response?.status;
-
                     setError(
                         status === 403 || status === 404
                             ? "This project is unavailable or is no longer assigned to you."
@@ -231,318 +219,286 @@ export default function SupervisorProjectOverview() {
     }, [projectId, refreshKey]);
 
     const coverUrl = project
-        ? getMediaUrl(
-            project.cover_image || project.category_image
-        )
+        ? getMediaUrl(project.cover_image || project.category_image)
         : "";
 
     const supervisors = Array.isArray(project?.supervisors)
         ? project.supervisors
         : [];
 
-    return (
-        <div className="space-y-6 pb-8">
-            {loading && (
-                <LoadingScreen message="Loading project overview..." />
-            )}
+    const endDateHint = project?.end_date ? daysLeft(project.end_date) : "";
 
-            {/* BREADCRUMB */}
-            <nav className="flex flex-wrap items-center gap-2 text-xs text-[#716658]">
-                <Link
-                    to="/supervisor/dashboard"
-                    className="hover:text-[#211E1A]"
-                >
-                    Dashboard
-                </Link>
-                <span>/</span>
+    return (
+        <div className="min-h-dvh w-full min-w-0 bg-[#F7F3EE] pb-10">
+            {loading && <LoadingScreen message="Loading project overview..." />}
+
+            {/* BACK LINK */}
+            <div className="px-4 pt-4">
                 <Link
                     to="/supervisor/projects"
-                    className="hover:text-[#211E1A]"
+                    className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-[#716658] hover:text-[#211E1A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
                 >
+                    <ArrowLeft size={15} aria-hidden="true" />
                     My Projects
                 </Link>
-                <span>/</span>
-                <span className="font-semibold text-[#211E1A]">
-                    {project?.name || "Project Overview"}
-                </span>
-            </nav>
+            </div>
 
+            {/* ERROR STATE */}
             {!loading && error && (
-                <section className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-8 text-center">
-                    <FolderKanban
-                        size={38}
-                        className="mx-auto text-[#716658]"
-                    />
-
-                    <p role="alert" className="mt-4 text-sm text-[#716658]">
-                        {error}
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap justify-center gap-3">
-                        <Link
-                            to="/supervisor/projects"
-                            className="rounded-xl border border-[#E4DCCD] px-4 py-3 text-sm font-semibold text-[#211E1A]"
-                        >
-                            Back to Projects
-                        </Link>
-
-                        <button
-                            type="button"
-                            onClick={() => setRefreshKey((n) => n + 1)}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-white"
-                        >
-                            <RefreshCw size={17} />
-                            Retry
-                        </button>
-                    </div>
-                </section>
+                <div className="mx-auto mt-4 max-w-[1200px] px-4">
+                    <section className="rounded-[18px] border border-[#E7DED2] bg-[#FFFDFA] p-6 text-center">
+                        <FolderKanban size={38} className="mx-auto text-[#716658]" />
+                        <p role="alert" className="mt-4 text-sm text-[#716658]">
+                            {error}
+                        </p>
+                        <div className="mt-5 flex flex-wrap justify-center gap-3">
+                            <Link
+                                to="/supervisor/projects"
+                                className="rounded-xl border border-[#E4DCCD] px-4 py-3 text-sm font-semibold text-[#211E1A]"
+                            >
+                                Back to Projects
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={() => setRefreshKey((n) => n + 1)}
+                                className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-white"
+                            >
+                                <RefreshCw size={17} />
+                                Retry
+                            </button>
+                        </div>
+                    </section>
+                </div>
             )}
 
             {!loading && project && (
                 <>
-                    {/* =====================================
-              PROJECT HERO - ADMIN DESIGN LANGUAGE
-              ===================================== */}
-
-                    <section className="overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
-                        <div className="relative h-28 overflow-hidden bg-gradient-to-br from-[#D9C8B1] to-[#F1EADF] sm:h-44 lg:h-52">
-                            {coverUrl && !imageFailed ? (
-                                <img
-                                    src={coverUrl}
-                                    alt={`${project.name} project cover`}
-                                    onError={() => setImageFailed(true)}
-                                    className="h-full w-full object-cover"
+                    {/* BANNER */}
+                    <div className="relative h-[120px] overflow-hidden bg-gradient-to-br from-[#D9C8B1] to-[#F1EADF] lg:h-[160px]">
+                        {coverUrl && !imageFailed ? (
+                            <img
+                                src={coverUrl}
+                                alt={`${project.name} project cover`}
+                                onError={() => setImageFailed(true)}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <div className="flex h-full items-center justify-center">
+                                <Building2
+                                    size={72}
+                                    strokeWidth={1.1}
+                                    className="text-[#8E7E69]"
                                 />
-                            ) : (
-                                <div className="flex h-full items-center justify-center">
-                                    <Building2
-                                        size={72}
-                                        strokeWidth={1.1}
-                                        className="text-[#8E7E69]"
-                                    />
-                                </div>
-                            )}
-
-                            <div className="absolute bottom-4 left-4 rounded-xl bg-[#FFFDFA]/95 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#514232] shadow-sm backdrop-blur sm:bottom-6 sm:left-6">
-                                {project.category_name || "Project"}
                             </div>
-                        </div>
+                        )}
 
-                        <div className="p-5 sm:p-7">
-                            <Link
-                                to="/supervisor/projects"
-                                className="inline-flex items-center gap-2 text-xs font-semibold text-[#716658] transition-colors hover:text-[#211E1A]"
+                        {/* Category chip on image */}
+                        <div className="absolute bottom-3 left-3 rounded-xl bg-[#FFFDFA]/95 px-3 py-1.5 text-xs font-bold text-[#514232] shadow-sm backdrop-blur">
+                            {project.category_name || "Project"}
+                        </div>
+                    </div>
+
+                    {/* PROJECT NAME + STATUS + LOCATION */}
+                    <div className="px-4 pb-3 pt-3">
+                        <h1 className="line-clamp-2 break-words text-xl font-bold leading-tight text-[#211E1A]">
+                            {project.name}
+                        </h1>
+                        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+                            <span
+                                className={`inline-flex min-h-7 items-center rounded-full px-3 py-1 text-xs font-bold ${statusClasses(project.status)}`}
                             >
-                                <ArrowLeft size={16} />
-                                Back to My Projects
-                            </Link>
-
-                            <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
-                                        RARE / Project Overview
-                                    </p>
-
-                                    <h1 className="mt-2 break-words text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">
-                                        {project.name}
-                                    </h1>
-
-                                    <p className="mt-3 flex items-start gap-2 text-sm text-[#716658]">
-                                        <MapPin
-                                            size={18}
-                                            className="mt-0.5 shrink-0"
-                                        />
-                                        {project.location || "Location not provided"}
-                                    </p>
-                                </div>
-
-                                <span
-                                    className={`inline-flex shrink-0 items-center rounded-full px-4 py-2 text-xs font-bold ${statusClasses(project.status)}`}
-                                >
-                                    {statusLabel(project.status)}
-                                </span>
-                            </div>
+                                {statusLabel(project.status)}
+                            </span>
+                            {project.location && (
+                                <p className="flex min-w-0 items-center gap-1 text-xs text-[#716658]">
+                                    <MapPin size={13} className="shrink-0" />
+                                    <span className="break-words">{project.location}</span>
+                                </p>
+                            )}
                         </div>
-                    </section>
+                    </div>
 
-                    {/* =====================================
-              PROJECT INFORMATION
-              ===================================== */}
-
-                    {project.status === "CANCELLED" && <p role="status" className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5 text-sm text-[#716658]">This project has been cancelled. Existing records remain available for reference.</p>}
-                    <section className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
-                        <div>
-                            <h2 className="text-lg font-bold text-[#211E1A]">
-                                Project Information
-                            </h2>
-                            <p className="mt-1 text-xs text-[#716658]">
-                                Client, location and project schedule
+                    {/* CANCELLED NOTICE */}
+                    {project.status === "CANCELLED" && (
+                        <div className="px-4 pb-3">
+                            <p
+                                role="status"
+                                className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] px-4 py-3 text-xs text-[#716658]"
+                            >
+                                This project has been cancelled. Existing records remain available for reference.
                             </p>
                         </div>
+                    )}
 
-                        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                            <DetailCard
-                                icon={Building2}
-                                label="Client Name"
-                                value={project.client_name}
-                                tone="bg-[#E9F0FC] text-[#3565A5]"
-                            />
+                    {/* MAIN CONTENT: 1-col mobile/tablet → 2-col laptop (65% / 35%) */}
+                    <div className="mx-auto max-w-[1200px] px-4 lg:grid lg:grid-cols-[65fr_35fr] lg:items-start lg:gap-3">
 
-                            <DetailCard
-                                icon={MapPin}
-                                label="Location"
-                                value={project.location}
-                                tone="bg-[#F1EADF] text-[#74614D]"
-                            />
+                        {/* ── LEFT COLUMN ── */}
+                        <div className="mt-3 space-y-3 lg:mt-0">
 
-                            <DetailCard
-                                icon={FolderKanban}
-                                label="Category"
-                                value={`${project.category_name || "Not specified"}${project.category_is_active === false ? " (inactive)" : ""}`}
-                                tone="bg-[#F0EAF8] text-[#7C5BA4]"
-                            />
-
-                            <DetailCard
-                                icon={CalendarDays}
-                                label="Start Date"
-                                value={formatDate(project.start_date)}
-                                tone="bg-[#E7F2E8] text-[#368250]"
-                            />
-
-                            <DetailCard
-                                icon={CalendarDays}
-                                label="End Date"
-                                value={formatDate(project.end_date)}
-                                tone="bg-[#FFF2D8] text-[#9A6D20]"
-                            />
-
-                            <DetailCard
-                                icon={ShieldCheck}
-                                label="Status"
-                                value={statusLabel(project.status)}
-                                tone="bg-[#E9F0FC] text-[#3565A5]"
-                            />
-                        </div>
-                    </section>
-
-                    {/* =====================================
-              PROJECT DESCRIPTION
-              ===================================== */}
-
-                    <section className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
-                        <h2 className="text-lg font-bold text-[#211E1A]">
-                            Project Description
-                        </h2>
-
-                        <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[#665E53]">
-                            {project.description ||
-                                "No project description has been added."}
-                        </p>
-                    </section>
-
-                    {/* =====================================
-              PROJECT WORKSPACE - CLICKABLE
-              ===================================== */}
-
-                    <section className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                                <h2 className="text-lg font-bold text-[#211E1A]">
+                            {/* PROJECT WORKSPACE TILES */}
+                            <section
+                                className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-4"
+                                aria-labelledby="workspace-heading"
+                            >
+                                <h2
+                                    id="workspace-heading"
+                                    className="text-sm font-bold text-[#211E1A]"
+                                >
                                     Project Workspace
                                 </h2>
+                                {/* 2 cols phone, 3 tablet, 5 laptop */}
+                                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                                    {workspaceItems.map((item) => (
+                                        <WorkspaceTile
+                                            key={item.key}
+                                            item={item}
+                                            projectId={projectId}
+                                        />
+                                    ))}
+                                </div>
+                            </section>
 
-                                <p className="mt-1 text-xs leading-6 text-[#716658]">
-                                    Open project tasks, site reports, timelines,
-                                    delays and documents.
+                            {/* PROJECT DESCRIPTION */}
+                            <section
+                                className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-4"
+                                aria-labelledby="description-heading"
+                            >
+                                <h2
+                                    id="description-heading"
+                                    className="text-sm font-bold text-[#211E1A]"
+                                >
+                                    Project Description
+                                </h2>
+                                <p
+                                    className={`mt-2 whitespace-pre-wrap text-sm leading-6 text-[#665E53] [overflow-wrap:anywhere] ${
+                                        descriptionExpanded ? "" : "line-clamp-3"
+                                    }`}
+                                >
+                                    {project.description || "No project description has been added."}
                                 </p>
-                            </div>
-
-                            <span className="rounded-full bg-[#F1EADF] px-3 py-2 text-xs font-bold text-[#665E53]">
-                                Supervisor Access
-                            </span>
+                                {project.description && (
+                                    <button
+                                        type="button"
+                                        aria-expanded={descriptionExpanded}
+                                        onClick={() =>
+                                            setDescriptionExpanded((v) => !v)
+                                        }
+                                        className="mt-2 inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-[#716658] underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                                    >
+                                        {descriptionExpanded ? (
+                                            <>
+                                                <ChevronUp size={14} aria-hidden="true" />
+                                                Show less
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ChevronDown size={14} aria-hidden="true" />
+                                                Read more
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </section>
                         </div>
 
-                        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                            {workspaceItems.map((item) => (
-                                <WorkspaceCard
-                                    key={item.key}
-                                    item={item}
-                                    projectId={projectId}
-                                />
-                            ))}
-                        </div>
+                        {/* ── RIGHT COLUMN ── */}
+                        <div className="mt-3 space-y-3">
 
-                        <p className="mt-5 text-xs leading-6 text-[#716658]">
-                            Manpower, material observations and site work
-                            entries are recorded within Daily Reports.
-                        </p>
-                    </section>
+                            {/* PROJECT INFORMATION */}
+                            <section
+                                className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-4"
+                                aria-labelledby="info-heading"
+                            >
+                                <h2
+                                    id="info-heading"
+                                    className="text-sm font-bold text-[#211E1A]"
+                                >
+                                    Project Information
+                                </h2>
+                                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+                                    <InfoRow
+                                        label="Client"
+                                        value={project.client_name}
+                                    />
+                                    <InfoRow
+                                        label="Category"
+                                        value={`${project.category_name || "Not specified"}${
+                                            project.category_is_active === false
+                                                ? " (inactive)"
+                                                : ""
+                                        }`}
+                                    />
+                                    <InfoRow
+                                        label="Start date"
+                                        value={formatDate(project.start_date)}
+                                    />
+                                    <InfoRow
+                                        label="End date"
+                                        value={formatDate(project.end_date)}
+                                        hint={endDateHint}
+                                    />
+                                </dl>
+                            </section>
 
-                    {/* =====================================
-              SUPERVISOR TEAM - READ ONLY
-              ===================================== */}
-
-                    <section className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
-                        <div className="flex items-start gap-3">
-                            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F0EAF8] text-[#7C5BA4]">
-                                <UsersRound size={23} />
-                            </span>
-
-                            <div>
-                                <h2 className="text-lg font-bold text-[#211E1A]">
+                            {/* SUPERVISION TEAM */}
+                            <section
+                                className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-4"
+                                aria-labelledby="team-heading"
+                            >
+                                <h2
+                                    id="team-heading"
+                                    className="text-sm font-bold text-[#211E1A]"
+                                >
                                     Supervision Team
                                 </h2>
 
-                                <p className="mt-1 text-xs text-[#716658]">
-                                    Supervisors assigned to this project
-                                </p>
-                            </div>
+                                {supervisors.length === 0 ? (
+                                    <p className="mt-3 text-xs text-[#716658]">
+                                        No supervision team details are available.
+                                    </p>
+                                ) : (
+                                    <ul className="mt-3 space-y-2">
+                                        {supervisors.map((item, index) => {
+                                            const name = getSupervisorName(item);
+                                            const phone = getSupervisorPhone(item);
+
+                                            return (
+                                                <li
+                                                    key={item.id || item.supervisor || index}
+                                                    className="flex min-w-0 items-center gap-3 rounded-xl border border-[#EEE6DC] bg-[#FFFDFA] p-3"
+                                                >
+                                                    {/* Avatar */}
+                                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E9DFD1] text-sm font-bold text-[#665E53]">
+                                                        {name.charAt(0).toUpperCase()}
+                                                    </div>
+
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-sm font-bold text-[#211E1A] [overflow-wrap:anywhere]">
+                                                            {name}
+                                                        </p>
+                                                        <p className="mt-0.5 text-xs text-[#716658] [overflow-wrap:anywhere]">
+                                                            {phone || "Site Supervisor"}
+                                                        </p>
+                                                    </div>
+
+                                                    {phone && (
+                                                        <a
+                                                            href={`tel:${phone}`}
+                                                            aria-label={`Call ${name}`}
+                                                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#E7F2E8] text-[#296F40] transition-colors hover:bg-[#D5EAD9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                                                        >
+                                                            <Phone size={18} />
+                                                        </a>
+                                                    )}
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                )}
+                            </section>
                         </div>
-
-                        <div className="mt-6 grid gap-3 md:grid-cols-2">
-                            {supervisors.map((item, index) => {
-                                const name = getSupervisorName(item);
-                                const phone = getSupervisorPhone(item);
-
-                                return (
-                                    <article
-                                        key={item.id || item.supervisor || index}
-                                        className="flex min-w-0 items-center gap-3 rounded-[18px] border border-[#EEE6DC] bg-[#FFFDFA] p-4"
-                                    >
-                                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#E9DFD1] text-lg font-bold text-[#665E53]">
-                                            {name.charAt(0).toUpperCase()}
-                                        </div>
-
-                                        <div className="min-w-0 flex-1">
-                                            <p className="break-words text-sm font-bold text-[#211E1A]">
-                                                {name}
-                                            </p>
-
-                                            <p className="mt-1 text-xs text-[#716658]">
-                                                {phone || "Site Supervisor"}
-                                            </p>
-                                        </div>
-
-                                        {phone && (
-                                            <a
-                                                href={`tel:${phone}`}
-                                                aria-label={`Call ${name}`}
-                                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E7F2E8] text-[#296F40] transition-colors hover:bg-[#D5EAD9]"
-                                            >
-                                                <Phone size={18} />
-                                            </a>
-                                        )}
-                                    </article>
-                                );
-                            })}
-
-                            {supervisors.length === 0 && (
-                                <p className="rounded-xl bg-[#F8F4EE] p-5 text-sm text-[#716658] md:col-span-2">
-                                    No supervision team details are available.
-                                </p>
-                            )}
-                        </div>
-                    </section>
+                    </div>
                 </>
             )}
         </div>

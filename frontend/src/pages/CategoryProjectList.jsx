@@ -1,4 +1,5 @@
 import { ProjectSearch } from "../components/daily-reports/ReportProjectPicker";
+import SearchFilterToolbar from "../components/common/SearchFilterToolbar";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
@@ -9,7 +10,6 @@ import {
   ImageOff,
   Plus,
   RefreshCw,
-  SlidersHorizontal,
 } from "lucide-react";
 
 import { useAuth } from "../hooks/useAuth";
@@ -313,30 +313,13 @@ export default function CategoryProjectList() {
               FILTER BAR
               ===================================== */}
 
-          <section
-            aria-label="Project filters"
-            className="
-              rounded-[22px]
-              border border-[#E7DED2]
-              bg-[#FFFDFA]
-              p-4 sm:p-5
-            "
+          <SearchFilterToolbar
+            label="Project search and filters"
+            search={<ProjectSearch compact suggestionsFiltered query={search} onSearch={(value) => { setSearch(value); setPage(1); }} loading={loading} label="Search projects" labelClassName="sr-only" placeholder="Project, client or location" suggestions={loading ? [] : projects.map((project) => ({ id: project.id, name: project.name, context: project.location, to: `/${isAdmin ? "admin" : "supervisor"}/projects/${project.id}` }))} />}
+            activeCount={Number(Boolean(statusFilter)) + Number(ordering !== "-created_at")}
+            onClear={() => { setSearch(""); setStatusFilter(""); setOrdering("-created_at"); setPage(1); }}
           >
-            <div className="flex items-center gap-2 pb-4">
-              <SlidersHorizontal size={18} className="text-[#211E1A]" />
-
-              <h3 className="text-sm font-bold text-[#211E1A]">
-                Search & Filter
-              </h3>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_170px_190px]">
-              {/* SEARCH */}
-              <div className="relative">
-                <ProjectSearch suggestionsFiltered query={search} onSearch={(value) => { setSearch(value); setPage(1); }} loading={loading} label="Search projects" placeholder="Project, client or location" suggestions={loading ? [] : projects.map((project) => ({ id: project.id, name: project.name, context: project.location, to: `/${isAdmin ? "admin" : "supervisor"}/projects/${project.id}` }))} />
-              </div>
-
-              {/* STATUS */}
+            <div className="grid gap-4">
               <select
                 value={statusFilter}
                 onChange={handleStatusChange}
@@ -357,7 +340,6 @@ export default function CategoryProjectList() {
                 <option value="CANCELLED">Cancelled</option>
               </select>
 
-              {/* SORT */}
               <select
                 value={ordering}
                 onChange={handleOrderingChange}
@@ -379,7 +361,7 @@ export default function CategoryProjectList() {
                 <option value="end_date">End Date</option>
               </select>
             </div>
-          </section>
+          </SearchFilterToolbar>
 
           {/* =====================================
               HORIZONTAL PROJECT LIST

@@ -4,8 +4,8 @@ import {
     ListOrdered,
     Search,
     SlidersHorizontal,
-    X,
 } from "lucide-react";
+import SearchFilterToolbar from "../common/SearchFilterToolbar";
 
 const selectClass = `
   h-11 w-full rounded-xl
@@ -39,14 +39,6 @@ export default function TimelineToolbar({
 
     onClearFilters,
 }) {
-    const hasFilters = Boolean(
-        search ||
-        approval ||
-        workStatus ||
-        priority ||
-        sort !== "order"
-    );
-
     return (
         <section className="rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5">
             {/* HEADER */}
@@ -105,29 +97,16 @@ export default function TimelineToolbar({
             </div>
 
             {/* FILTERS */}
-            <div className="space-y-3">
-                {/* SEARCH */}
-                <div className="relative">
-                    <Search
-                        size={17}
-                        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
-                    />
-
-                    <input
-                        type="search"
-                        value={search}
-                        onChange={(e) =>
-                            onSearchChange?.(e.target.value)
-                        }
-                        placeholder="Search task or worker..."
-                        aria-label="Search timeline tasks"
-                        className={`${selectClass} pl-10`}
-                    />
-                </div>
-
-                <details className="rare-filter-disclosure">
-                    <summary>Filters and sorting</summary>
-                    <div className="grid gap-3 pt-3 sm:grid-cols-2 xl:grid-cols-4">
+            <SearchFilterToolbar
+                label="Timeline search and filters"
+                search={<div className="relative">
+                    <Search size={17} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]" />
+                    <input type="search" value={search} onChange={(e) => onSearchChange?.(e.target.value)} placeholder="Search task or worker..." aria-label="Search timeline tasks" className={`${selectClass} h-11 min-h-11 py-2 pl-10`} />
+                </div>}
+                activeCount={Number(Boolean(approval)) + Number(Boolean(workStatus)) + Number(Boolean(priority)) + Number(sort !== "order")}
+                onClear={onClearFilters}
+            >
+                <div className="grid gap-3 sm:grid-cols-2">
                 {/* APPROVAL STATUS */}
                 <select
                     value={approval}
@@ -191,24 +170,8 @@ export default function TimelineToolbar({
                     <option value="priority">Highest Priority</option>
                     <option value="title">Task Name A–Z</option>
                 </select>
-            </div>
-
-                </details>
-            </div>
-
-            {/* CLEAR */}
-            {hasFilters && (
-                <div className="mt-4 flex justify-end">
-                    <button
-                        type="button"
-                        onClick={onClearFilters}
-                        className="inline-flex items-center gap-2 text-xs font-semibold text-[#716658] transition-colors hover:text-[#211E1A]"
-                    >
-                        <X size={15} />
-                        Clear Filters
-                    </button>
                 </div>
-            )}
+            </SearchFilterToolbar>
         </section>
     );
 }

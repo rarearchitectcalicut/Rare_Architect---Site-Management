@@ -64,6 +64,7 @@ export function useDelayReports(projectId, { tasksEnabled = false } = {}) {
         reports: current ? state.reports : [], count: current ? state.count : 0,
         summary: current ? state.summary : null, loading: !current, initialLoading: !state.key,
         projects: project ? [project] : [], project,
+        projectLoading: Boolean(projectId) && projectState.id !== projectId && !projectState.error,
         error: current && state.error || projectState.id === projectId && projectState.error || "",
         refresh, filters, page, setPage, pageCount: current ? Math.max(1, Math.ceil(state.count / 8)) : 1,
         updateFilter: (field, value) => { setFilters((previous) => ({ ...previous, [field]: value })); setPage(1); },

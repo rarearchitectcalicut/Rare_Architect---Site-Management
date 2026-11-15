@@ -237,7 +237,7 @@ async function reportDetailHarness({ role = "SUPERVISOR", submitted = false, del
     const selections = [];
     const report = { id: "11111111-1111-1111-1111-111111111111", project: "22222222-2222-2222-2222-222222222222", reported_by: "supervisor", status: submitted || correctionMode ? "SUBMITTED" : "DRAFT", work_summary: "Saved site summary", report_date: "2026-10-26", correction_summary: correctionMode ? { rejected_count: 1, eligible_count: 1, entries: [] } : null };
     const hooks = {
-        useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === "function" ? initial() : initial; return [slots[i], (next) => { slots[i] = typeof next === "function" ? next(slots[i]) : next; }]; },
+        useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = initial; return [slots[i], (next) => { slots[i] = typeof next === "function" ? next(slots[i]) : next; }]; },
         useRef(initial) { const i = cursor++; return slots[i] ??= { current: initial }; },
         useEffect(create, deps) { const i = cursor++; const previous = slots[i]; if (!previous || deps.some((value, j) => value !== previous.deps[j])) effects.push(() => { previous?.cleanup?.(); slots[i] = { deps, cleanup: create() }; }); },
     };
@@ -591,7 +591,7 @@ function delayHooks() {
     const slots = []; const effects = []; let cursor = 0;
     return {
         hooks: {
-            useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = initial; return [slots[i], (next) => { slots[i] = typeof next === "function" ? next(slots[i]) : next; }]; },
+            useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === "function" ? initial() : initial; return [slots[i], (next) => { slots[i] = typeof next === "function" ? next(slots[i]) : next; }]; },
             useRef(initial) { const i = cursor++; return slots[i] ??= { current: initial }; },
             useCallback(callback) { cursor++; return callback; },
             useEffect(create, deps) { const i = cursor++; const previous = slots[i]; if (!previous || deps.some((value, j) => value !== previous.deps[j])) effects.push(() => { previous?.cleanup?.(); slots[i] = { deps, cleanup: create() }; }); },
@@ -634,39 +634,51 @@ test("delay register uses bounded server pages and summaries, ignores stale requ
     state.cleanup();
 });
 
+function delayTestDate(offset = 0) {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + offset);
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+}
+
 async function delayFormHarness() {
-    const state = delayHooks(); const requests = []; const confirmations = []; const saved = []; let tree;
-    const tasks = [{ id: "task", title: "Wall work", approval_status: "APPROVED", work_status: "IN_PROGRESS", start_date: "2026-10-01", end_date: "2026-10-30" }];
+    const state = delayHooks(); const requests = []; const saved = []; let tree;
+    const dates = { today: delayTestDate(), deadline: delayTestDate(-1), forecast: delayTestDate(5), nextForecast: delayTestDate(7), manualExtension: delayTestDate(9) };
+    const tasks = [
+        { id: "task", project_id: "project", title: "Wall work", approval_status: "APPROVED", work_status: "IN_PROGRESS", start_date: delayTestDate(-10), end_date: dates.deadline },
+        { id: "pending-task", project_id: "project", title: "Pending extension task", approval_status: "APPROVED", work_status: "IN_PROGRESS", start_date: delayTestDate(-10), end_date: dates.deadline, has_pending_extension: true },
+    ];
     const { exports } = await loadSource("modal/supervisor/DelayReportForm.jsx", { overrides: {
         react: { ...React, ...state.hooks },
-        "hooks/useConfirmation.jsx": { useConfirmation: () => ({ confirmationModal: null, confirm: () => new Promise((resolve) => confirmations.push(resolve)) }) },
         "api/delayApi.js": { delayApi: { create: (id, payload) => new Promise((resolve, reject) => requests.push({ id, payload, resolve, reject })) } },
+        "api/projectApi.js": { projectApi: { getProjects: async () => ({ results: [{ id: "project", name: "Site", status: "ACTIVE" }], next: null }) } },
+        "api/taskApi.js": { taskApi: { get: async (id) => tasks.find((task) => task.id === id), register: async () => ({ results: tasks, count: tasks.length }) } },
+        "hooks/useApprovalReview.js": { validationMessage: (_failure, fallback) => fallback || "Failed" },
     } });
     function find(predicate, node) { if (Array.isArray(node)) return node.map((child) => find(predicate, child)).find(Boolean); if (!node || typeof node !== "object") return; return predicate(node) ? node : find(predicate, node.props?.children); }
-    const draw = () => { tree = state.render(() => exports.default({ tasks, onClose() {}, onSaved: (report) => saved.push(report) })); };
+    const draw = () => { tree = state.render(() => exports.default({ projectId: "project", taskId: "task", onClose() {}, onSaved: (report) => saved.push(report) })); };
     draw();
-    return { tasks, requests, confirmations, saved, draw, find: (predicate) => find(predicate, tree),
+    await flushDelay(); draw(); await flushDelay(); draw();
+    return { tasks, requests, dates, saved, draw, find: (predicate) => find(predicate, tree),
         change(name, value) { find((node) => node.props?.id === `delay-${name}`, tree).props.onChange({ target: { value, checked: value } }); draw(); },
+        chooseTask(id) { find((node) => node.props?.id === "delay-task", tree).props.onChange({ target: { value: id } }); draw(); },
         submit() { return find((node) => node.type === "form", tree).props.onSubmit({ preventDefault() {} }); },
     };
 }
 
-test("delay form validates dates, clears disabled extension dates and prevents duplicate confirmations or submissions", async () => {
+test("delay form validates dates, clears disabled extension dates and prevents duplicate submissions", async () => {
     const ui = await delayFormHarness();
-    ui.change("task", "task"); ui.change("expected_completion_date", "2026-11-10"); ui.change("reason", " Rain delayed access "); ui.change("extension_requested", true); ui.change("requested_end_date", "2026-10-30");
+    ui.change("expected_completion_date", ui.dates.forecast); ui.change("reason", " Rain delayed access "); ui.change("extension_requested", true); ui.change("requested_end_date", ui.dates.deadline);
     await ui.submit(); ui.draw();
-    assert.equal(ui.confirmations.length, 0);
     assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props["aria-invalid"], true);
-    ui.change("requested_end_date", "2026-11-10"); ui.change("extension_requested", false);
+    ui.change("requested_end_date", ui.dates.forecast); ui.change("extension_requested", false);
     assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date"), undefined);
     ui.change("extension_requested", true);
-    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "2026-11-10");
-    ui.change("requested_end_date", "2026-11-10");
+    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, ui.dates.forecast);
     const first = ui.submit(); await ui.submit(); ui.draw();
-    assert.equal(ui.confirmations.length, 1); assert.equal(ui.find((node) => node.type === "fieldset").props.disabled, true);
-    ui.confirmations[0](true); await flushDelay(); ui.draw(); await ui.submit();
+    assert.equal(ui.find((node) => node.type === "button" && node.props.type === "submit").props.disabled, true);
     assert.equal(ui.requests.length, 1);
-    assert.equal(ui.requests[0].payload.reason, "Rain delayed access"); assert.equal(ui.requests[0].payload.requested_end_date, "2026-11-10");
+    assert.equal(ui.requests[0].payload.reason, "Rain delayed access"); assert.equal(ui.requests[0].payload.requested_end_date, ui.dates.forecast);
     assert.equal(ui.requests[0].payload.end_date, undefined);
     ui.requests[0].resolve({ id: "report", status: "PENDING", extension_status: "PENDING" }); await first;
     assert.equal(ui.saved[0].status, "PENDING");
@@ -675,55 +687,51 @@ test("delay form validates dates, clears disabled extension dates and prevents d
 test("extension date prefills from the forecast regardless of which field is chosen first", async () => {
     for (const extensionFirst of [true, false]) {
         const ui = await delayFormHarness();
-        ui.change("task", "task");
         if (extensionFirst) ui.change("extension_requested", true);
-        ui.change("expected_completion_date", "2026-11-10");
+        ui.change("expected_completion_date", ui.dates.forecast);
         if (!extensionFirst) ui.change("extension_requested", true);
-        assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "2026-11-10");
-        ui.change("expected_completion_date", "2026-11-12");
-        assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "2026-11-12");
+        assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, ui.dates.forecast);
+        ui.change("expected_completion_date", ui.dates.nextForecast);
+        assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, ui.dates.nextForecast);
     }
 });
 
 test("a manually edited extension date survives forecast changes and is sent independently", async () => {
     const ui = await delayFormHarness();
-    ui.change("task", "task"); ui.change("reason", "Materials delayed");
-    ui.change("expected_completion_date", "2026-11-10"); ui.change("extension_requested", true);
-    ui.change("requested_end_date", "2026-11-15");
-    ui.change("expected_completion_date", "2026-11-12");
-    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "2026-11-15");
-    const pending = ui.submit(); ui.confirmations[0](true); await flushDelay();
-    assert.equal(ui.requests[0].payload.expected_completion_date, "2026-11-12");
-    assert.equal(ui.requests[0].payload.requested_end_date, "2026-11-15");
+    ui.change("reason", "Materials delayed");
+    ui.change("expected_completion_date", ui.dates.forecast); ui.change("extension_requested", true);
+    ui.change("requested_end_date", ui.dates.manualExtension);
+    ui.change("expected_completion_date", ui.dates.nextForecast);
+    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, ui.dates.manualExtension);
+    const pending = ui.submit();
+    assert.equal(ui.requests[0].payload.expected_completion_date, ui.dates.nextForecast);
+    assert.equal(ui.requests[0].payload.requested_end_date, ui.dates.manualExtension);
     assert.equal(ui.requests[0].payload.end_date, undefined);
     ui.requests[0].resolve({ id: "report", status: "PENDING", extension_status: "PENDING" }); await pending;
 });
 
 test("toggling extension off and on starts from the current forecast and respects pending task requests", async () => {
     const ui = await delayFormHarness();
-    ui.tasks.push({ ...ui.tasks[0], id: "pending-task", has_pending_extension: true });
-    ui.change("task", "task"); ui.change("expected_completion_date", "2026-11-10");
-    ui.change("extension_requested", true); ui.change("requested_end_date", "2026-11-15");
-    ui.change("extension_requested", false); ui.change("expected_completion_date", "2026-11-12");
+    ui.change("expected_completion_date", ui.dates.forecast);
+    ui.change("extension_requested", true); ui.change("requested_end_date", ui.dates.manualExtension);
+    ui.change("extension_requested", false); ui.change("expected_completion_date", ui.dates.nextForecast);
     ui.change("extension_requested", true);
-    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, "2026-11-12");
-    ui.change("task", "pending-task");
+    assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date").props.value, ui.dates.nextForecast);
+    ui.chooseTask("pending-task");
     const checkbox = ui.find((node) => node.props?.id === "delay-extension_requested");
     assert.equal(checkbox.props.checked, false);
     assert.equal(checkbox.props.disabled, true);
     assert.equal(ui.find((node) => node.props?.id === "delay-requested_end_date"), undefined);
-    assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props.value, "2026-11-12");
+    assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props.value, ui.dates.nextForecast);
 });
 
-test("delay form preserves backend field errors and can retry after failure or cancelled confirmation", async () => {
-    const ui = await delayFormHarness(); ui.change("task", "task"); ui.change("expected_completion_date", "2026-11-10"); ui.change("reason", "Rain");
-    const cancelled = ui.submit(); ui.confirmations[0](false); await cancelled;
-    assert.equal(ui.requests.length, 0);
-    const first = ui.submit(); ui.confirmations[1](true); await flushDelay();
+test("delay form preserves backend field errors and can retry after failure", async () => {
+    const ui = await delayFormHarness(); ui.change("expected_completion_date", ui.dates.forecast); ui.change("reason", "Rain");
+    const first = ui.submit();
     ui.requests[0].reject({ response: { data: { reason: ["Please explain the site issue."] } } }); await first; ui.draw();
     assert.equal(ui.find((node) => node.props?.id === "delay-reason").props["aria-invalid"], true);
     assert.ok(ui.find((node) => node.type?.name === "FieldError" && node.props.name === "reason").props.errors.reason.includes("Please explain the site issue."));
-    const retry = ui.submit(); ui.confirmations[2](true); await flushDelay();
+    const retry = ui.submit();
     assert.equal(ui.requests[1].payload.requested_end_date, null);
     ui.requests[1].resolve({ id: "report", status: "PENDING" }); await retry;
     assert.equal(ui.saved.length, 1);
@@ -745,6 +753,17 @@ test("delay details distinguish original, current and approved deadlines with se
     assert.ok(!html.includes("Extension rejection is available independently"));
 });
 
+test("Admin dashboard quick actions include a direct Delay Reports link", async () => {
+    const { exports } = await loadSource("components/dashboard/AdminQuickActions.jsx", { overrides: {
+        "modal/admin/AddProject.jsx": { default: () => null },
+        "modal/admin/AddSupervisor.jsx": { default: () => null },
+    } });
+    const html = render(exports.default, {}, "/admin/dashboard");
+    assert.match(html, /Delay Reports/);
+    assert.match(html, /href="\/admin\/delays"/);
+    assert.match(html, /Approvals/);
+});
+
 test("Admin delay register reviews pending reports in place and Supervisors stay read-only", async () => {
     const { exports } = await loadSource("pages/supervisor/ProjectDelays.jsx", { overrides: {
         "hooks/useDelayReports.js": { useDelayReports: () => ({ reports: [{ id: "report", status: "PENDING", project_id: "project", task_title: "Wall work" }], projects: [{ id: "project", name: "Site Alpha" }], project: { id: "project", name: "Site Alpha", status: "ACTIVE" }, summary: { total: 1, pending: 1, approved: 0, rejected: 0, pending_extensions: 0 }, count: 1, page: 1, pageCount: 1, filters: { search: "", status: "", sort: "newest", project: "", extension: "", delayType: "" }, loading: false, error: "", refresh() {}, setPage() {}, updateFilter() {}, clear() {} }) },
@@ -757,6 +776,17 @@ test("Admin delay register reviews pending reports in place and Supervisors stay
     assert.ok(!html.includes("Report delay</button>"));
     const supervisor = render(exports.default, { role: "SUPERVISOR" }, "/supervisor/delays?project=project&request=report");
     assert.ok(!/>Approve Request<\/button>/.test(supervisor)); assert.ok(!/>Reject Request<\/button>/.test(supervisor));
+    assert.ok(supervisor.includes("aspect-square"));
+    assert.ok(!html.includes("aspect-square"));
+});
+
+test("Supervisor delay shortcut opens the report form for the selected project", async () => {
+    const { exports } = await loadSource("pages/supervisor/ProjectDelays.jsx", { overrides: {
+        "hooks/useDelayReports.js": { useDelayReports: () => ({ reports: [], projects: [], project: { id: "project", name: "Site Alpha", status: "ACTIVE" }, projectLoading: false, summary: { total: 0, pending: 0, approved: 0, rejected: 0, pending_extensions: 0 }, count: 0, page: 1, pageCount: 1, filters: {}, loading: false, error: "", refresh() {}, setPage() {}, updateFilter() {}, clear() {}, tasks: [], taskOptions: {} }) },
+        "modal/supervisor/DelayReportForm.jsx": { default: () => createElement("div", null, "New delay report form") },
+    } });
+    const html = render(exports.default, { role: "SUPERVISOR" }, "/supervisor/projects/project/delays?create=true");
+    assert.ok(html.includes("New delay report form"));
 });
 
 
@@ -780,7 +810,7 @@ test("Approval Center loads delay totals once and pages pending delay and extens
 function documentWalk(predicate, node) {
     if (Array.isArray(node)) return node.map((child) => documentWalk(predicate, child)).find(Boolean);
     if (!node || typeof node !== "object") return;
-    return predicate(node) ? node : documentWalk(predicate, node.props?.children);
+    return predicate(node) ? node : documentWalk(predicate, [node.props?.search, node.props?.children]);
 }
 const documentRules = { max_file_size: 1000, allowed_extensions: [".pdf", ".png"], document_types: [{ value: "DRAWING", label: "Drawing" }, { value: "CONTRACT", label: "Contract" }] };
 
@@ -851,7 +881,7 @@ test("new project document versions send only the file and retain logical docume
     const ui = await projectUploadHarness(true);
     assert.equal(ui.find((node) => node.type === "input" && node.props.maxLength === 200), undefined);
     ui.find((node) => node.type === "input" && node.props.type === "file").props.onChange({ target: { files: [{ name: "revision.pdf", size: 100 }] } }); ui.draw();
-    const pending = ui.submit();
+    const pending = ui.submit(); ui.draw();
     assert.equal(ui.calls[0].id, "document"); assert.equal(ui.calls[0].type, "version");
     assert.equal(ui.calls[0].payload.values.size, 1); assert.equal(ui.calls[0].payload.get("version_number"), undefined);
     ui.calls[0].resolve({}); await pending; assert.equal(ui.saved, 1);
@@ -1208,19 +1238,18 @@ test("unmounted notification operations cannot update a later session's unread b
 
 test("delay completion date is required and strictly after the task deadline", async () => {
     const ui = await delayFormHarness();
-    ui.change("task", "task"); ui.change("reason", "Rain");
-    assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props.min, "2026-10-31");
-    assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props.required, true);
-    for (const value of ["", "2026-10-29", "2026-10-30"]) {
+    ui.change("reason", "Rain");
+    assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props.min, ui.dates.today);
+    assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props.required, undefined);
+    for (const value of ["", delayTestDate(-1), delayTestDate(-2)]) {
         ui.change("expected_completion_date", value);
         await ui.submit(); ui.draw();
         assert.equal(ui.find((node) => node.props?.id === "delay-expected_completion_date").props["aria-invalid"], true);
     }
-    assert.equal(ui.confirmations.length, 0);
-    ui.change("expected_completion_date", "2026-10-31");
+    ui.change("expected_completion_date", ui.dates.forecast);
     const submission = ui.submit();
-    assert.equal(ui.confirmations.length, 1);
-    ui.confirmations[0](false); await submission;
+    assert.equal(ui.requests.length, 1);
+    ui.requests[0].resolve({ id: "report", status: "PENDING" }); await submission;
 });
 
 test("Supervisor task details load only that task's paginated delay reports and discard stale results", async () => {
@@ -1253,20 +1282,130 @@ function quickFind(node, predicate) {
     return predicate(node) ? node : quickFind(node.props?.children, predicate);
 }
 
-test("Supervisor Quick Actions match the Admin card pattern and provide direct project/task links", async () => {
+test("Supervisor Quick Actions omit dashboard delay shortcuts", async () => {
     const state = delayHooks();
     const { exports } = await loadSource("pages/Dashboard.jsx", { overrides: { react: { ...React, ...state.hooks }, "components/dashboard/AdminQuickActions.jsx": { default: () => null } }, append: "\nexport { SupervisorQuickActions };" });
     let tree;
     const draw = () => { tree = state.render(() => exports.SupervisorQuickActions()); };
     draw();
     const contents = JSON.stringify(tree);
-    for (const text of ["My Projects", "My Tasks", "Daily Report", "Create Task", "grid-cols-2", "sm:grid-cols-4", "/supervisor/projects", "/supervisor/tasks"]) assert.ok(contents.includes(text));
-    quickFind(tree, (node) => node.type === "button" && JSON.stringify(node.props.children).includes("Daily Report")).props.onClick(); draw();
+    for (const text of ["Submit today's report", "My Projects", "My Tasks", "Create Task", "grid-cols-2", "sm:grid-cols-3", "/supervisor/projects", "/supervisor/tasks"]) assert.ok(contents.includes(text));
+    assert.ok(!contents.includes("Report Delay"));
+    assert.ok(!contents.includes(">Delays<"));
+    assert.ok(!contents.includes("/supervisor/delays"));
+    quickFind(tree, (node) => node.type === "button" && JSON.stringify(node.props.children).includes("Submit today's report")).props.onClick(); draw();
     assert.ok(quickFind(tree, (node) => node.type?.name === "SupervisorProjectSelector" && node.props.action === "report"));
     state.cleanup();
 });
 
-test("one Supervisor project selector handles eligible projects, errors, search and both create destinations without mutations", async () => {
+test("Supervisor attention rows flag stale drafts and open their exact records", async () => {
+    const { exports } = await loadSource("pages/Dashboard.jsx", {
+        overrides: {
+            "components/dashboard/ProjectCategories.jsx": { default: () => null },
+            "components/dashboard/AdminQuickActions.jsx": { default: () => null },
+        },
+        append: "\nexport { buildSupervisorAttentionItems, getSupervisorAttentionCount, dashboardGreeting, WorkSummary };",
+    });
+    const now = new Date("2026-11-23T12:00:00");
+    const items = exports.buildSupervisorAttentionItems({
+        draft_daily_reports: { items: [{ id: "draft-id", project_id: "project-id", report_date: "2026-11-14", updated_at: "2026-11-14T08:00:00Z" }] },
+        pending_approval_tasks: { items: [{ id: "pending-id", project_id: "project-id", project_name: "Site", title: "Pending task" }] },
+        overdue_tasks: { items: [{ id: "overdue-id", project_id: "project-id", project_name: "Site", title: "Overdue task", end_date: "2026-11-20" }] },
+        rejected_tasks: { items: [{ id: "rejected-id", project_id: "project-id", project_name: "Site", title: "Rejected task" }] },
+        rejected_work_to_correct: { items: [{ id: "work-id", project_id: "project-id", daily_report_id: "report-id", task_title: "Correct work", project_name: "Site" }] },
+    }, now);
+    assert.equal(items.length, 5);
+    assert.equal(items[0].description, "Draft from 9 days ago");
+    assert.equal(items[0].to, "/supervisor/projects/project-id/daily-reports?report=draft-id");
+    assert.equal(items[1].to, "/supervisor/projects/project-id/tasks?task=pending-id");
+    assert.equal(items[2].to, "/supervisor/projects/project-id/tasks?task=overdue-id");
+    assert.equal(items[3].to, "/supervisor/projects/project-id/tasks?task=rejected-id");
+    assert.equal(items[4].to, "/supervisor/projects/project-id/daily-reports?correct=report-id");
+    assert.equal(exports.dashboardGreeting(new Date("2026-11-23T08:00:00")).salutation, "Good morning");
+    assert.equal(exports.dashboardGreeting(new Date("2026-11-23T14:00:00")).salutation, "Good afternoon");
+    assert.equal(exports.dashboardGreeting(new Date("2026-11-23T19:00:00")).salutation, "Good evening");
+
+    const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.WorkSummary, {
+        tasks: { pending_approval: 0, approved: 14, completed: 2, rejected: 0 },
+        reports: { submitted: 8, draft: 1 },
+        work: { pending_verification: 3, verified: 12 },
+    })));
+    assert.ok(html.includes('href="/supervisor/tasks?approval_status=PENDING"'));
+    assert.ok(html.includes('href="/supervisor/tasks?approval_status=APPROVED"'));
+    assert.ok(html.includes('href="/supervisor/tasks?work_status=COMPLETED"'));
+    assert.ok(html.includes('aria-label="Approved tasks, 14"'));
+    assert.ok(html.includes('href="/supervisor/reports"'));
+    assert.ok(html.includes('aria-label="Awaiting verification work, 3"'));
+    assert.ok(html.includes('aria-label="Verified work, 12"'));
+    assert.ok(html.includes("Work summary"));
+    assert.ok(html.includes("<h3"));
+    assert.ok(html.includes("grid-cols-1 gap-4 md:grid-cols-2"));
+    assert.ok(!html.includes("Rejected"));
+    assert.ok(!html.includes("Task pipeline"));
+    assert.ok(!html.includes("Created tasks"));
+    assert.ok(!html.includes("Unread notifications"));
+    const withRejected = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.WorkSummary, {
+        tasks: { rejected: 1 }, reports: {}, work: {},
+    })));
+    assert.ok(withRejected.includes('aria-label="Rejected tasks, 1"'));
+});
+
+test("Supervisor Quick Actions link directly to an existing daily report draft", async () => {
+    const { exports } = await loadSource("pages/Dashboard.jsx", {
+        overrides: { "components/dashboard/AdminQuickActions.jsx": { default: () => null } },
+        append: "\nexport { SupervisorQuickActions };",
+    });
+    const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorQuickActions, {
+        draftGroup: { count: 1, items: [{ id: "draft-id", project_id: "project-id" }] },
+    })));
+    assert.ok(html.includes("Continue today"));
+    assert.ok(html.includes('href="/supervisor/projects/project-id/daily-reports?report=draft-id"'));
+    assert.ok(!html.includes("Submit today"));
+});
+
+test("Supervisor dashboard shows one compact All clear row when action queues are empty", async () => {
+    const { exports } = await loadSource("pages/Dashboard.jsx", {
+        overrides: {
+            "components/dashboard/ProjectCategories.jsx": { default: () => null },
+            "components/dashboard/AdminQuickActions.jsx": { default: () => null },
+        },
+        append: "\nexport { SupervisorDashboard };",
+    });
+    const now = new Date("2026-11-23T12:00:00");
+    const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorDashboard, { summary: {}, actionItems: {}, now })));
+    assert.equal((html.match(/All clear: no rejected tasks, corrections, change requests, delays or extensions\./g) || []).length, 1);
+    assert.ok(!html.includes("Nothing pending in this section."));
+    assert.ok(!html.includes("py-10 text-center"));
+    const withDraft = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorDashboard, {
+        summary: {},
+        actionItems: { draft_daily_reports: { count: 1, items: [{ id: "draft", project_id: "project", report_date: "2026-11-14", updated_at: "2026-11-14T08:00:00Z", status: "DRAFT" }] } },
+        now,
+    })));
+    assert.ok(withDraft.includes("Daily report"));
+    assert.ok(withDraft.includes('href="/supervisor/projects/project/daily-reports?report=draft"'));
+    assert.ok(!withDraft.includes("All clear: no rejected tasks, corrections, change requests, delays or extensions."));
+});
+
+test("Supervisor dashboard keeps one Pending Delay Reports section for duplicate delay and extension records", async () => {
+    const { exports } = await loadSource("pages/Dashboard.jsx", {
+        overrides: {
+            "components/dashboard/ProjectCategories.jsx": { default: () => null },
+            "components/dashboard/AdminQuickActions.jsx": { default: () => null },
+        },
+        append: "\nexport { SupervisorDashboard };",
+    });
+    const actionItems = {
+        pending_delay_reports: { count: 1, items: [{ id: "same-report", project_id: "project-id", project_name: "Project", task_title: "Rain delay", status: "PENDING", delay_type: "WEATHER" }] },
+        pending_extensions: { count: 1, items: [{ id: "same-report", project_id: "project-id", project_name: "Project", task_title: "Rain delay", extension_status: "PENDING", requested_end_date: "2026-12-01" }] },
+    };
+    const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorDashboard, { summary: {}, actionItems, now: new Date("2026-11-23T12:00:00") })));
+    assert.equal((html.match(/Pending Delay Reports/g) || []).length, 1);
+    assert.equal((html.match(/Rain delay/g) || []).length, 1);
+    assert.ok(html.includes("Delay and extension pending"));
+    assert.ok(!html.includes("Pending Extensions"));
+});
+
+test("one Supervisor project selector handles eligible projects, errors, search and all create destinations without mutations", async () => {
     const Router = await import("react-router-dom");
     for (const action of ["report", "task"]) {
         const state = delayHooks(), requests = [], routes = [];
@@ -1298,7 +1437,8 @@ test("one Supervisor project selector handles eligible projects, errors, search 
         quickFind(tree, (node) => node.type === "button" && node.props.children === "Retry").props.onClick(); draw();
         requests[2].resolve({ results: [], next: false, previous: false }); await flushDelay(); draw();
         submit(); submit();
-        assert.deepEqual(routes, [`/supervisor/projects/maintenance/${action === "report" ? "daily-reports" : "tasks"}?create=true`]);
+        const section = action === "report" ? "daily-reports" : action === "delay" ? "delays" : "tasks";
+        assert.deepEqual(routes, [`/supervisor/projects/maintenance/${section}?create=true`]);
         assert.equal(closed, 1);
         state.cleanup(); assert.equal(requests[2].signal.aborted, true);
     }
@@ -1327,6 +1467,8 @@ test("dashboard create links open existing Supervisor task/report forms only for
                 const form = quickFind(tree, (node) => node.type?.name === "TaskForm");
                 assert.equal(form.props.open, eligible);
             } else {
+                const breadcrumb = quickFind(tree, (node) => node.type === "span" && node.props["aria-current"] === "page" && node.props.children === "Daily Reports");
+                assert.ok(breadcrumb);
                 assert.equal(Boolean(quickFind(tree, (node) => node.type?.name === "ReportDiaryForm")), eligible);
             }
             assert.equal(query.has("create"), false);

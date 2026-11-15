@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Activity, ArrowLeft, ChevronLeft, ChevronRight, History, RefreshCw, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { Activity, ArrowLeft, ChevronLeft, ChevronRight, History, RefreshCw, ShieldCheck } from "lucide-react";
 import { activityApi, activityPage } from "../../api/activityApi";
 import ActivityEntry from "../../components/activity/ActivityEntry";
 import LoadingScreen from "../../components/LoadingScreen";
 import { formatText, getError } from "../../components/approvals/approvalUtils";
 
 import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
+import SearchFilterToolbar from "../../components/common/SearchFilterToolbar";
 
 const entityTypes = ["USER", "CATEGORY", "PROJECT", "TASK", "TASK_BATCH", "TASK_CHANGE_REQUEST", "DAILY_REPORT", "DAILY_TASK_WORK", "DAILY_MANPOWER", "DAILY_MATERIAL", "DAILY_REPORT_ATTACHMENT", "DELAY_REPORT", "PROJECT_DOCUMENT", "TASK_DOCUMENT"];
 const filterKeys = ["search", "entity_type", "action", "actor", "entity_id", "date_from", "date_to"];
@@ -30,33 +31,23 @@ function ActivityFilters({ filters, onApply, onReset }) {
         }
         onApply(next);
     }
-    function submit(event) {
-        event.preventDefault();
-        if (draft.date_from && draft.date_to && draft.date_from > draft.date_to) { setError("End date must be on or after start date."); return; }
-        onApply(draft);
-    }
-    return <form onSubmit={submit} className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-4 shadow-[0_4px_24px_#422F1605] sm:p-6">
-        <div className="mb-5 flex items-center gap-2.5 border-b border-[#EEE6DC] pb-4"><SlidersHorizontal size={17} className="text-[#A38D72]" aria-hidden="true" /><h2 className="text-sm font-semibold">Explore the audit trail</h2></div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="sm:col-span-2"><ProjectSearch key={searchReset} query={filters.search} onSearch={(value) => change("search", value)} label="Search all activity" placeholder="Person, project, action or description" /></div>
-        </div><details className="rare-filter-disclosure"><summary>Filters and date range</summary>
-            <div className="grid gap-4 pt-3 sm:grid-cols-2">
+    return <SearchFilterToolbar
+        label="Activity search and filters"
+        search={<ProjectSearch compact key={searchReset} query={filters.search} onSearch={(value) => change("search", value)} label="Search all activity" labelClassName="sr-only" placeholder="Person, project, action or description" />}
+        activeCount={filterKeys.filter((key) => key !== "search" && Boolean(filters[key])).length}
+        onClear={() => { setSearchReset((value) => value + 1); onReset(); }}
+    >
+            <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-xs font-medium text-[#716658]">Area<select value={draft.entity_type} onChange={(e) => change("entity_type", e.target.value)} className={input}><option value="">All areas</option>{entityTypes.map((type) => <option key={type} value={type}>{formatText(type)}</option>)}</select></label>
             <label className="text-xs font-medium text-[#716658]">Action code<input value={draft.action} onChange={(e) => change("action", e.target.value.toUpperCase().trim())} maxLength={100} className={input} placeholder="e.g. TASK_APPROVED" /></label>
             <label className="text-xs font-medium text-[#716658]">From date (UTC)<input type="date" value={draft.date_from} onChange={(e) => change("date_from", e.target.value)} className={input} /></label>
             <label className="text-xs font-medium text-[#716658]">To date (UTC)<input type="date" min={draft.date_from || undefined} value={draft.date_to} onChange={(e) => change("date_to", e.target.value)} className={input} /></label>
-            </div></details>
-        <div>
-            <div className="flex flex-wrap items-end gap-2 sm:col-span-2"><button type="button" onClick={() => { setSearchReset((value) => value + 1); onReset(); }} className={secondary}>Reset</button></div>
-        </div>
-        <details className="mt-5 border-t border-[#EEE6DC] pt-4" open={Boolean(filters.actor || filters.entity_id)}>
-            <summary className="w-fit cursor-pointer rounded-lg text-xs font-medium text-[#8B6944] focus-visible:outline-2 focus-visible:outline-[#A58A67]">Filter by record references</summary>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            </div>
+            <div className="mt-4 grid gap-4 border-t border-[#EEE6DC] pt-4 sm:grid-cols-2">
                 {[["actor", "Actor reference"], ["entity_id", "Entity reference"]].map(([key, label]) => <label key={key} className="text-xs text-[#716658]">{label}<input value={draft[key]} pattern={uuidPattern} title="Enter a valid UUID reference" onChange={(e) => change(key, e.target.value)} className={input} placeholder="UUID" /></label>)}
             </div>
-        </details>
-        {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
-    </form>;
+            {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
+    </SearchFilterToolbar>;
 }
 
 export default function AdminActivity() {

@@ -1,11 +1,26 @@
 
 import axios from "axios";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const CONFIGURED_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-if (!BASE_URL) {
+if (!CONFIGURED_BASE_URL) {
   throw new Error("VITE_API_BASE_URL is not configured");
 }
+
+function getApiBaseUrl() {
+  if (!import.meta.env.DEV) {
+    return CONFIGURED_BASE_URL;
+  }
+
+  const configuredUrl = new URL(CONFIGURED_BASE_URL, globalThis.location.origin);
+  const isLoopback = ["localhost", "127.0.0.1", "[::1]"].includes(configuredUrl.hostname);
+  const usesViteProxy = configuredUrl.port === "8000" &&
+    configuredUrl.pathname.replace(/\/+$/, "") === "/api/v1";
+
+  return isLoopback && usesViteProxy ? "/api/v1/" : CONFIGURED_BASE_URL;
+}
+
+const BASE_URL = getApiBaseUrl();
 
 export const api = axios.create({
   baseURL: BASE_URL,

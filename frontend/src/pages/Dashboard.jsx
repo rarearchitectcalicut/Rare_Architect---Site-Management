@@ -27,6 +27,7 @@ import ApprovalModal from "../components/approvals/ApprovalModal";
 import { ProjectSearch } from "../components/daily-reports/ReportProjectPicker";
 import { projectApi } from "../api/projectApi";
 import { validationMessage } from "../hooks/useApprovalReview";
+import DelayReportForm from "../modal/supervisor/DelayReportForm";
 
 // =====================================================
 // MOTION SYSTEM
@@ -155,6 +156,7 @@ function StatCard({
   delay = 0,
   tone = "neutral",
 }) {
+  const iconTone = Number(value) === 0 && ["orange", "red"].includes(tone) ? "green" : tone;
   return (
     <Link
       to={to}
@@ -164,19 +166,19 @@ function StatCard({
       <div
         className="
           group h-full cursor-pointer
-          rounded-[18px] border border-[#e8dfd3]
+          rounded-[20px] border border-[#e8dfd3]
           bg-[#fffdfa] p-4
           shadow-[0_3px_14px_rgba(33,30,26,0.025)]
           transition-all duration-300 ease-out
-          hover:-translate-y-1 hover:border-[#d9ccba]
+          hover:border-[#d9ccba]
           hover:shadow-[0_14px_34px_rgba(33,30,26,0.08)]
+          focus-within:border-[#d9ccba]
           motion-reduce:transition-none
-          motion-reduce:hover:translate-y-0
           sm:rounded-[22px] sm:p-6
         "
       >
         <div className="flex items-start justify-between gap-3">
-          <p className="min-w-0 text-[13px] font-medium text-[#776f63] sm:text-sm">
+          <p className="min-w-0 text-[13px] font-medium text-[#776f63]">
             {label}
           </p>
 
@@ -189,19 +191,19 @@ function StatCard({
               motion-reduce:transition-none
               motion-reduce:group-hover:transform-none
               sm:p-2.5
-              ${iconTones[tone] || iconTones.neutral}
+              ${iconTones[iconTone] || iconTones.neutral}
             `}
           >
             <Icon size={19} strokeWidth={1.8} />
           </div>
         </div>
 
-        <p className="mt-3 text-[28px] font-bold leading-none tracking-tight tabular-nums text-[#211e1a] sm:mt-4 sm:text-[32px]">
+        <p className="mt-3 text-[32px] font-bold leading-none tracking-tight tabular-nums text-[#211e1a] sm:mt-4 sm:text-[36px]">
           <AnimatedNumber value={value} />
         </p>
 
         {hint && (
-          <p className="mt-2.5 text-xs text-[#716658] sm:mt-3">
+          <p className="mt-2.5 text-xs font-medium text-[#716658] sm:mt-3">
             {hint}
           </p>
         )}
@@ -219,6 +221,7 @@ function StatusPill({ status }) {
     COMPLETED: "bg-[#e6f3e8] text-[#246b3b]",
     REJECTED: "bg-[#fde8e6] text-[#9e3535]",
     PENDING: "bg-[#fff1cc] text-[#8d640f]",
+    DELAYED: "bg-[#fde8e6] text-[#9e3535]",
     DRAFT: "bg-[#ece8e2] text-[#72675b]",
     SUBMITTED: "bg-[#e6ebfa] text-[#415eaa]",
   };
@@ -243,16 +246,175 @@ function StatusPill({ status }) {
 
 function EmptyState({ message }) {
   return (
-    <div className="rare-fade py-8 text-center sm:py-10">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#E6F4EA] text-[#16A34A]">
-        <CheckCircle2 size={26} strokeWidth={1.6} />
+    <div className="rare-fade flex items-center gap-3 rounded-xl bg-[#E9F6EF] px-3 py-3 text-left text-[#176647]">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6F4EA] text-[#16A34A]">
+        <CheckCircle2 size={20} strokeWidth={1.6} />
       </div>
-
-      <p className="text-sm text-[#716658]">
-        {message}
-      </p>
+      <p className="text-sm">{message}</p>
     </div>
   );
+}
+
+function AllClearRow() {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-[#B5DCCB] bg-[#E9F6EF] px-4 py-3 text-sm text-[#176647]">
+      <CheckCircle2 size={20} strokeWidth={1.8} className="shrink-0" aria-hidden="true" />
+      <p>All clear: no rejected tasks, corrections, change requests, delays or extensions.</p>
+    </div>
+  );
+}
+
+function dashboardGreeting(now) {
+  const hour = now.getHours();
+  const salutation = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const date = now.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" });
+  return { salutation, date };
+}
+
+function draftAgeDays(draft, now) {
+  const value = draft.updated_at || (draft.report_date ? `${draft.report_date}T00:00:00` : "");
+  if (!value) return null;
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return null;
+  const draftDate = new Date(timestamp);
+  const today = new Date(now);
+  const draftDay = Date.UTC(draftDate.getFullYear(), draftDate.getMonth(), draftDate.getDate());
+  const todayDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.max(0, Math.floor((todayDay - draftDay) / 86400000));
+}
+
+function formatAttentionDate(value) {
+  if (!value) return "";
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" });
+}
+
+function buildSupervisorAttentionItems(actionItems, now) {
+  const rows = [];
+  for (const draft of actionItems.draft_daily_reports?.items || []) {
+    const age = draftAgeDays(draft, now);
+    rows.push({
+      key: `draft:${draft.id}`,
+      title: `Daily report · ${formatAttentionDate(draft.report_date) || "Draft"}`,
+      description: age >= 7 ? `Draft from ${age} days ago` : age === 0 ? "Draft updated today" : "Draft recently updated",
+      status: "DRAFT",
+      to: `/supervisor/projects/${encodeURIComponent(draft.project_id)}/daily-reports?report=${encodeURIComponent(draft.id)}`,
+    });
+  }
+  for (const task of actionItems.pending_approval_tasks?.items || []) {
+    rows.push({
+      key: `pending-task:${task.id}`,
+      title: task.title,
+      description: `${task.project_name} · Waiting for approval`,
+      status: "PENDING",
+      to: `/supervisor/projects/${encodeURIComponent(task.project_id)}/tasks?task=${encodeURIComponent(task.id)}`,
+    });
+  }
+  for (const task of actionItems.overdue_tasks?.items || []) {
+    rows.push({
+      key: `overdue-task:${task.id}`,
+      title: task.title,
+      description: `${task.project_name} · Due ${formatAttentionDate(task.end_date)}`,
+      status: "DELAYED",
+      to: `/supervisor/projects/${encodeURIComponent(task.project_id)}/tasks?task=${encodeURIComponent(task.id)}`,
+      reportDelay: { projectId: task.project_id, taskId: task.id },
+    });
+  }
+  for (const task of actionItems.rejected_tasks?.items || []) {
+    rows.push({
+      key: `rejected-task:${task.id}`,
+      title: task.title,
+      description: `${task.project_name} · Rejected task`,
+      status: "REJECTED",
+      to: `/supervisor/projects/${encodeURIComponent(task.project_id)}/tasks?task=${encodeURIComponent(task.id)}`,
+    });
+  }
+  for (const work of actionItems.rejected_work_to_correct?.items || []) {
+    rows.push({
+      key: `correction:${work.id}`,
+      title: work.task_title,
+      description: work.verification_note || `${work.project_name} · Work needs correction`,
+      status: "REJECTED",
+      to: `/supervisor/projects/${encodeURIComponent(work.project_id)}/daily-reports?correct=${encodeURIComponent(work.daily_report_id)}`,
+    });
+  }
+  for (const change of actionItems.pending_change_requests?.items || []) {
+    rows.push({
+      key: `change:${change.id}`,
+      title: change.task_title,
+      description: `${change.project_name} · Change request pending`,
+      status: "PENDING",
+      to: `/supervisor/projects/${encodeURIComponent(change.project_id)}/tasks?task=${encodeURIComponent(change.task_id)}`,
+    });
+  }
+  return rows;
+}
+
+function getSupervisorAttentionCount(actionItems) {
+  const sections = [
+    "draft_daily_reports",
+    "pending_approval_tasks",
+    "overdue_tasks",
+    "rejected_tasks",
+    "rejected_work_to_correct",
+    "pending_change_requests",
+  ];
+  return sections.reduce((total, key) => total + Number(actionItems[key]?.count ?? actionItems[key]?.items?.length ?? 0), 0);
+}
+
+function AttentionRow({ item, onReportDelay }) {
+  const contents = <>
+    <span className="min-w-0 flex-1">
+      <span className="block truncate text-sm font-semibold text-[#211E1A]">{item.title}</span>
+      <span className="mt-0.5 block truncate text-xs font-medium text-[#716658]">{item.description}</span>
+    </span>
+    <span className="flex shrink-0 items-center gap-2"><StatusPill status={item.status} /><ArrowRight size={16} aria-hidden="true" className="text-[#716658] transition-transform group-hover:translate-x-0.5" /></span>
+  </>;
+  if (!item.reportDelay) return <Link to={item.to} className="group flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[#E7DED2] px-3 py-2.5 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">{contents}</Link>;
+  return <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-[#E7DED2] p-2.5">
+    <Link to={item.to} className="group flex min-h-11 min-w-0 flex-1 items-center justify-between gap-4 rounded-lg px-1 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">{contents}</Link>
+    <button type="button" onClick={() => onReportDelay(item.reportDelay)} aria-label={`Report delay for ${item.title || "task"}`} className="rare-button rare-button-secondary min-h-11 px-3 py-2 text-xs">Report delay</button>
+  </div>;
+}
+
+function NeedsAttention({ items, noItemsMessage, onReportDelay }) {
+  return <Panel title="Needs your attention">
+    {items.length ? <div className="grid gap-2 sm:grid-cols-2">{items.map((item) => <AttentionRow key={item.key} item={item} onReportDelay={onReportDelay} />)}</div> : noItemsMessage ? <p className="rounded-xl border border-[#E7DED2] px-4 py-3 text-sm text-[#716658]">{noItemsMessage}</p> : <AllClearRow />}
+  </Panel>;
+}
+
+function mergePendingDelayItems(actionItems) {
+  const pendingById = new Map();
+  for (const [type, group] of [["delay", actionItems.pending_delay_reports], ["extension", actionItems.pending_extensions]]) {
+    for (const item of group?.items || []) {
+      const key = String(item.id);
+      const existing = pendingById.get(key);
+      if (existing) {
+        existing.pendingTypes.push(type);
+        existing.status = "PENDING";
+      }
+      else pendingById.set(key, {
+        ...item,
+        status: "PENDING",
+        pendingTypes: [type],
+      });
+    }
+  }
+  return [...pendingById.values()].map((item) => ({
+    key: `delay:${item.id}`,
+    title: item.task_title || "Delay report",
+    description: `${item.project_name || "Project"} · ${item.pendingTypes.length > 1 ? "Delay and extension pending" : item.pendingTypes[0] === "extension" ? "Extension pending" : "Pending Admin review"}`,
+    status: item.status,
+    to: `/supervisor/delays?project=${encodeURIComponent(item.project_id)}&request=${encodeURIComponent(item.id)}${item.pendingTypes.includes("delay") ? "" : "&type=extension"}`,
+  }));
+}
+
+function SupervisorGreeting({ name, count, now }) {
+  const { salutation, date } = dashboardGreeting(now);
+  return <header className="space-y-1">
+    <p className="text-xl font-semibold tracking-tight text-[#211E1A]">{salutation}, {name}. {count} things need attention.</p>
+    <p className="text-xs font-medium text-[#716658]">{date}</p>
+  </header>;
 }
 
 function Panel({ title, subtitle, children, action, delay = 0 }) {
@@ -263,11 +425,12 @@ function Panel({ title, subtitle, children, action, delay = 0 }) {
     >
       <section
         className="
-          h-full min-w-0 rounded-[18px]
+          h-full min-w-0 rounded-[20px]
           border border-[#e8dfd3]
           bg-[#fffdfa] p-4
+          shadow-[0_3px_14px_rgba(33,30,26,0.025)]
           transition-all duration-300 ease-out
-          hover:border-[#dccfbd]
+          hover:border-[#C9B9A4]
           hover:shadow-[0_10px_30px_rgba(33,30,26,0.05)]
           motion-reduce:transition-none
           sm:rounded-[22px] sm:p-6
@@ -286,6 +449,9 @@ function Panel({ title, subtitle, children, action, delay = 0 }) {
 }
 
 function CountRow({ label, value, icon: Icon, tone = "neutral" }) {
+  const zeroWarning = Number(value) === 0 && ["orange", "red"].includes(tone);
+  const RowIcon = zeroWarning ? CheckCircle2 : Icon;
+  const rowTone = zeroWarning ? "green" : tone;
   return (
     <div
       className="
@@ -305,10 +471,10 @@ function CountRow({ label, value, icon: Icon, tone = "neutral" }) {
             group-hover:scale-105
             motion-reduce:transition-none
             motion-reduce:group-hover:transform-none
-            ${iconTones[tone] || iconTones.neutral}
+            ${iconTones[rowTone] || iconTones.neutral}
           `}
         >
-          <Icon size={17} strokeWidth={1.8} />
+          <RowIcon size={17} strokeWidth={1.8} />
         </div>
 
         <span className="min-w-0 wrap-break-word text-sm text-[#665e53] transition-colors duration-200 group-hover:text-[#211e1a]">
@@ -321,6 +487,56 @@ function CountRow({ label, value, icon: Icon, tone = "neutral" }) {
       </span>
     </div>
   );
+}
+
+function WorkSummary({ tasks, reports, work }) {
+  const taskItems = [
+    { label: "Pending approval", count: tasks.pending_approval, to: "/supervisor/tasks?approval_status=PENDING", noun: "tasks", icon: Clock3, tone: "orange" },
+    { label: "Approved", count: tasks.approved, to: "/supervisor/tasks?approval_status=APPROVED", noun: "tasks", icon: CheckCircle2, tone: "green" },
+    { label: "Completed", count: tasks.completed, to: "/supervisor/tasks?work_status=COMPLETED", noun: "tasks", icon: ClipboardCheck, tone: "violet" },
+    ...(Number(tasks.rejected) > 0 ? [{ label: "Rejected", count: tasks.rejected, to: "/supervisor/tasks?approval_status=REJECTED", noun: "tasks", icon: AlertTriangle, tone: "red" }] : []),
+  ];
+  const reportItems = [
+    { label: "Submitted", count: reports.submitted, noun: "daily reports", icon: FileText, tone: "blue" },
+    { label: "Drafts", count: reports.draft, noun: "daily reports", icon: FileText, tone: "slate" },
+    { label: "Awaiting verification", count: work.pending_verification, noun: "work", icon: Clock3, tone: "orange" },
+    { label: "Verified", count: work.verified, noun: "work", icon: CheckCircle2, tone: "green" },
+  ];
+  const SummaryLink = ({ item }) => {
+    const count = Number(item.count) || 0;
+    const Icon = item.icon;
+    const tone = count === 0 && item.tone === "orange" ? "green" : item.tone;
+    return <Link
+      to={item.to || "/supervisor/reports"}
+      aria-label={`${item.label} ${item.noun}, ${count}`}
+      className="flex min-h-14 min-w-0 items-center gap-2 rounded-lg border border-[#E7DED2] px-2 py-2 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A] focus-visible:ring-offset-1"
+    >
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconTones[tone] || iconTones.neutral}`}>
+        <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-2xl font-bold leading-none tabular-nums text-[#211E1A]">{count}</span>
+        <span className="mt-1 block break-words text-[12px] font-medium leading-4 text-[#716658]">{item.label}</span>
+      </span>
+    </Link>;
+  };
+  return <section aria-labelledby="work-summary-heading" className="rounded-[20px] border border-[#e8dfd3] bg-[#fffdfa] p-4 shadow-[0_3px_14px_rgba(33,30,26,0.025)]">
+    <h2 id="work-summary-heading" className="mb-3 text-base font-bold tracking-tight text-[#211e1a]">Work summary</h2>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <section aria-labelledby="work-summary-tasks-heading" className="min-w-0">
+        <h3 id="work-summary-tasks-heading" className="mb-2 text-sm font-semibold text-[#211e1a]">Tasks</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {taskItems.map((item) => <SummaryLink key={item.label} item={item} />)}
+        </div>
+      </section>
+      <section aria-labelledby="work-summary-reports-heading" className="min-w-0">
+        <h3 id="work-summary-reports-heading" className="mb-2 text-sm font-semibold text-[#211e1a]">Daily reports &amp; work</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {reportItems.map((item) => <SummaryLink key={item.label} item={item} />)}
+        </div>
+      </section>
+    </div>
+  </section>;
 }
 
 function ItemList({ items, getTitle, getSubtitle, getStatus }) {
@@ -705,57 +921,6 @@ function AdminDashboard({ summary, reviewQueue }) {
 }
 
 // =====================================================
-// SUPERVISOR ACTION SECTION
-// =====================================================
-
-function SupervisorActionPanel({ title, group, type, delay = 0 }) {
-  const items = group?.items || [];
-  const count = group?.count ?? 0;
-
-  return (
-    <Panel
-      delay={delay}
-      title={title}
-      subtitle={`${count} matching records`}
-    >
-      <ItemList
-        items={items}
-        getTitle={(item) =>
-          item.title ||
-          item.task_title ||
-          (type === "draft" ? "Daily Report Draft" : "Work Item")
-        }
-        getSubtitle={(item) => {
-          if (item.report_date) {
-            return `Report date: ${item.report_date}`;
-          }
-
-          if (item.requested_end_date) {
-            return `Requested end: ${item.requested_end_date}`;
-          }
-
-          if (item.change_type) {
-            return `Type: ${item.change_type}`;
-          }
-
-          if (item.verification_note) {
-            return item.verification_note;
-          }
-
-          return `ID: ${item.id}`;
-        }}
-        getStatus={(item) =>
-          item.approval_status ||
-          item.verification_status ||
-          item.extension_status ||
-          item.status
-        }
-      />
-    </Panel>
-  );
-}
-
-// =====================================================
 // SUPERVISOR DASHBOARD
 // =====================================================
 
@@ -785,7 +950,8 @@ function SupervisorProjectSelector({ action, onClose }) {
     event.preventDefault();
     if (!selected || !current?.data || navigating.current || !["ACTIVE", "MAINTENANCE"].includes(selected.status)) return;
     navigating.current = true;
-    navigate(`/supervisor/projects/${encodeURIComponent(selected.id)}/${action === "report" ? "daily-reports" : "tasks"}?create=true`);
+    const section = action === "report" ? "daily-reports" : "tasks";
+    navigate(`/supervisor/projects/${encodeURIComponent(selected.id)}/${section}?create=true`);
     onClose();
   }
   return <ApprovalModal label={`${title}: choose project`} onClose={onClose}>
@@ -809,48 +975,84 @@ function SupervisorProjectSelector({ action, onClose }) {
   </ApprovalModal>;
 }
 
-function SupervisorQuickActions() {
+function SupervisorQuickActions({ draftGroup } = {}) {
   const [action, setAction] = useState(null);
-  const actions = [
+  const reportAction = {
+    label: "Submit today's report",
+    action: "report",
+    icon: FileText,
+    tile: "bg-[#E6F4EA] text-[#16A34A] group-hover:bg-[#16A34A]",
+  };
+  const secondaryActions = [
     { label: "My Projects", path: "/supervisor/projects", icon: FolderKanban, tile: "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB]" },
     { label: "My Tasks", path: "/supervisor/tasks", icon: ListTodo, tile: "bg-[#EDE9FE] text-[#7C3AED] group-hover:bg-[#7C3AED]" },
-    { label: "Daily Report", action: "report", icon: FileText, tile: "bg-[#E6F4EA] text-[#16A34A] group-hover:bg-[#16A34A]" },
     { label: "Create Task", action: "task", icon: Plus, tile: "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB]" },
   ];
+  const primaryClass = "group flex min-h-24 w-full items-center gap-4 rounded-2xl border border-[#B5DCCB] bg-[#F8FCF9] px-5 py-5 text-left transition-colors hover:bg-[#E9F6EF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176647]";
+  const secondaryClass = "group flex min-h-14 items-center justify-center gap-2 rounded-xl border border-[#E7DED2] bg-transparent px-3 py-3 text-center text-sm font-medium text-[#665E53] transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]";
+  const draftItems = draftGroup?.items || [];
+  const draft = draftItems.find((item) => item?.id && item?.project_id);
+  const primaryLabel = draft ? "Continue today's draft" : reportAction.label;
+  const PrimaryIcon = reportAction.icon;
+  const draftPath = draft
+    ? `/supervisor/projects/${encodeURIComponent(draft.project_id)}/daily-reports?report=${encodeURIComponent(draft.id)}`
+    : null;
   return <>
     <section aria-label="Supervisor Quick Actions" className="rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] px-4 py-5 sm:px-6">
       <h2 className="mb-4 text-base font-bold text-[#211E1A] sm:mb-5">Quick Actions</h2>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">{actions.map((item) => {
+      <div className="space-y-3">
+        {draftPath ? <Link to={draftPath} className={primaryClass}>
+          <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${reportAction.tile}`}><PrimaryIcon size={25} strokeWidth={1.8} aria-hidden="true" /></span>
+          <span className="min-w-0"><span className="block text-base font-bold text-[#211E1A] sm:text-lg">{primaryLabel}</span><span className="mt-1 block text-sm text-[#665E53]">Open your saved daily report draft</span></span>
+        </Link> : <button type="button" onClick={() => setAction("report")} className={primaryClass}>
+          <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${reportAction.tile}`}><PrimaryIcon size={25} strokeWidth={1.8} aria-hidden="true" /></span>
+          <span className="min-w-0"><span className="block text-base font-bold text-[#211E1A] sm:text-lg">{primaryLabel}</span><span className="mt-1 block text-sm text-[#665E53]">Record today's site progress</span></span>
+        </button>}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">{secondaryActions.map((item) => {
         const Icon = item.icon;
-        const className = "group flex flex-col items-center justify-center gap-2.5 rounded-2xl px-2 py-3 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A]/40 sm:py-4";
-        const content = <><span className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${item.tile}`}><Icon size={23} strokeWidth={1.8} aria-hidden="true" /></span><span className="text-xs font-medium text-[#665E53] group-hover:text-[#211E1A] sm:text-sm">{item.label}</span></>;
-        return item.path ? <Link key={item.label} to={item.path} className={className}>{content}</Link> : <button key={item.label} type="button" onClick={() => setAction(item.action)} className={className}>{content}</button>;
+        const content = <><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white ${item.tile}`}><Icon size={17} strokeWidth={1.8} aria-hidden="true" /></span><span>{item.label}</span></>;
+        return item.path ? <Link key={item.label} to={item.path} className={secondaryClass}>{content}</Link> : <button key={item.label} type="button" onClick={() => setAction(item.action)} className={secondaryClass}>{content}</button>;
       })}</div>
+      </div>
     </section>
     {action && <SupervisorProjectSelector action={action} onClose={() => setAction(null)} />}
   </>;
 }
 
-function SupervisorDashboard({ summary, actionItems }) {
+function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
+  const [delayReport, setDelayReport] = useState(null);
+  const [notice, setNotice] = useState("");
   const projects = summary.projects || {};
   const tasks = summary.my_tasks || {};
   const reports = summary.project_daily_reports || {};
-  const work = summary.project_daily_task_work || {};
-  const delays = summary.my_delay_reports || {};
-  const notifications = summary.notifications || {};
+  const pendingDelayItems = mergePendingDelayItems(actionItems);
+  const attentionItems = buildSupervisorAttentionItems(actionItems, now);
+  const hasOtherAttention = Boolean(
+    actionItems.pending_change_requests?.count ||
+    actionItems.pending_delay_reports?.count ||
+    actionItems.pending_extensions?.count
+  );
+  const attentionCount = getSupervisorAttentionCount(actionItems);
+  const displayName = user?.first_name || user?.name || "there";
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(""), 8000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-5 sm:space-y-6">
       <DashboardStyles />
-
-      {/* SUPERVISOR OVERVIEW */}
+      <SupervisorGreeting name={displayName} count={attentionCount} now={now} />
+      {notice && <p role="status" aria-live="polite" className="rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
+      <NeedsAttention
+        items={attentionItems}
+        noItemsMessage={hasOtherAttention ? "No immediate task items need attention." : ""}
+        onReportDelay={setDelayReport}
+      />
       <section>
-        <SectionHeading
-          title="My Site Overview"
-          subtitle="Your assigned projects and work summary."
-        />
-
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
           <StatCard
             delay={stagger(0)}
             label="Assigned Projects"
@@ -866,7 +1068,7 @@ function SupervisorDashboard({ summary, actionItems }) {
             label="My Tasks"
             to="/supervisor/tasks"
             tone="orange"
-            value={tasks.total_created}
+            value={tasks.total}
             icon={ListTodo}
             hint={`${tasks.pending_approval ?? 0} pending approval`}
           />
@@ -880,135 +1082,27 @@ function SupervisorDashboard({ summary, actionItems }) {
             icon={FileText}
             hint={`${reports.submitted ?? 0} submitted`}
           />
-
-          <StatCard
-            delay={stagger(3)}
-            label="My Pending Delays"
-            to="/supervisor/delays"
-            tone="red"
-            value={delays.pending_review}
-            icon={AlertTriangle}
-            hint="Awaiting Admin review"
-          />
         </div>
       </section>
 
-      {/* STATUS OVERVIEW */}
-      <SupervisorQuickActions />
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
-        <Panel delay={stagger(4)} title="My Tasks">
-          <CountRow
-            label="Created tasks"
-            tone="blue"
-            value={tasks.total_created}
-            icon={ListTodo}
-          />
-          <CountRow
-            label="Pending approval"
-            tone="orange"
-            value={tasks.pending_approval}
-            icon={Clock3}
-          />
-          <CountRow
-            label="Approved"
-            tone="green"
-            value={tasks.approved}
-            icon={CheckCircle2}
-          />
-          <CountRow
-            label="Rejected"
-            tone="red"
-            value={tasks.rejected}
-            icon={AlertTriangle}
-          />
-          <CountRow
-            label="Completed"
-            tone="violet"
-            value={tasks.completed}
-            icon={ClipboardCheck}
-          />
+      <SupervisorQuickActions draftGroup={actionItems.draft_daily_reports} />
+      <WorkSummary tasks={tasks} reports={reports} work={summary.project_daily_task_work || {}} />
+      {!!pendingDelayItems.length && <section aria-labelledby="my-action-center-heading" className="space-y-3">
+        <div><h2 id="my-action-center-heading" className="text-lg font-semibold text-[#211E1A]">My Action Center</h2><p className="text-xs font-medium text-[#716658]">Delay reports awaiting Admin review.</p></div>
+        <Panel title="Pending Delay Reports">
+          <div className="space-y-2">{pendingDelayItems.map((item) => <AttentionRow key={item.key} item={item} />)}</div>
         </Panel>
-
-        <Panel delay={stagger(5)} title="Assigned Project Work">
-          <CountRow
-            label="Submitted daily reports"
-            tone="blue"
-            value={reports.submitted}
-            icon={FileText}
-          />
-          <CountRow
-            label="Draft daily reports"
-            tone="slate"
-            value={reports.draft}
-            icon={FileText}
-          />
-          <CountRow
-            label="Work awaiting verification"
-            tone="orange"
-            value={work.pending_verification}
-            icon={Clock3}
-          />
-          <CountRow
-            label="Verified work entries"
-            tone="green"
-            value={work.verified}
-            icon={CheckCircle2}
-          />
-          <CountRow
-            label="Unread notifications"
-            tone="red"
-            value={notifications.unread_count}
-            icon={Bell}
-          />
-        </Panel>
-      </div>
-
-      {/* ACTION CENTER */}
-      <section>
-        <SectionHeading
-          title="My Action Center"
-          subtitle="Items needing correction and requests awaiting decisions."
-        />
-
-        <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
-          <SupervisorActionPanel
-            delay={stagger(6)}
-            title="Rejected Tasks"
-            group={actionItems.rejected_tasks}
-          />
-
-          <SupervisorActionPanel
-            delay={stagger(7)}
-            title="Work to Correct"
-            group={actionItems.rejected_work_to_correct}
-          />
-
-          <SupervisorActionPanel
-            delay={stagger(8)}
-            title="Draft Daily Reports"
-            group={actionItems.draft_daily_reports}
-            type="draft"
-          />
-
-          <SupervisorActionPanel
-            delay={stagger(9)}
-            title="Pending Change Requests"
-            group={actionItems.pending_change_requests}
-          />
-
-          <SupervisorActionPanel
-            delay={stagger(10)}
-            title="Pending Delay Reports"
-            group={actionItems.pending_delay_reports}
-          />
-
-          <SupervisorActionPanel
-            delay={stagger(11)}
-            title="Pending Extensions"
-            group={actionItems.pending_extensions}
-          />
-        </div>
-      </section>
+      </section>}
+      {delayReport && <DelayReportForm
+        key={`${delayReport.projectId}:${delayReport.taskId}`}
+        projectId={delayReport.projectId}
+        taskId={delayReport.taskId}
+        onClose={() => setDelayReport(null)}
+        onSaved={(report) => {
+          setDelayReport(null);
+          setNotice(`Delay report submitted: ${report.status === "PENDING" ? "Pending Admin review" : report.status}.`);
+        }}
+      />}
     </div>
   );
 }
@@ -1024,6 +1118,7 @@ export default function Dashboard() {
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentTime, setCurrentTime] = useState(null);
 
   const isAdmin = user?.role === "ADMIN";
 
@@ -1051,6 +1146,7 @@ export default function Dashboard() {
 
       setSummary(summaryData);
       setDetails(detailsData);
+      setCurrentTime(new Date());
     } catch (err) {
       const status = err.response?.status;
 
@@ -1149,15 +1245,8 @@ export default function Dashboard() {
   // ROLE-BASED DASHBOARD
   // ---------------------------------------------
 
-  return <div className="space-y-5"><header className="rare-page-header border border-[#E7DED2] bg-[#FFFDFA]"><h1>Dashboard</h1><p className="text-sm text-[#716658]">{isAdmin ? "Project priorities and decisions at a glance." : "Your sites and next actions."}</p></header>{isAdmin ? (
-    <AdminDashboard
-      summary={summary}
-      reviewQueue={details}
-    />
-  ) : (
-    <SupervisorDashboard
-      summary={summary}
-      actionItems={details}
-    />
-  )}</div>;
+  return <div className="space-y-5">{isAdmin ? <>
+    <header className="rare-page-header border border-[#E7DED2] bg-[#FFFDFA]"><h1>Dashboard</h1><p className="text-sm text-[#716658]">Project priorities and decisions at a glance.</p></header>
+    <AdminDashboard summary={summary} reviewQueue={details} />
+  </> : <SupervisorDashboard summary={summary} actionItems={details} user={user} now={currentTime} />}</div>;
 }
