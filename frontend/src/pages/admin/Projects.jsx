@@ -167,7 +167,7 @@ export function ProjectDirectory({ role = "ADMIN", section = "" }) {
     const from = data?.count ? (page - 1) * pageSize + 1 : 0;
     const to = data ? Math.min((page - 1) * pageSize + data.results.length, data.count) : 0;
     const pageCount = data ? Math.max(1, Math.ceil(data.count / pageSize)) : 1;
-    return <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-4 px-4 pb-8 text-[#211E1A] sm:space-y-5 md:px-6 lg:px-8">
+    return <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-4 pb-8 text-[#211E1A] sm:space-y-5">
         {!result && loading && <LoadingScreen message="Loading project directory..." />}
         <header className="flex w-full items-center justify-between gap-3">
             <h1 className="min-w-0 truncate text-xl font-bold tracking-tight text-[#211E1A]">{section === "documents" ? "Project Documents" : admin ? "All Projects" : "My Projects"}</h1>

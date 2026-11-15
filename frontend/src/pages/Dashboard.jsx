@@ -27,6 +27,7 @@ import ApprovalModal from "../components/approvals/ApprovalModal";
 import { ProjectSearch } from "../components/daily-reports/ReportProjectPicker";
 import { projectApi } from "../api/projectApi";
 import { validationMessage } from "../hooks/useApprovalReview";
+import DelayReportForm from "../modal/supervisor/DelayReportForm";
 
 // =====================================================
 // MOTION SYSTEM
@@ -316,6 +317,7 @@ function buildSupervisorAttentionItems(actionItems, now) {
       description: `${task.project_name} · Due ${formatAttentionDate(task.end_date)}`,
       status: "DELAYED",
       to: `/supervisor/projects/${encodeURIComponent(task.project_id)}/tasks?task=${encodeURIComponent(task.id)}`,
+      reportDelay: { projectId: task.project_id, taskId: task.id },
     });
   }
   for (const task of actionItems.rejected_tasks?.items || []) {
@@ -360,19 +362,24 @@ function getSupervisorAttentionCount(actionItems) {
   return sections.reduce((total, key) => total + Number(actionItems[key]?.count ?? actionItems[key]?.items?.length ?? 0), 0);
 }
 
-function AttentionRow({ item }) {
-  return <Link to={item.to} className="group flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[#E7DED2] px-3 py-2.5 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">
-    <span className="min-w-0">
+function AttentionRow({ item, onReportDelay }) {
+  const contents = <>
+    <span className="min-w-0 flex-1">
       <span className="block truncate text-sm font-semibold text-[#211E1A]">{item.title}</span>
       <span className="mt-0.5 block truncate text-xs font-medium text-[#716658]">{item.description}</span>
     </span>
     <span className="flex shrink-0 items-center gap-2"><StatusPill status={item.status} /><ArrowRight size={16} aria-hidden="true" className="text-[#716658] transition-transform group-hover:translate-x-0.5" /></span>
-  </Link>;
+  </>;
+  if (!item.reportDelay) return <Link to={item.to} className="group flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[#E7DED2] px-3 py-2.5 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">{contents}</Link>;
+  return <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-[#E7DED2] p-2.5">
+    <Link to={item.to} className="group flex min-h-11 min-w-0 flex-1 items-center justify-between gap-4 rounded-lg px-1 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">{contents}</Link>
+    <button type="button" onClick={() => onReportDelay(item.reportDelay)} aria-label={`Report delay for ${item.title || "task"}`} className="rare-button rare-button-secondary min-h-11 px-3 py-2 text-xs">Report delay</button>
+  </div>;
 }
 
-function NeedsAttention({ items, noItemsMessage }) {
+function NeedsAttention({ items, noItemsMessage, onReportDelay }) {
   return <Panel title="Needs your attention">
-    {items.length ? <div className="grid gap-2 sm:grid-cols-2">{items.map((item) => <AttentionRow key={item.key} item={item} />)}</div> : noItemsMessage ? <p className="rounded-xl border border-[#E7DED2] px-4 py-3 text-sm text-[#716658]">{noItemsMessage}</p> : <AllClearRow />}
+    {items.length ? <div className="grid gap-2 sm:grid-cols-2">{items.map((item) => <AttentionRow key={item.key} item={item} onReportDelay={onReportDelay} />)}</div> : noItemsMessage ? <p className="rounded-xl border border-[#E7DED2] px-4 py-3 text-sm text-[#716658]">{noItemsMessage}</p> : <AllClearRow />}
   </Panel>;
 }
 
@@ -1013,6 +1020,8 @@ function SupervisorQuickActions({ draftGroup } = {}) {
 }
 
 function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
+  const [delayReport, setDelayReport] = useState(null);
+  const [notice, setNotice] = useState("");
   const projects = summary.projects || {};
   const tasks = summary.my_tasks || {};
   const reports = summary.project_daily_reports || {};
@@ -1026,13 +1035,21 @@ function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
   const attentionCount = getSupervisorAttentionCount(actionItems);
   const displayName = user?.first_name || user?.name || "there";
 
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(""), 8000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   return (
     <div className="space-y-5 sm:space-y-6">
       <DashboardStyles />
       <SupervisorGreeting name={displayName} count={attentionCount} now={now} />
+      {notice && <p role="status" aria-live="polite" className="rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
       <NeedsAttention
         items={attentionItems}
         noItemsMessage={hasOtherAttention ? "No immediate task items need attention." : ""}
+        onReportDelay={setDelayReport}
       />
       <section>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
@@ -1076,6 +1093,16 @@ function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
           <div className="space-y-2">{pendingDelayItems.map((item) => <AttentionRow key={item.key} item={item} />)}</div>
         </Panel>
       </section>}
+      {delayReport && <DelayReportForm
+        key={`${delayReport.projectId}:${delayReport.taskId}`}
+        projectId={delayReport.projectId}
+        taskId={delayReport.taskId}
+        onClose={() => setDelayReport(null)}
+        onSaved={(report) => {
+          setDelayReport(null);
+          setNotice(`Delay report submitted: ${report.status === "PENDING" ? "Pending Admin review" : report.status}.`);
+        }}
+      />}
     </div>
   );
 }

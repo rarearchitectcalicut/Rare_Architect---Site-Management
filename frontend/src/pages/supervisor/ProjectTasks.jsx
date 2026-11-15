@@ -1,27 +1,26 @@
 import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
-    AlertCircle,
-    CalendarDays,
     CheckCircle2,
     ChevronDown,
     ChevronLeft,
     ChevronRight,
     ClipboardList,
+    Filter,
     FolderOpen,
     Layers3,
+    LayoutGrid,
+    List,
     Pencil,
     Plus,
     RefreshCw,
-    SlidersHorizontal,
-    UserRound,
     X,
 } from "lucide-react";
 
 import { projectApi } from "../../api/projectApi";
-import { taskApi, taskScheduleErrors } from "../../api/taskApi";
+import { isTaskOverdue, taskApi, taskScheduleErrors } from "../../api/taskApi";
 import { delayApi } from "../../api/delayApi";
 import DelayReportReview from "../../components/approvals/review/DelayReportReview";
 import { formatDateTime } from "../../components/approvals/approvalUtils";
@@ -30,11 +29,11 @@ import TaskDocuments from "../../components/tasks/TaskDocuments";
 import TaskExecutionActions, { TaskProgress } from "../../components/tasks/TaskExecutionActions";
 import TaskForm from "../../modal/supervisor/TaskForm";
 import BulkAddTasks from "../../modal/supervisor/BulkAddTasks";
-
-const PAGE_SIZE = 10;
+import DelayReportForm from "../../modal/supervisor/DelayReportForm";
+import { MobileTaskCard, TaskPageStyles } from "../../components/admin/tasks/AdminTaskCard";
 
 const inputClass =
-    "h-11 w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-3 text-sm text-[#211E1A] outline-none focus:border-[#B7A58E] focus:ring-4 focus:ring-[#E8DDD0]/50";
+    "h-11 w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-3 text-xs sm:text-sm text-[#211E1A] outline-none focus:border-[#B7A58E] focus:ring-2 focus:ring-[#E8DDD0]";
 
 const statusColors = {
     LOW: "bg-[#E9F0FC] text-[#3565A5]",
@@ -60,6 +59,12 @@ function readable(value) {
         .replaceAll("_", " ")
         .toLowerCase()
         .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function canReportDelay(task, project) {
+    return task?.approval_status === "APPROVED" &&
+        !["COMPLETED", "CANCELLED"].includes(task.work_status) &&
+        ["ACTIVE", "MAINTENANCE"].includes(project?.status);
 }
 
 function formatDate(value) {
@@ -135,33 +140,12 @@ function Badge({ value }) {
 
     return (
         <span
-            className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${statusColors[value] || "bg-[#EEE8E0] text-[#74695D]"
-                }`}
+            className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
+                statusColors[value] || "bg-[#EEE8E0] text-[#74695D]"
+            }`}
         >
             {readable(value)}
         </span>
-    );
-}
-
-function SummaryCard({ label, value, icon: Icon, tone }) {
-    return (
-        <div className="rounded-[20px] border border-[#E7DED2] bg-[#FFFDFA] p-4 transition-all hover:-translate-y-0.5 hover:shadow-sm sm:p-5">
-            <div className="flex items-start justify-between gap-2">
-                <p className="text-xs font-medium text-[#716658]">
-                    {label}
-                </p>
-
-                <span
-                    className={`flex h-11 w-11 items-center justify-center rounded-2xl ${tone}`}
-                >
-                    <Icon size={21} />
-                </span>
-            </div>
-
-            <p className="mt-3 text-2xl font-bold text-[#211E1A] sm:text-3xl">
-                {value}
-            </p>
-        </div>
     );
 }
 
@@ -188,6 +172,8 @@ function ExpandedTask({
     onRetry,
     onEdit,
     onStatusChanged,
+    canReportDelay = false,
+    onReportDelay,
 }) {
     const [documentsOpen, setDocumentsOpen] = useState(false);
     const [delayPage, setDelayPage] = useState(1);
@@ -271,7 +257,7 @@ function ExpandedTask({
             : "Not applicable";
 
     return (
-        <div className="border-t border-[#EEE6DC] bg-[#FFFDFA] p-5 sm:p-6">
+        <div className="border-t border-[#EEE6DC] bg-[#FFFDFA] p-4 sm:p-6">
             {/* DETAILS HEADER */}
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -292,7 +278,7 @@ function ExpandedTask({
                     <button
                         type="button"
                         onClick={() => onEdit(task)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#F0D99A] bg-[#FFF5D6] px-4 py-3 text-xs font-bold text-[#8A620D] transition-colors hover:bg-[#FFE9A8]"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#F0D99A] bg-[#FFF5D6] px-4 py-2.5 text-xs font-bold text-[#8A620D] transition-colors hover:bg-[#FFE9A8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8A620D]"
                     >
                         <Pencil size={16} />
                         {editLabel}
@@ -330,7 +316,7 @@ function ExpandedTask({
             <TaskProgress progress={task.progress} />
 
             {/* DETAILS GRID */}
-            <div className="mt-5 grid gap-5 rounded-[20px] bg-[#F8F4EE] p-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-5 grid gap-4 rounded-[20px] bg-[#F8F4EE] p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
                 <DetailItem label="Task Name" value={task.title} />
                 <DetailItem
                     label="Worker / Team"
@@ -368,56 +354,59 @@ function ExpandedTask({
 
             <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
                 <h4 className="text-sm font-bold text-[#211E1A]">Admin decisions and comments</h4>
-                {!decisionState && <p role="status" className="text-sm text-[#716658]">Loading decision history...</p>}
-                {decisionState?.error && <p role="alert" className="text-sm text-red-700">{decisionState.error} <button type="button" className="underline" onClick={() => setDecisionRevision((value) => value + 1)}>Retry</button></p>}
+                {!decisionState && <p role="status" className="text-xs text-[#716658]">Loading decision history...</p>}
+                {decisionState?.error && <p role="alert" className="text-xs text-red-700">{decisionState.error} <button type="button" className="underline" onClick={() => setDecisionRevision((value) => value + 1)}>Retry</button></p>}
                 {decisionState?.data?.results.map((decision) => <article key={decision.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4">
                     <p className={`text-sm font-semibold ${decision.action.endsWith("REJECTED") ? "text-[#B42318]" : "text-[#166534]"}`}>{readable(decision.action)}</p>
                     <p className="mt-1 text-xs text-[#716658]">{decision.actor_name || "Reviewer unavailable"} / {formatDateTime(decision.created_at)}</p>
-                    <p className="mt-3 whitespace-pre-wrap break-words text-sm text-[#211E1A]">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
+                    <p className="mt-3 whitespace-pre-wrap break-words text-xs text-[#211E1A] sm:text-sm">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
                 </article>)}
-                {decisionState?.data?.count === 0 && <p className="text-sm text-[#716658]">No Admin decision has been recorded yet.</p>}
+                {decisionState?.data?.count === 0 && <p className="text-xs text-[#716658]">No Admin decision has been recorded yet.</p>}
                 {decisionState?.data && (decisionState.data.next || decisionState.data.previous) && <nav aria-label="Decision history pages" className="rare-pagination">
-                    <button type="button" className="rare-button rare-button-secondary" disabled={!decisionState.data.previous} onClick={() => setDecisionPage((page) => page - 1)}>Previous decisions</button>
+                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.previous} onClick={() => setDecisionPage((page) => page - 1)}>Previous decisions</button>
                     <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
-                    <button type="button" className="rare-button rare-button-secondary" disabled={!decisionState.data.next} onClick={() => setDecisionPage((page) => page + 1)}>Next decisions</button>
+                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.next} onClick={() => setDecisionPage((page) => page + 1)}>Next decisions</button>
                 </nav>}
             </section>
             <section aria-label="Task delay reports" className="mt-5 space-y-4 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <h4 className="text-sm font-bold">Delay reports for this task</h4>
-                    <button type="button" className="rare-button rare-button-secondary" onClick={() => setDelayRevision((value) => value + 1)}>Refresh reports</button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {canReportDelay && <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" onClick={() => onReportDelay(task)}>Report delay</button>}
+                        <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" onClick={() => setDelayRevision((value) => value + 1)}>Refresh reports</button>
+                    </div>
                 </div>
                 <p className="text-xs text-[#716658]">Current approved deadline: {formatDate(task.end_date)}. Reporting a delay does not change this deadline; an extension needs separate approval.</p>
-                {!delayState && <p role="status" className="text-sm text-[#716658]">Loading task delay reports...</p>}
-                {delayState?.error && <p role="alert" className="text-sm text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
-                {delayState?.data?.count === 0 && <p className="text-sm text-[#716658]">No delays have been reported for this task.</p>}
+                {!delayState && <p role="status" className="text-xs text-[#716658]">Loading task delay reports...</p>}
+                {delayState?.error && <p role="alert" className="text-xs text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
+                {delayState?.data?.count === 0 && <p className="text-xs text-[#716658]">No delays have been reported for this task.</p>}
                 {delayState?.data?.results.map((report) => <article key={report.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article>)}
                 {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="rare-pagination">
-                    <button type="button" className="rare-button rare-button-secondary" disabled={!delayState.data.previous} onClick={() => setDelayPage((page) => page - 1)}>Previous reports</button>
+                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.previous} onClick={() => setDelayPage((page) => page - 1)}>Previous reports</button>
                     <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
-                    <button type="button" className="rare-button rare-button-secondary" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
+                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
                 </nav>}
             </section>
             {/* DESCRIPTION AND COMPLETION CRITERIA */}
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                <div className="rounded-[18px] border border-[#EEE6DC] p-5">
+                <div className="rounded-[18px] border border-[#EEE6DC] p-4 sm:p-5">
                     <h4 className="flex items-center gap-2 text-sm font-bold text-[#211E1A]">
                         <ClipboardList size={18} className="text-[#3565A5]" />
                         Task Description
                     </h4>
 
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[#716658]">
+                    <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-[#716658] sm:text-sm">
                         {task.description || "No description provided."}
                     </p>
                 </div>
 
-                <div className="rounded-[18px] border border-[#EEE6DC] p-5">
+                <div className="rounded-[18px] border border-[#EEE6DC] p-4 sm:p-5">
                     <h4 className="flex items-center gap-2 text-sm font-bold text-[#211E1A]">
                         <CheckCircle2 size={18} className="text-[#368250]" />
                         Completion Criteria
                     </h4>
 
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[#716658]">
+                    <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-[#716658] sm:text-sm">
                         {task.completion_criteria ||
                             "No completion criteria specified."}
                     </p>
@@ -430,11 +419,11 @@ function ExpandedTask({
                     type="button"
                     aria-expanded={documentsOpen}
                     onClick={() => setDocumentsOpen((value) => !value)}
-                    className="flex w-full items-center justify-between gap-3 rounded-[18px] border border-[#E4DCCD] bg-[#F8F4EE] px-5 py-4 text-left transition-colors hover:bg-[#F1EADF]"
+                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[18px] border border-[#E4DCCD] bg-[#F8F4EE] px-4 py-3.5 text-left transition-colors hover:bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] sm:px-5 sm:py-4"
                 >
                     <span className="flex items-center gap-3">
-                        <span className="rounded-xl bg-[#F0EAF8] p-3 text-[#7C5BA4]">
-                            <FolderOpen size={21} />
+                        <span className="rounded-xl bg-[#F0EAF8] p-2.5 text-[#7C5BA4] sm:p-3">
+                            <FolderOpen size={20} />
                         </span>
 
                         <span>
@@ -450,8 +439,9 @@ function ExpandedTask({
 
                     <ChevronDown
                         size={19}
-                        className={`shrink-0 text-[#716658] transition-transform ${documentsOpen ? "rotate-180" : ""
-                            }`}
+                        className={`shrink-0 text-[#716658] transition-transform ${
+                            documentsOpen ? "rotate-180" : ""
+                        }`}
                     />
                 </button>
 
@@ -463,9 +453,181 @@ function ExpandedTask({
     );
 }
 
+
+function ProjectTaskFilterSheet({
+    open,
+    onClose,
+    approval,
+    priority,
+    workStatus,
+    sort,
+    workStatuses,
+    onApprovalChange,
+    onPriorityChange,
+    onWorkStatusChange,
+    onSortChange,
+    onClearAll,
+    triggerRef,
+}) {
+    const dialogRef = useRef(null);
+    const closeRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const dialog = dialogRef.current;
+        const trigger = triggerRef.current;
+        const previousFocus = document.activeElement;
+        const previousOverflow = document.body.style.overflow;
+        if (dialog && !dialog.open) dialog.showModal();
+        document.body.style.overflow = "hidden";
+        closeRef.current?.focus();
+        return () => {
+            dialog?.close();
+            document.body.style.overflow = previousOverflow;
+            if (trigger?.isConnected) trigger.focus();
+            else previousFocus?.focus?.();
+        };
+    }, [open, triggerRef]);
+
+    function trapFocus(event) {
+        if (event.key === "Escape") {
+            event.preventDefault();
+            onClose();
+            return;
+        }
+        if (event.key !== "Tab") return;
+        const focusable = [...event.currentTarget.querySelectorAll(
+            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )];
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+
+    return (
+        <dialog
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="task-filters-sheet-title"
+            onCancel={(event) => {
+                event.preventDefault();
+                onClose();
+            }}
+            onKeyDown={trapFocus}
+            onClick={(event) => {
+                if (event.target === dialogRef.current) onClose();
+            }}
+            className="fixed inset-x-0 bottom-0 top-auto m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-[#211E1A] shadow-[0_-12px_36px_rgba(33,30,26,0.18)] backdrop:bg-[#211E1A]/45 min-[1024px]:inset-auto min-[1024px]:top-1/2 min-[1024px]:left-1/2 min-[1024px]:-translate-x-1/2 min-[1024px]:-translate-y-1/2 min-[1024px]:w-[min(28rem,calc(100vw-2rem))] min-[1024px]:rounded-2xl min-[1024px]:shadow-2xl"
+        >
+            <div className="mb-4 flex items-center justify-between gap-3 border-b border-[#EEE6DC] pb-3">
+                <h2 id="task-filters-sheet-title" className="text-base font-semibold text-[#211E1A]">
+                    Filters and sorting
+                </h2>
+                <button
+                    ref={closeRef}
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Close filters"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl text-[#716658] hover:bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                >
+                    <X size={20} aria-hidden="true" />
+                </button>
+            </div>
+
+            <div className="space-y-4">
+                <label className="block text-xs font-semibold text-[#716658]">
+                    Approvals
+                    <select
+                        value={approval}
+                        onChange={(e) => onApprovalChange(e.target.value)}
+                        aria-label="Approval status"
+                        className={`${inputClass} mt-1.5`}
+                    >
+                        <option value="">All Approvals</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                    </select>
+                </label>
+
+                <label className="block text-xs font-semibold text-[#716658]">
+                    Priorities
+                    <select
+                        value={priority}
+                        onChange={(e) => onPriorityChange(e.target.value)}
+                        aria-label="Priority"
+                        className={`${inputClass} mt-1.5`}
+                    >
+                        <option value="">All Priorities</option>
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                    </select>
+                </label>
+
+                <label className="block text-xs font-semibold text-[#716658]">
+                    Work statuses
+                    <select
+                        value={workStatus}
+                        onChange={(e) => onWorkStatusChange(e.target.value)}
+                        aria-label="Work status"
+                        className={`${inputClass} mt-1.5`}
+                    >
+                        <option value="">All Work Statuses</option>
+                        {workStatuses.map((value) => (
+                            <option key={value} value={value}>
+                                {readable(value)}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                <label className="block text-xs font-semibold text-[#716658]">
+                    Sort by
+                    <select
+                        value={sort}
+                        onChange={(e) => onSortChange(e.target.value)}
+                        aria-label="Sort tasks"
+                        className={`${inputClass} mt-1.5`}
+                    >
+                        <option value="order">Timeline Order</option>
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="title">Title A–Z</option>
+                        <option value="title-desc">Title Z–A</option>
+                        <option value="start-date">Start Date</option>
+                        <option value="end-date">End Date</option>
+                    </select>
+                </label>
+
+                <div className="flex justify-end border-t border-[#EEE6DC] pt-4">
+                    <button
+                        type="button"
+                        onClick={onClearAll}
+                        className="flex min-h-11 items-center gap-2 rounded-xl border border-[#9A8872] bg-[#FFFDFA] px-4 py-2 text-xs font-semibold text-[#514538] hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                    >
+                        <X size={15} aria-hidden="true" />
+                        Clear all filters
+                    </button>
+                </div>
+            </div>
+        </dialog>
+    );
+}
+
 function TaskCard({
     project,
     task,
+    projectId,
     expanded,
     onToggle,
     detail,
@@ -475,63 +637,132 @@ function TaskCard({
     onEdit,
     onStatusChanged,
 }) {
+    const priorityTone = {
+        URGENT: "bg-[#B5473E]",
+        HIGH: "bg-[#94651D]",
+        MEDIUM: "bg-[#74614D]",
+        LOW: "bg-[#3565A5]",
+    };
+
+    const overdue = typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task);
+
+    const rawWorker = task.worker_name?.trim();
+    const assignee = rawWorker && rawWorker !== "Not specified"
+        ? rawWorker
+        : Array.isArray(task.supervisors)
+            ? task.supervisors.map((s) => s.name).filter(Boolean).join(", ")
+            : "";
+
+    const formatSafeDate = (value) => {
+        if (!value || value === "Not specified") return "";
+        const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        });
+    };
+
+    const startDate = formatSafeDate(task.start_date);
+    const endDate = formatSafeDate(task.end_date);
+    let datesText = "";
+    if (startDate && endDate) {
+        datesText = `${startDate} → ${endDate}`;
+    } else if (endDate) {
+        datesText = `Due ${endDate}`;
+    } else if (startDate) {
+        datesText = `Starts ${startDate}`;
+    }
+
+    const hasLineInfo = Boolean(overdue || assignee || datesText);
+
+    const rawProgress = task.progress?.progress_percentage;
+    const progress = Number(rawProgress);
+    const showProgress = Number.isFinite(progress) && progress > 0;
+    const isAwaitingVerification = !showProgress && task.work_status === "COMPLETED";
+
+    const taskHref = `/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`;
+
     return (
-        <article className="overflow-hidden rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] transition-all hover:border-[#C9B9A6] hover:shadow-sm">
-            <button
-                type="button"
+        <article className="overflow-hidden rounded-xl border border-[#E7DED2] bg-[#FFFDFA] transition-all hover:border-[#C9B9A6] hover:shadow-sm">
+            <Link
+                to={expanded ? `/supervisor/projects/${projectId}/tasks` : taskHref}
+                onClick={(event) => {
+                    event.preventDefault();
+                    onToggle();
+                }}
                 aria-expanded={expanded}
                 aria-controls={`task-details-${task.id}`}
-                onClick={onToggle}
-                className="flex w-full items-start gap-3 p-4 text-left hover:bg-[#FCF9F4] sm:gap-4 sm:p-5"
+                aria-label={`${task.title || "Untitled Task"}`}
+                className="group flex min-h-11 min-w-0 flex-col gap-1.5 p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
             >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#E9F0FC] text-[#3565A5]">
-                    <ClipboardList size={22} />
-                </span>
-
-                <span className="min-w-0 flex-1">
-                    <span className="block break-words text-base font-bold text-[#211E1A]">
+                {/* Priority dot plus title, chevron */}
+                <span className="flex min-w-0 items-center gap-2">
+                    <span
+                        aria-hidden="true"
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                            priorityTone[task.priority] || "bg-[#74614D]"
+                        }`}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-base font-semibold leading-5 text-[#211E1A]">
                         {task.title || "Untitled Task"}
                     </span>
-
-                    {task.description && (
-                        <span className="mt-2 line-clamp-2 block text-xs leading-5 text-[#716658]">
-                            {task.description}
-                        </span>
-                    )}
-
-                    <span className="mt-3 flex flex-wrap gap-2">
-                        <Badge value={task.approval_status} />
-                        <Badge value={task.priority} />
-                        <Badge value={task.work_status} />
-                    </span>
-
-                    {Object.keys(taskScheduleErrors(task, project)).length > 0 && <span role="status" className="mt-3 block rounded-xl bg-[#F1EADF] p-3 text-sm text-[#665E53]">Task schedule conflicts with the current project schedule. Ask Admin to review the project dates; approved deadline changes require an extension review.</span>}
-                    <TaskProgress progress={task.progress} />
-                    <span className="mt-4 grid gap-2 text-xs text-[#716658] sm:grid-cols-2">
-                        <span className="flex items-start gap-2">
-                            <UserRound size={15} className="shrink-0" />
-                            {task.worker_name || "No worker assigned"}
-                        </span>
-
-                        <span className="flex items-start gap-2">
-                            <CalendarDays size={15} className="shrink-0" />
-                            {formatDate(task.start_date)}
-                            {" → "}
-                            {formatDate(task.end_date)}
-                        </span>
-                    </span>
-
-                    <span className="mt-4 block text-xs font-semibold text-[#665E53]">
-                        {expanded ? "Hide task details" : "View complete task details"}
-                    </span>
+                    <ChevronRight
+                        size={18}
+                        aria-hidden="true"
+                        className={`shrink-0 text-[#716658] transition-transform ${
+                            expanded ? "rotate-90" : ""
+                        }`}
+                    />
                 </span>
 
-                <ChevronDown
-                    size={20}
-                    className={`mt-2 shrink-0 text-[#716658] transition-transform ${expanded ? "rotate-180" : ""
-                        }`}
-                />
-            </button>
+                {/* Chips for Work status and Approval status only */}
+                <span className="flex min-w-0 flex-wrap gap-1.5">
+                    {[
+                        ["Work", task.work_status],
+                        ["Approval", task.approval_status],
+                    ]
+                        .filter(([, value]) => value)
+                        .map(([label, value]) => (
+                            <span
+                                key={label}
+                                className={`max-w-full truncate rounded-full px-2.5 py-1 text-xs font-semibold leading-4 ${
+                                    statusColors[value] || "bg-[#F1EADF] text-[#74614D]"
+                                }`}
+                            >
+                                {label}: {readable(value)}
+                            </span>
+                        ))}
+                </span>
+
+                {/* One line with assignee and dates (hide "Not specified") */}
+                {hasLineInfo && (
+                    <span className="flex min-w-0 items-center gap-1 truncate text-xs font-medium leading-4 text-[#716658]">
+                        {overdue && <span className="shrink-0 font-semibold text-red-700">Overdue · </span>}
+                        {assignee && <span className="truncate">{assignee}</span>}
+                        {assignee && datesText && <span className="shrink-0"> · </span>}
+                        {datesText && <span className="shrink-0">{datesText}</span>}
+                    </span>
+                )}
+
+                {/* Show the progress bar only when progress is above 0, otherwise "Completed, awaiting verification" when that applies */}
+                {showProgress ? (
+                    <TaskProgress progress={task.progress} />
+                ) : (
+                    isAwaitingVerification && (
+                        <span className="truncate text-xs font-medium text-[#94651D]">
+                            Completed, awaiting verification
+                        </span>
+                    )
+                )}
+
+                {Object.keys(taskScheduleErrors(task, project)).length > 0 && (
+                    <span role="status" className="rounded-lg bg-[#F1EADF] p-2 text-xs text-[#665E53]">
+                        Task schedule conflicts with current project schedule.
+                    </span>
+                )}
+            </Link>
 
             {expanded && (
                 <div id={`task-details-${task.id}`}>
@@ -567,6 +798,11 @@ export default function SupervisorProjectTasks() {
     const [workStatus, setWorkStatus] = useState("");
     const [sort, setSort] = useState("order");
     const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(12);
+
+    const [layout, setLayout] = useState("gallery");
+    const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+    const filterButtonRef = useRef(null);
 
     const [expandedId, setExpandedId] = useState(null);
     const [expandedTask, setExpandedTask] = useState(null);
@@ -577,6 +813,7 @@ export default function SupervisorProjectTasks() {
     const [formOpen, setFormOpen] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
     const [bulkOpen, setBulkOpen] = useState(false);
+    const [delayReportTask, setDelayReportTask] = useState(null);
     const [notice, setNotice] = useState("");
     const [creationError, setCreationError] = useState("");
 
@@ -750,14 +987,14 @@ export default function SupervisorProjectTasks() {
 
     const pageCount = Math.max(
         1,
-        Math.ceil(filteredTasks.length / PAGE_SIZE)
+        Math.ceil(filteredTasks.length / pageSize)
     );
 
     const safePage = Math.min(page, pageCount);
 
     const pageTasks = filteredTasks.slice(
-        (safePage - 1) * PAGE_SIZE,
-        safePage * PAGE_SIZE
+        (safePage - 1) * pageSize,
+        safePage * pageSize
     );
 
     const stats = {
@@ -776,6 +1013,12 @@ export default function SupervisorProjectTasks() {
     const workStatuses = [
         ...new Set(tasks.map((task) => task.work_status).filter(Boolean)),
     ].sort();
+
+    const activeFilterCount =
+        (approval ? 1 : 0) +
+        (priority ? 1 : 0) +
+        (workStatus ? 1 : 0) +
+        (sort !== "order" ? 1 : 0);
 
     const hasFilters = Boolean(
         search ||
@@ -812,12 +1055,18 @@ export default function SupervisorProjectTasks() {
             setExpandedId(null);
             setExpandedTask(null);
             setDetailError("");
+            const next = new URLSearchParams(searchParams);
+            next.delete("task");
+            setSearchParams(next, { replace: true });
             return;
         }
 
         setExpandedTask(null);
         setDetailError("");
         setExpandedId(taskId);
+        const next = new URLSearchParams(searchParams);
+        next.set("task", String(taskId));
+        setSearchParams(next, { replace: true });
     }
 
     function retryDetails() {
@@ -861,9 +1110,21 @@ export default function SupervisorProjectTasks() {
     }
 
     function handleStatusChanged(action) {
-        setNotice(({ start: "Task started successfully.", complete: "Task completed successfully.", cancel: "Cancellation request submitted for Admin approval." })[action] || "Task updated successfully.");
+        setNotice(
+            ({
+                start: "Task started successfully.",
+                complete: "Task completed successfully.",
+                cancel: "Cancellation request submitted for Admin approval.",
+            })[action] || "Task updated successfully."
+        );
 
         refreshTasks();
+    }
+
+    function handleDelayReportSaved(report) {
+        setDelayReportTask(null);
+        setNotice(`Delay report submitted: ${report.status === "PENDING" ? "Pending Admin review" : report.status}.`);
+        setDetailRefreshKey((value) => value + 1);
     }
 
     // SUPPORT LINKS FROM TIMELINE AND NOTIFICATIONS
@@ -897,98 +1158,189 @@ export default function SupervisorProjectTasks() {
             (task) => String(task.id) === String(linkedTaskId)
         );
 
-        setPage(Math.floor(sortedIndex / PAGE_SIZE) + 1);
+        setPage(Math.floor(sortedIndex / pageSize) + 1);
         setExpandedId(linkedTaskId);
-    }, [linkedTaskId, loading, error, tasks]);
+    }, [linkedTaskId, loading, error, tasks, pageSize]);
 
     return (
-        <div className="space-y-6 pb-8">
+        <div className="rare-tasks mx-auto w-full min-w-0 max-w-[1400px] space-y-4 pb-8 text-[#211E1A]">
+            <TaskPageStyles />
             {loading && (
                 <LoadingScreen message="Loading project tasks..." />
             )}
 
-            {/* BREADCRUMB */}
-            <nav
-                aria-label="Breadcrumb"
-                className="flex flex-wrap items-center gap-2 text-xs text-[#716658]"
-            >
-                <Link
-                    to="/supervisor/projects"
-                    className="hover:text-[#211E1A]"
-                >
-                    My Projects
-                </Link>
-
-                <span>/</span>
-
+            {/* 1. BACK LINK ABOVE HEADER */}
+            <div>
                 <Link
                     to={`/supervisor/projects/${projectId}`}
-                    className="hover:text-[#211E1A]"
+                    aria-label={`Back to ${project?.name || "Project"}`}
+                    className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-[#716658] hover:text-[#211E1A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
                 >
-                    {project?.name || "Project"}
+                    <ChevronLeft size={16} aria-hidden="true" />
+                    <span className="truncate">{project?.name || "Project"}</span>
                 </Link>
+            </div>
 
-                <span>/</span>
-
-                <span className="font-bold text-[#211E1A]">
-                    Tasks
-                </span>
-            </nav>
-
-            {/* HEADER */}
-            <header className="rare-page-header flex flex-wrap items-center justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold uppercase tracking-widest text-[#716658]">
-                        Supervisor / Project Workspace
-                    </p>
-
-                    <h1 className="mt-2 text-2xl font-bold text-[#211E1A] sm:text-3xl">
+            {/* 2. HEADER ROW: title + refresh, project name caption, then actions row */}
+            <header className="min-w-0">
+                <div className="flex w-full min-w-0 items-center justify-between gap-3">
+                    <h1 className="min-w-0 truncate text-xl font-bold tracking-tight text-[#211E1A] sm:text-2xl">
                         Project Tasks
                     </h1>
 
-                    <p className="mt-2 text-sm text-[#716658]">
-                        {project?.name || "Assigned Project"}
-                        {" · "}
-                        Create, manage and execute project tasks.
-                    </p>
-                </div>
-
-                <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setBulkOpen(true)}
-                        disabled={loading || Boolean(error) || !["ACTIVE", "MAINTENANCE"].includes(project?.status)}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#D6C6B2] bg-[#F1EADF] px-3 py-2 text-sm font-semibold text-[#66513D] hover:bg-[#E8DCCB] disabled:opacity-50"
-                    >
-                        <Layers3 size={18} />
-                        Bulk Add Tasks
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={openCreate}
-                        disabled={loading || Boolean(error) || !["ACTIVE", "MAINTENANCE"].includes(project?.status)}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#211E1A] px-3 py-2 text-sm font-semibold text-white hover:bg-[#39332B] disabled:opacity-50"
-                    >
-                        <Plus size={18} />
-                        Create Task
-                    </button>
                     <button
                         type="button"
                         onClick={refreshTasks}
                         disabled={loading}
                         aria-label="Refresh tasks"
-                        className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-3 py-2 text-sm font-semibold text-[#514538] hover:bg-[#F1EADF] disabled:opacity-50"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] text-[#514538] hover:bg-[#F1EADF] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
                     >
-                        <RefreshCw size={18} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />
-                        Refresh
+                        <RefreshCw
+                            size={18}
+                            className={loading ? "motion-safe:animate-spin" : ""}
+                            aria-hidden="true"
+                        />
+                    </button>
+                </div>
+
+                {project?.name && (
+                    <p className="mt-0.5 truncate text-xs text-[#716658]">
+                        {project.name}
+                    </p>
+                )}
+
+                {/* Actions row: side-by-side buttons */}
+                <div className="mt-3 flex min-w-0 items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={openCreate}
+                        disabled={
+                            loading ||
+                            Boolean(error) ||
+                            !["ACTIVE", "MAINTENANCE"].includes(project?.status)
+                        }
+                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[#211E1A] px-4 text-xs font-semibold text-white hover:bg-[#39332B] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] sm:flex-none sm:text-sm"
+                    >
+                        <Plus size={17} aria-hidden="true" className="shrink-0" />
+                        Create Task
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setBulkOpen(true)}
+                        disabled={
+                            loading ||
+                            Boolean(error) ||
+                            !["ACTIVE", "MAINTENANCE"].includes(project?.status)
+                        }
+                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-4 text-xs font-semibold text-[#514538] hover:bg-[#F1EADF] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] sm:flex-none sm:text-sm"
+                    >
+                        <Layers3 size={17} aria-hidden="true" className="shrink-0" />
+                        Bulk Add Tasks
                     </button>
                 </div>
             </header>
 
-            {project?.status === "CANCELLED" && <p role="status" className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-sm text-[#716658]">This project has been cancelled. Existing records remain available for reference.</p>}
-            {/* SUCCESS NOTICE */}
-            {creationError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{creationError}</p>}
+            {/* 3. HORIZONTALLY SCROLLABLE FILTER CHIPS ROW */}
+            <div
+                role="region"
+                aria-label="Filter tasks by approval status"
+                className="flex min-w-0 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+                {[
+                    { id: "", label: "All", count: stats.total },
+                    { id: "PENDING", label: "Pending approval", count: stats.pending },
+                    { id: "APPROVED", label: "Approved", count: stats.approved },
+                    { id: "REJECTED", label: "Rejected", count: stats.rejected },
+                ].map((chip) => {
+                    const isSelected = approval === chip.id;
+                    return (
+                        <button
+                            key={chip.label}
+                            type="button"
+                            aria-pressed={isSelected}
+                            onClick={() => updateFilter(setApproval, chip.id)}
+                            className={`flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] ${
+                                isSelected
+                                    ? "border-[#211E1A] bg-[#211E1A] text-[#FFFDFA]"
+                                    : "border-[#E7DED2] bg-[#FFFDFA] text-[#665C50] hover:bg-[#F8F5F0]"
+                            }`}
+                        >
+                            <span>{chip.label}</span>
+                            <span className={isSelected ? "text-white/80" : "text-[#716658]"}>
+                                {error ? "—" : chip.count}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* 4. SEARCH ROW PLUS ICON-ONLY FILTER BUTTON (OPENS BOTTOM SHEET / POPOVER) */}
+            <div className="flex w-full min-w-0 items-center gap-2">
+                <ProjectSearch
+                    query={search}
+                    delay={0}
+                    onSearch={(value) => updateFilter(setSearch, value)}
+                    label="Search tasks"
+                    labelClassName="sr-only"
+                    placeholder="Task, worker or description"
+                    suggestions={filteredTasks.map((task) => ({
+                        id: task.id,
+                        name: task.title,
+                        context: task.worker_name,
+                        to: `/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`,
+                    }))}
+                    className="min-w-0 flex-1"
+                />
+
+                <button
+                    ref={filterButtonRef}
+                    type="button"
+                    onClick={() => setFilterSheetOpen(true)}
+                    aria-label={`Filters and sorting, ${activeFilterCount} active ${
+                        activeFilterCount === 1 ? "filter" : "filters"
+                    }`}
+                    className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#E7DED2] bg-[#FFFDFA] text-[#211E1A] hover:bg-[#F8F5F0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                >
+                    <Filter size={18} aria-hidden="true" />
+                    {activeFilterCount > 0 && (
+                        <span
+                            aria-hidden="true"
+                            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#211E1A] px-1 text-xs font-semibold text-[#FFFDFA]"
+                        >
+                            {activeFilterCount}
+                        </span>
+                    )}
+                </button>
+
+                <ProjectTaskFilterSheet
+                    open={filterSheetOpen}
+                    onClose={() => setFilterSheetOpen(false)}
+                    approval={approval}
+                    priority={priority}
+                    workStatus={workStatus}
+                    sort={sort}
+                    workStatuses={workStatuses}
+                    onApprovalChange={(val) => updateFilter(setApproval, val)}
+                    onPriorityChange={(val) => updateFilter(setPriority, val)}
+                    onWorkStatusChange={(val) => updateFilter(setWorkStatus, val)}
+                    onSortChange={(val) => updateFilter(setSort, val)}
+                    onClearAll={clearFilters}
+                    triggerRef={filterButtonRef}
+                />
+            </div>
+
+            {/* NOTICES */}
+            {project?.status === "CANCELLED" && (
+                <p role="status" className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-xs text-[#716658]">
+                    This project has been cancelled. Existing records remain available for reference.
+                </p>
+            )}
+            {creationError && (
+                <p role="alert" className="rounded-xl bg-red-50 p-4 text-xs text-red-700">
+                    {creationError}
+                </p>
+            )}
             {notice && (
                 <div
                     role="status"
@@ -999,7 +1351,7 @@ export default function SupervisorProjectTasks() {
                         className="shrink-0 text-[#296F40]"
                     />
 
-                    <p className="flex-1 text-sm font-medium text-[#296F40]">
+                    <p className="flex-1 text-xs font-medium text-[#296F40]">
                         {notice}
                     </p>
 
@@ -1007,156 +1359,67 @@ export default function SupervisorProjectTasks() {
                         type="button"
                         onClick={() => setNotice("")}
                         aria-label="Dismiss message"
+                        className="flex h-11 w-11 -mr-2 -mt-2 items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#296F40]"
                     >
                         <X size={17} className="text-[#296F40]" />
                     </button>
                 </div>
             )}
 
-            {/* SUMMARY */}
-            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                <SummaryCard
-                    label="Total Tasks"
-                    value={error ? "—" : stats.total}
-                    icon={ClipboardList}
-                    tone="bg-[#E9F0FC] text-[#3565A5]"
-                />
+            {/* 5. CAPTION AND LIST/GALLERY TOGGLE */}
+            <div className="flex w-full min-w-0 items-center justify-between gap-3">
+                <p
+                    role="status"
+                    aria-live="polite"
+                    className="min-w-0 truncate text-sm font-medium text-[#716658]"
+                >
+                    {loading
+                        ? "Updating tasks..."
+                        : error
+                            ? "Tasks are unavailable"
+                            : `${filteredTasks.length} ${
+                                  filteredTasks.length === 1 ? "task" : "tasks"
+                              }`}
+                </p>
 
-                <SummaryCard
-                    label="Pending Approval"
-                    value={error ? "—" : stats.pending}
-                    icon={CalendarDays}
-                    tone="bg-[#FFF2D8] text-[#94651D]"
-                />
-
-                <SummaryCard
-                    label="Approved"
-                    value={error ? "—" : stats.approved}
-                    icon={CheckCircle2}
-                    tone="bg-[#E7F2E8] text-[#296F40]"
-                />
-
-                <SummaryCard
-                    label="Rejected"
-                    value={error ? "—" : stats.rejected}
-                    icon={AlertCircle}
-                    tone="bg-[#FCE9E6] text-[#B5473E]"
-                />
-            </div>
-
-            {/* SEARCH AND FILTERS */}
-            <section className="rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5">
-                <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-[#211E1A]">
-                    <SlidersHorizontal size={18} />
-                    Search & Filter Tasks
-                </h2>
-
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_145px_140px_155px_150px]">
-                    <ProjectSearch query={search} delay={0} onSearch={(value) => updateFilter(setSearch, value)} label="Search tasks" placeholder="Task, worker or description" suggestions={filteredTasks.map((task) => ({ id: task.id, name: task.title, context: task.worker_name, to: `/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}` }))} />
-
-                    <select
-                        value={approval}
-                        onChange={(event) =>
-                            updateFilter(setApproval, event.target.value)
-                        }
-                        aria-label="Approval status"
-                        className={inputClass}
-                    >
-                        <option value="">All Approvals</option>
-                        <option value="PENDING">Pending</option>
-                        <option value="APPROVED">Approved</option>
-                        <option value="REJECTED">Rejected</option>
-                    </select>
-
-                    <select
-                        value={priority}
-                        onChange={(event) =>
-                            updateFilter(setPriority, event.target.value)
-                        }
-                        aria-label="Priority"
-                        className={inputClass}
-                    >
-                        <option value="">All Priorities</option>
-                        <option value="LOW">Low</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="HIGH">High</option>
-                        <option value="URGENT">Urgent</option>
-                    </select>
-
-                    <select
-                        value={workStatus}
-                        onChange={(event) =>
-                            updateFilter(setWorkStatus, event.target.value)
-                        }
-                        aria-label="Work status"
-                        className={inputClass}
-                    >
-                        <option value="">All Work Statuses</option>
-
-                        {workStatuses.map((value) => (
-                            <option key={value} value={value}>
-                                {readable(value)}
-                            </option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={sort}
-                        onChange={(event) =>
-                            updateFilter(setSort, event.target.value)
-                        }
-                        aria-label="Sort tasks"
-                        className={inputClass}
-                    >
-                        <option value="order">Timeline Order</option>
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="title">Title A–Z</option>
-                        <option value="title-desc">Title Z–A</option>
-                        <option value="start-date">Start Date</option>
-                        <option value="end-date">End Date</option>
-                    </select>
-                </div>
-
-                {hasFilters && (
-                    <div className="mt-4 flex justify-end">
+                <div
+                    role="group"
+                    aria-label="Task view"
+                    className="ml-auto inline-flex shrink-0 gap-1 rounded-2xl border border-[#D8C7B2] bg-[#F1EADF] p-1"
+                >
+                    {[
+                        ["list", "List", List],
+                        ["gallery", "Gallery", LayoutGrid],
+                    ].map(([value, label, Icon]) => (
                         <button
+                            key={value}
                             type="button"
-                            onClick={clearFilters}
-                            className="flex items-center gap-2 text-xs font-semibold text-[#716658] hover:text-[#211E1A]"
+                            aria-label={`${label} view`}
+                            aria-pressed={layout === value}
+                            onClick={() => setLayout(value)}
+                            className={`inline-flex h-11 w-11 min-h-11 items-center justify-center rounded-xl p-0 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#94651D] ${
+                                layout === value
+                                    ? "bg-[#FFFDFA] text-[#352D24] shadow-sm"
+                                    : "text-[#66543D] hover:bg-white/60"
+                            }`}
                         >
-                            <X size={15} />
-                            Clear Filters
+                            <Icon size={18} aria-hidden="true" />
                         </button>
-                    </div>
-                )}
-            </section>
-
-            {/* DIRECTORY HEADER */}
-            <div className="flex w-full items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                    <h2 className="text-lg font-bold text-[#211E1A]">
-                        Task Directory
-                    </h2>
-
-                    <p className="mt-1 text-xs text-[#716658]">
-                        {filteredTasks.length} matching tasks
-                    </p>
+                    ))}
                 </div>
-
             </div>
 
             {/* ERROR */}
             {!loading && error && (
                 <div className="rounded-2xl border border-red-200 bg-[#FFFDFA] p-5">
-                    <p role="alert" className="text-sm text-red-700">
+                    <p role="alert" className="text-xs text-red-700 sm:text-sm">
                         {error}
                     </p>
 
                     <button
                         type="button"
                         onClick={refreshTasks}
-                        className="mt-3 flex items-center gap-2 text-sm font-semibold underline"
+                        className="mt-3 flex min-h-11 items-center gap-2 text-xs font-semibold underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] sm:text-sm"
                     >
                         <RefreshCw size={16} />
                         Try Again
@@ -1164,29 +1427,52 @@ export default function SupervisorProjectTasks() {
                 </div>
             )}
 
-            {/* TASK LIST */}
+            {/* 6, 7 & 8: TASK LIST / GALLERY GRID */}
             {!loading && !error && (
                 <>
                     {pageTasks.length > 0 ? (
-                        <div className="space-y-4">
+                        <div
+                            className={
+                                layout === "gallery"
+                                    ? "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3"
+                                    : "flex flex-col gap-3"
+                            }
+                        >
                             {pageTasks.map((task) => {
                                 const expanded =
                                     String(expandedId) === String(task.id);
 
                                 return (
-                                    <TaskCard
-                                        key={task.id}
-                                        task={task}
-                                        project={project}
-                                        expanded={expanded}
-                                        onToggle={() => toggleTask(task.id)}
-                                        detail={expanded ? expandedTask : null}
-                                        detailLoading={expanded && detailLoading}
-                                        detailError={expanded ? detailError : ""}
-                                        onRetry={retryDetails}
-                                        onEdit={openEdit}
-                                        onStatusChanged={handleStatusChanged}
-                                    />
+                                    <div key={task.id} className="min-w-0">
+                                        <MobileTaskCard
+                                            task={task}
+                                            to={`/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`}
+                                            showProject={false}
+                                            expanded={expanded}
+                                            onClick={(event) => {
+                                                event.preventDefault();
+                                                toggleTask(task.id);
+                                            }}
+                                        />
+                                        {!expanded && canReportDelay(task, project) && <div className="-mt-2 flex justify-end rounded-b-xl border-x border-b border-[#E7DED2] bg-[#FFFDFA] px-3 pb-2">
+                                            <button type="button" aria-label={`Report delay for ${task.title || "task"}`} onClick={() => setDelayReportTask(task)} className="min-h-11 px-3 text-sm font-semibold text-[#514538] underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]">Report delay</button>
+                                        </div>}
+                                        {expanded && (
+                                            <div id={`task-details-${task.id}`} className="overflow-hidden rounded-b-xl border-x border-b border-[#E7DED2] bg-[#FFFDFA]">
+                                                <ExpandedTask
+                                                    key={task.id}
+                                                    task={expandedTask}
+                                                    loading={detailLoading}
+                                                    error={detailError}
+                                                    onRetry={retryDetails}
+                                                    onEdit={openEdit}
+                                                    onStatusChanged={handleStatusChanged}
+                                                    canReportDelay={canReportDelay(expandedTask, project)}
+                                                    onReportDelay={setDelayReportTask}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
                                 );
                             })}
                         </div>
@@ -1203,7 +1489,7 @@ export default function SupervisorProjectTasks() {
                                     : "No tasks added yet"}
                             </h3>
 
-                            <p className="mt-2 text-sm text-[#716658]">
+                            <p className="mt-2 text-xs text-[#716658]">
                                 {hasFilters
                                     ? "Try adjusting the filters."
                                     : "Create your first project task to get started."}
@@ -1213,7 +1499,7 @@ export default function SupervisorProjectTasks() {
                                 <button
                                     type="button"
                                     onClick={clearFilters}
-                                    className="mt-5 rounded-xl border px-4 py-2.5 text-sm font-semibold"
+                                    className="mt-5 min-h-11 rounded-xl border border-[#9A8872] bg-[#FFFDFA] px-4 py-2.5 text-xs font-semibold text-[#514538] hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
                                 >
                                     Clear Filters
                                 </button>
@@ -1222,7 +1508,7 @@ export default function SupervisorProjectTasks() {
                                     type="button"
                                     onClick={openCreate}
                                     disabled={project?.status === "CANCELLED"}
-                                    className="rare-button rare-button-primary mt-5"
+                                    className="rare-button rare-button-primary mt-5 min-h-11 px-4 py-2.5 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
                                 >
                                     <Plus size={18} aria-hidden="true" />
                                     Create First Task
@@ -1231,46 +1517,77 @@ export default function SupervisorProjectTasks() {
                         </div>
                     )}
 
-                    {/* PAGINATION */}
+                    {/* 7. PAGINATION AND PER PAGE: HIDE WHEN ONE PAGE */}
                     {pageCount > 1 && (
-                        <nav
-                            aria-label="Task pagination"
-                            className="rare-pagination rounded-[20px] border border-[#E7DED2] bg-[#FFFDFA] p-3"
-                        >
-                            <button
-                                type="button"
-                                disabled={safePage === 1}
-                                onClick={() => {
-                                    setExpandedId(null);
-                                    setExpandedTask(null);
-                                    setPage((value) => Math.max(1, value - 1));
-                                }}
-                                className="flex items-center gap-1 rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-[#F1EADF] disabled:opacity-35"
-                            >
-                                <ChevronLeft size={18} />
-                                Previous
-                            </button>
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E0D5C6] pt-4">
+                            <label className="flex items-center gap-2 text-xs font-medium text-[#716658]">
+                                Per page
+                                <select
+                                    aria-label="Tasks per page"
+                                    value={pageSize}
+                                    onChange={(event) => {
+                                        setPageSize(Number(event.target.value));
+                                        setPage(1);
+                                    }}
+                                    className="min-h-11 rounded-lg border border-[#E7DED2] bg-[#FFFDFA] px-2 py-2 text-xs text-[#211E1A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                                >
+                                    {[12, 24, 48].map((size) => (
+                                        <option key={size} value={size}>
+                                            {size}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
 
-                            <span aria-live="polite" aria-atomic="true" className="text-xs font-semibold text-[#716658]">
-                                Page {safePage} of {pageCount}
-                            </span>
-
-                            <button
-                                type="button"
-                                disabled={safePage >= pageCount}
-                                onClick={() => {
-                                    setExpandedId(null);
-                                    setExpandedTask(null);
-                                    setPage((value) =>
-                                        Math.min(pageCount, value + 1)
-                                    );
-                                }}
-                                className="flex items-center gap-1 rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-[#F1EADF] disabled:opacity-35"
+                            <nav
+                                aria-label="Task pagination"
+                                className="rare-pagination flex flex-1 items-center justify-end gap-2 text-xs"
                             >
-                                Next
-                                <ChevronRight size={18} />
-                            </button>
-                        </nav>
+                                <button
+                                    type="button"
+                                    disabled={safePage === 1}
+                                    onClick={() => {
+                                        setExpandedId(null);
+                                        setExpandedTask(null);
+                                        setPage((value) =>
+                                            Math.max(1, value - 1)
+                                        );
+                                    }}
+                                    className="flex min-h-11 items-center gap-1 rounded-xl border border-[#9A8872] bg-[#FFFDFA] px-3 py-2 text-xs font-semibold text-[#514538] hover:bg-[#F8F4EE] disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                                >
+                                    <ChevronLeft size={16} aria-hidden="true" />
+                                    Previous
+                                </button>
+
+                                <span
+                                    aria-live="polite"
+                                    aria-atomic="true"
+                                    className="px-1 text-[#716658]"
+                                >
+                                    Page{" "}
+                                    <strong className="font-semibold text-[#211E1A]">
+                                        {safePage}
+                                    </strong>{" "}
+                                    of {pageCount}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    disabled={safePage >= pageCount}
+                                    onClick={() => {
+                                        setExpandedId(null);
+                                        setExpandedTask(null);
+                                        setPage((value) =>
+                                            Math.min(pageCount, value + 1)
+                                        );
+                                    }}
+                                    className="flex min-h-11 items-center gap-1 rounded-xl border border-[#9A8872] bg-[#FFFDFA] px-3 py-2 text-xs font-semibold text-[#514538] hover:bg-[#F8F4EE] disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                                >
+                                    Next
+                                    <ChevronRight size={16} aria-hidden="true" />
+                                </button>
+                            </nav>
+                        </div>
                     )}
                 </>
             )}
@@ -1292,6 +1609,13 @@ export default function SupervisorProjectTasks() {
                 onClose={() => setBulkOpen(false)}
                 onSaved={handleBulkSaved}
             />
+            {delayReportTask && <DelayReportForm
+                key={`${projectId}:${delayReportTask.id}`}
+                projectId={projectId}
+                taskId={delayReportTask.id}
+                onClose={() => setDelayReportTask(null)}
+                onSaved={handleDelayReportSaved}
+            />}
         </div>
     );
 }

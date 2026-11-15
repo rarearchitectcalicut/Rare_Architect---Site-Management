@@ -1,4 +1,5 @@
 import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
+import SearchFilterToolbar from "../../components/common/SearchFilterToolbar";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -8,7 +9,6 @@ import {
     Phone,
     Plus,
     RefreshCw,
-    SlidersHorizontal,
     UserCheck,
     UserX,
     UsersRound,
@@ -389,24 +389,15 @@ export default function Supervisors() {
             </div>
 
             {/* FILTERS */}
-            <section
-                className="rare-rise rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5"
-                style={{ "--d": `${stagger(4, 70)}ms` }}
-            >
-                <div className="mb-4 flex items-center gap-3">
-                    <span className={`rounded-xl p-2 ${tones.violet}`}>
-                        <SlidersHorizontal size={17} strokeWidth={1.8} />
-                    </span>
-                    <h2 className="text-sm font-bold text-[#211E1A]">
-                        Search & Filter
-                    </h2>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-[minmax(0,1fr)_160px_180px_auto]">
-                    <div className="group relative col-span-2 md:col-span-1">
-                        <ProjectSearch query={search} delay={0} onSearch={setSearch} label="Search supervisors" placeholder="Name, phone, email or username" suggestions={visibleSupervisors.map((person) => ({ id: person.id, name: supervisorName(person), context: person.username, to: `/admin/supervisors/${person.id}` }))} />
-                    </div>
-
+            <section className="rare-rise" style={{ "--d": `${stagger(4, 70)}ms` }}>
+                <SearchFilterToolbar
+                    label="Supervisor search and filters"
+                    search={<ProjectSearch compact query={search} delay={0} onSearch={setSearch} label="Search supervisors" labelClassName="sr-only" placeholder="Name, phone, email or username" suggestions={visibleSupervisors.map((person) => ({ id: person.id, name: supervisorName(person), context: person.username, to: `/admin/supervisors/${person.id}` }))} />}
+                    activeCount={Number(status !== "all") + Number(sort !== "name")}
+                    onClear={() => { setSearch(""); setStatus("all"); setSort("name"); }}
+                    actions={<button type="button" onClick={() => setRefreshKey((key) => key + 1)} aria-label="Refresh supervisors" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] text-sm font-semibold text-[#211E1A] hover:bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"><RefreshCw size={18} className={loading ? "animate-spin" : ""} aria-hidden="true" /></button>}
+                >
+                    <div className="grid gap-3">
                     <div className="relative min-w-0">
                         <select
                             value={status}
@@ -443,35 +434,8 @@ export default function Supervisors() {
                         />
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setRefreshKey((key) => key + 1)}
-                        aria-label="Refresh supervisors"
-                        className="
-                            group col-span-2 flex h-12 items-center justify-center gap-2
-                            rounded-xl border border-[#E4DCCD] px-4
-                            text-sm font-semibold text-[#211E1A]
-                            transition-all duration-200 ease-out
-                            hover:border-[#CFC4B5] hover:bg-[#F1EADF]
-                            active:scale-[0.97]
-                            focus-visible:outline-none focus-visible:ring-2
-                            focus-visible:ring-[#211E1A]/30
-                            md:col-span-1
-                        "
-                    >
-                        <RefreshCw
-                            size={18}
-                            className={`
-                                transition-transform duration-500 ease-out
-                                group-hover:rotate-180
-                                motion-reduce:transition-none
-                                motion-reduce:group-hover:rotate-0
-                                ${loading ? "animate-spin" : ""}
-                            `}
-                        />
-                        <span className="md:hidden">Refresh</span>
-                    </button>
-                </div>
+                    </div>
+                </SearchFilterToolbar>
             </section>
 
             {/* ERROR */}

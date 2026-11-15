@@ -47,7 +47,16 @@ export function TaskBadges({ task }) {
     </div>;
 }
 
-export function MobileTaskCard({ task, to }) {
+export function MobileTaskCard({
+    task,
+    to,
+    showProject = true,
+    expanded = false,
+    onClick,
+    className = "",
+    "aria-label": customAriaLabel,
+    ariaLabel,
+}) {
     const overdue = typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task);
     const priorityTone = {
         URGENT: "bg-[#B5473E]",
@@ -55,36 +64,89 @@ export function MobileTaskCard({ task, to }) {
         MEDIUM: "bg-[#74614D]",
         LOW: "bg-[#3565A5]",
     };
-    const supervisors = Array.isArray(task.supervisors)
-        ? task.supervisors.map((supervisor) => supervisor.name).filter(Boolean).join(", ")
-        : "";
-    const dueDate = task.end_date ? formatDate(task.end_date) : "";
+
+    const rawWorker = task.worker_name?.trim();
+    const assignee = rawWorker && rawWorker !== "Not specified"
+        ? rawWorker
+        : Array.isArray(task.supervisors)
+            ? task.supervisors.map((supervisor) => supervisor.name).filter(Boolean).join(", ")
+            : "";
+
+    function formatSafeDate(value, includeYear = true) {
+        if (!value || value === "Not specified") return "";
+        const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            ...(includeYear ? { year: "numeric" } : {}),
+        });
+    }
+
+    let datesText = "";
+    const hasStart = Boolean(task.start_date && task.start_date !== "Not specified");
+    const hasEnd = Boolean(task.end_date && task.end_date !== "Not specified");
+
+    if (hasStart && hasEnd) {
+        const d1 = new Date(`${String(task.start_date).slice(0, 10)}T00:00:00`);
+        const d2 = new Date(`${String(task.end_date).slice(0, 10)}T00:00:00`);
+        const sameYear = !Number.isNaN(d1.getTime()) && !Number.isNaN(d2.getTime()) && d1.getFullYear() === d2.getFullYear();
+        const startFormatted = formatSafeDate(task.start_date, !sameYear);
+        const endFormatted = formatSafeDate(task.end_date, true);
+        if (startFormatted && endFormatted) {
+            datesText = `${startFormatted} → ${endFormatted}`;
+        } else if (endFormatted) {
+            datesText = `Due ${endFormatted}`;
+        }
+    } else if (hasEnd) {
+        const endFormatted = formatSafeDate(task.end_date, true);
+        if (endFormatted) datesText = `Due ${endFormatted}`;
+    } else if (hasStart) {
+        const startFormatted = formatSafeDate(task.start_date, true);
+        if (startFormatted) datesText = `Starts ${startFormatted}`;
+    }
+
     const progress = Number(task.progress?.progress_percentage);
     const showProgress = Number.isFinite(progress) && progress > 0;
+    const awaitingVerification = !showProgress && task.work_status === "COMPLETED";
     const statusClass = (value) => tones[value] || "bg-[#F1EADF] text-[#74614D]";
+
+    const computedAriaLabel =
+        customAriaLabel ||
+        ariaLabel ||
+        (showProject && task.project_name
+            ? `${task.title || "Untitled Task"}, ${task.project_name}`
+            : `Open task: ${task.title || "Untitled Task"}`);
+
     return <Link
         to={to}
-        aria-label={`${task.title}, ${task.project_name || "Project"}`}
-        className="group flex min-h-11 min-w-0 flex-col gap-1.5 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+        onClick={onClick}
+        aria-label={computedAriaLabel}
+        className={`group flex min-h-11 min-w-0 flex-col gap-1.5 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] ${className}`}
     >
         <span className="flex min-w-0 items-center gap-2">
-            <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${priorityTone[task.priority] || "bg-[#74614D]"}`} />
-            <span className="min-w-0 flex-1 truncate text-base font-semibold leading-5 text-[#211E1A]">{task.title}</span>
-            <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-[#716658]" />
+            <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${priorityTone[task.priority] || "bg-[#74614D]"}`} />
+            <span className="min-w-0 flex-1 truncate text-base font-semibold leading-5 text-[#211E1A]">{task.title || "Untitled Task"}</span>
+            <ChevronRight size={18} aria-hidden="true" className={`shrink-0 text-[#716658] transition-transform ${expanded ? "rotate-90" : ""}`} />
         </span>
-        <span className="truncate text-[12px] font-medium leading-4 text-[#716658]">{task.project_name}</span>
+        {showProject && <span className="truncate text-[12px] font-medium leading-4 text-[#716658]">{task.project_name}</span>}
         <span className="flex min-w-0 flex-wrap gap-1.5">
-            {[["Work", task.work_status], ["Approval", task.approval_status]].filter(([, value]) => value).map(([label, value]) =>
-                <span key={label} className={`max-w-full truncate rounded-full px-2 py-1 text-[12px] font-semibold leading-4 ${statusClass(value)}`}>{label}: {formatText(value)}</span>)}
+            {[["Approval", task.approval_status], ["Work", task.work_status]].filter(([, value]) => value).map(([label, value]) =>
+                <span key={label} className={`max-w-full truncate rounded-full px-2.5 py-1 text-[12px] font-semibold leading-4 ${statusClass(value)}`}>{label}: {formatText(value)}</span>)}
         </span>
-        {(overdue || supervisors || dueDate) && <span className="flex min-w-0 items-center gap-1 truncate text-[12px] font-medium leading-4">
-            {overdue && <span className="shrink-0 font-semibold text-red-700">Overdue</span>}
-            {supervisors && <span className="truncate text-[#716658]">{supervisors}</span>}
-            {dueDate && <span className="shrink-0 text-[#716658]">{supervisors ? "· " : ""}Due {dueDate}</span>}
+        {(overdue || assignee || datesText) && <span className="flex min-w-0 items-center gap-1 truncate text-[12px] font-medium leading-4 text-[#716658]">
+            {overdue && <span className="shrink-0 font-semibold text-red-700">Overdue{assignee || datesText ? " · " : ""}</span>}
+            {assignee && <span className="truncate">{assignee}</span>}
+            {assignee && datesText && <span className="shrink-0"> · </span>}
+            {datesText && <span className="shrink-0">{datesText}</span>}
         </span>}
-        {showProgress && <span role="progressbar" aria-label={`${task.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(progress, 100)} className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-[#E7DED2]">
-            <span className="block h-full rounded-full bg-[#211E1A]" style={{ width: `${Math.min(progress, 100)}%` }} />
-        </span>}
+        {showProgress ? (
+            <span role="progressbar" aria-label={`${task.title || "Task"} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(progress, 100)} className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-[#E7DED2]">
+                <span className="block h-full rounded-full bg-[#211E1A]" style={{ width: `${Math.min(progress, 100)}%` }} />
+            </span>
+        ) : awaitingVerification ? (
+            <span className="truncate text-[12px] font-medium text-[#94651D]">Completed, awaiting verification</span>
+        ) : null}
     </Link>;
 }
 

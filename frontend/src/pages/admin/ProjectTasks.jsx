@@ -1,7 +1,7 @@
 import { TaskProgress } from "../../components/tasks/TaskExecutionActions";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Filter, LayoutGrid, Layers3, List, ListOrdered, RefreshCw, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Filter, LayoutGrid, Layers3, List, ListOrdered, RefreshCw, X } from "lucide-react";
 import { projectApi } from "../../api/projectApi";
 import { isTaskId, isTaskOverdue, taskApi, taskRegisterPage } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
@@ -10,6 +10,7 @@ import TimelineSchedule from "../../components/timeline/TimelineSchedule";
 import { formatDate, formatText, getError } from "../../components/approvals/approvalUtils";
 
 import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
+import SearchFilterToolbar from "../../components/common/SearchFilterToolbar";
 
 const emptyFilters = { search: "", approval_status: "", work_status: "", priority: "", sort: "order" };
 const control = "w-full min-w-0 rounded-xl border border-[#E7DED2] bg-[#F8F5F0] px-3 py-3 text-sm text-[#211E1A] hover:border-[#C9B9A4] focus:border-[#B7A58E] focus:bg-[#FFFDFA] focus:shadow-[0_0_0_3px_#E8DDD080] focus:outline-none";
@@ -262,7 +263,7 @@ function GlobalTaskRegisterPage({ role }) {
         : `/supervisor/projects/${task.project}/tasks?task=${encodeURIComponent(task.id)}`;
 
     const projectSuggestions = (data?.results || []).map((task) => ({ id: task.id, name: task.title, context: task.project_name, to: taskHref(task) }));
-    return <div className="rare-tasks mx-auto w-full min-w-0 max-w-[1200px] space-y-4 overflow-x-hidden px-4 pb-8 text-[#211E1A] md:px-6 lg:px-8 sm:space-y-5">
+    return <div className="rare-tasks mx-auto w-full min-w-0 max-w-[1200px] space-y-4 overflow-x-hidden pb-8 text-[#211E1A] sm:space-y-5">
         <TaskPageStyles />
         {!result && loading && <LoadingScreen message={admin ? "Loading all tasks..." : "Loading your assigned-project tasks..."} />}
         <header className="flex w-full items-center justify-between gap-3">
@@ -366,12 +367,18 @@ function ProjectTaskRegister({ projectId }) {
                 </div>
             ))}</div>
             <ProjectTimeline tasks={tasks} projectId={projectId} />
-            <section aria-label="Task filters" className="task-panel task-enter grid gap-4 p-4 sm:grid-cols-2 sm:p-6 lg:grid-cols-3">
-                <div className="flex items-center gap-2 border-b border-[#EEE6DC] pb-4 sm:col-span-2 lg:col-span-3"><SlidersHorizontal size={17} className="text-[#A38D72]" aria-hidden="true" /><h2 className="text-sm font-semibold">Find the right task</h2><span className="ml-auto text-xs text-[#716658]">{rows.length} results</span></div>
-                <ProjectSearch query={filters.search} delay={0} onSearch={(value) => change("search", value)} label="Search tasks" placeholder="Title, description or worker" suggestions={tasks.filter((task) => ["approval_status", "work_status", "priority"].every((field) => !filters[field] || task[field] === filters[field])).map((task) => ({ id: task.id, name: task.title, context: task.worker_name, to: `/admin/projects/${projectId}/tasks/${task.id}` }))} />
-                {[["Approval status", "approval_status", ["PENDING", "APPROVED", "REJECTED"]], ["Work status", "work_status", ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "DELAYED", "CANCELLED"]], ["Priority", "priority", priorities]].map(([label, field, options]) => <label key={field} className="text-xs text-[#716658]">{label}<select className={`${control} mt-1`} value={filters[field]} onChange={(e) => change(field, e.target.value)}><option value="">All</option>{options.map((value) => <option key={value} value={value}>{formatText(value)}</option>)}</select></label>)}
-                <label className="text-xs text-[#716658]">Sort by<select className={`${control} mt-1`} value={filters.sort} onChange={(e) => change("sort", e.target.value)}>{[["order", "Timeline order"], ["start_date", "Start date"], ["end_date", "End date"], ["newest", "Newest"], ["priority", "Priority"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-                <button type="button" className="task-secondary self-end px-4 py-3 text-sm font-semibold text-[#74614D]" onClick={() => { setFilters(emptyFilters); setPage(1); }}>Reset filters</button>
+            <section className="task-enter">
+                <SearchFilterToolbar
+                    label="Project task search and filters"
+                    search={<ProjectSearch compact query={filters.search} delay={0} onSearch={(value) => change("search", value)} label="Search tasks" labelClassName="sr-only" placeholder="Title, description or worker" suggestions={tasks.filter((task) => ["approval_status", "work_status", "priority"].every((field) => !filters[field] || task[field] === filters[field])).map((task) => ({ id: task.id, name: task.title, context: task.worker_name, to: `/admin/projects/${projectId}/tasks/${task.id}` }))} />}
+                    activeCount={["approval_status", "work_status", "priority"].filter((field) => Boolean(filters[field])).length + Number(filters.sort !== "order")}
+                    onClear={() => { setFilters(emptyFilters); setPage(1); }}
+                >
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        {[["Approval status", "approval_status", ["PENDING", "APPROVED", "REJECTED"]], ["Work status", "work_status", ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "DELAYED", "CANCELLED"]], ["Priority", "priority", priorities]].map(([label, field, options]) => <label key={field} className="text-xs text-[#716658]">{label}<select className={`${control} mt-1`} value={filters[field]} onChange={(e) => change(field, e.target.value)}><option value="">All</option>{options.map((value) => <option key={value} value={value}>{formatText(value)}</option>)}</select></label>)}
+                        <label className="text-xs text-[#716658]">Sort by<select className={`${control} mt-1`} value={filters.sort} onChange={(e) => change("sort", e.target.value)}>{[["order", "Timeline order"], ["start_date", "Start date"], ["end_date", "End date"], ["newest", "Newest"], ["priority", "Priority"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                    </div>
+                </SearchFilterToolbar>
             </section>
             <div className="flex flex-wrap items-end justify-between gap-2"><h2 className="text-xl font-semibold tracking-tight">Task register</h2><p role="status" className="text-xs text-[#716658]">{rows.length} matching tasks</p></div>
             <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">{rows.slice((page - 1) * 12, page * 12).map((task, index) => <div key={task.id} className="task-enter grid min-w-0" style={{ "--task-delay": `${Math.min(index * 35, 240)}ms` }}><AdminTaskCard task={task} to={`/admin/projects/${projectId}/tasks/${task.id}`} /></div>)}</div>

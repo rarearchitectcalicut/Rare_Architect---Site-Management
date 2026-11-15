@@ -19,7 +19,7 @@ function projectPage(data, page) {
 
 // Reused by listing toolbars. Suggestions use only records already loaded by the
 // authorized listing; searching never starts a separate, unbounded name fetch.
-export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false, suggestions, suggestionsFiltered = false, delay = 300, label = "Search projects", labelClassName = "mb-2 block text-sm font-semibold text-[#817669]", placeholder = "Project name", className = "" }) {
+export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false, suggestions, suggestionsFiltered = false, delay = 300, compact = false, label = "Search projects", labelClassName = "mb-2 block text-sm font-semibold text-[#817669]", placeholder = "Project name", className = "" }) {
     const [search, setSearch] = useState(query);
     const [open, setOpen] = useState(false);
     const [active, setActive] = useState(-1);
@@ -79,8 +79,8 @@ export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false
                         }
                         if (event.key === "Enter") { event.preventDefault(); if (expanded && matches[active]) select(matches[active]); else commit(search.trim()); }
                     }}
-                    className="min-h-12 w-full min-w-0 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] py-3 pl-11 pr-14 text-base text-[#211E1A] outline-none placeholder:text-[#817669] focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]" />
-                {search && <button type="button" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => { change(""); setOpen(false); }} className="absolute right-0 top-0 flex h-12 w-12 items-center justify-center rounded-xl text-lg text-[#817669] focus-visible:outline-2 focus-visible:outline-[#A58A67]">×</button>}
+                    className={`${compact ? "h-11 min-h-11 py-2" : "min-h-12 py-3"} w-full min-w-0 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] pl-11 pr-14 text-sm text-[#211E1A] outline-none placeholder:text-[#716658] focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]`} />
+                {search && <button type="button" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => { change(""); setOpen(false); }} className={`absolute right-0 top-0 flex ${compact ? "h-11 w-11" : "h-12 w-12"} items-center justify-center rounded-xl text-lg text-[#817669] focus-visible:outline-2 focus-visible:outline-[#A58A67]`}>×</button>}
             </div>
             {expanded && <ul id={`${id}-list`} role="listbox" aria-label={`${label} suggestions`} className="absolute left-0 right-0 z-40 mt-1 max-h-64 overflow-y-auto rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-1 shadow-lg">
                 {matches.map((item, index) => <li id={`${id}-${index}`} key={item.id ?? item.name} role="option" aria-selected={active === index} onPointerDown={(event) => event.preventDefault()} onClick={() => select(item)} onMouseEnter={() => setActive(index)} className={`min-h-12 cursor-pointer rounded-lg px-3 py-3 text-sm text-[#211E1A] ${active === index ? "bg-[#F1EADF]" : "hover:bg-[#F1EADF]"}`}><strong className="block break-words">{item.name}</strong>{item.context && <span className="block break-words text-xs text-[#817669]">{item.context}</span>}</li>)}
@@ -129,11 +129,11 @@ export default function ReportProjectPicker({ role = "ADMIN" }) {
     }
 
     return <div className="mx-auto min-w-0 max-w-[1500px] space-y-6 pb-8 text-[#211E1A]">
-        <header className="rare-page-header space-y-4 rounded-[28px] border border-[#E7DED2] bg-[#FFFDFA] p-6 sm:p-8">
+        <header className="rare-page-header space-y-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5">
             <div className="border-l-2 border-[#E7DED2] pl-3">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#716658]">Site records / {admin ? "Administration" : "Your assigned projects"}</p>
-                <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Daily Reports</h1>
-                <p className="mt-3 max-w-xl text-base leading-7 text-[#716658]">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#716658]">Site records / {admin ? "Administration" : "Your assigned projects"}</p>
+                <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Daily Reports</h1>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-[#716658]">
                     {admin ? "Choose a project to review its site diary, work records and evidence." : "Choose an assigned project to create a daily report, continue a draft or review submitted site records."}
                 </p>
             </div>
@@ -151,15 +151,15 @@ export default function ReportProjectPicker({ role = "ADMIN" }) {
             {data && <>
                 <p role="status" className="text-sm text-[#716658]">{data.count} matching {data.count === 1 ? "project" : "projects"}{admin ? "" : " assigned to you"}</p>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {data.results.map((project) => <Link key={project.id} to={`${prefix}/projects/${project.id}/daily-reports`} className="group min-w-0 rounded-[24px] border border-[#E2D6C6] bg-[#FFFDFA] p-6 transition-[border-color,box-shadow] hover:border-[#BCA17D] hover:shadow-md motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#94651D]">
-                        <span className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F6EAD5] text-[#795A30]"><FolderOpen size={23} aria-hidden="true" /></span>
-                        <h2 className="break-words text-xl font-bold text-[#352D24]">{project.name}</h2>
-                        <p className="mt-3 text-sm leading-6 text-[#665C50]">{admin ? "View daily reports and site evidence" : "Create reports, manage drafts and view site evidence"}</p>
-                        <span className="mt-5 inline-flex items-center gap-2 text-base font-bold text-[#795016]">Open reports<ArrowUpRight size={18} aria-hidden="true" /></span>
+                    {data.results.map((project) => <Link key={project.id} to={`${prefix}/projects/${project.id}/daily-reports`} className="group min-w-0 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 transition-[border-color,box-shadow] hover:border-[#9A8872] hover:shadow-md motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A58A67]">
+                        <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#F1EADF] text-[#514538]"><FolderOpen size={20} aria-hidden="true" /></span>
+                        <h2 className="break-words text-base font-semibold text-[#211E1A]">{project.name}</h2>
+                        <p className="mt-2 text-sm leading-6 text-[#716658]">{admin ? "View daily reports and site evidence" : "Create reports, manage drafts and view site evidence"}</p>
+                        <span className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-[#514538]">Open reports<ArrowUpRight size={16} aria-hidden="true" /></span>
                     </Link>)}
                 </div>
-                {!data.results.length && <div className="rounded-2xl border border-dashed border-[#CCB99F] bg-[#FFFDFA] p-8 text-center">
-                    <h2 className="font-semibold">{query ? "No projects match this search" : admin ? "No projects available" : "No projects assigned yet"}</h2>
+                {!data.results.length && <div className="rounded-2xl border border-dashed border-[#CCB99F] bg-[#FFFDFA] p-6 text-center">
+                    <h2 className="text-base font-semibold text-[#211E1A]">{query ? "No projects match this search" : admin ? "No projects available" : "No projects assigned yet"}</h2>
                     <p className="mt-2 text-sm text-[#716658]">{query ? "Try a different project name or clear the search." : admin ? "Projects will appear here once created." : "Your projects will appear here when an administrator assigns them to you."}</p>
                     {(query || page > 1) && <button type="button" className={`${button} mt-4`} onClick={() => applySearch("")}>Reset search and page</button>}
                 </div>}

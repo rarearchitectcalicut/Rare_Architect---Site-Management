@@ -1,4 +1,5 @@
 import { ProjectSearch } from "../daily-reports/ReportProjectPicker";
+import SearchFilterToolbar from "../common/SearchFilterToolbar";
 import ApprovalModal from "../approvals/ApprovalModal";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +29,7 @@ import { dailyReportApi } from "../../api/dailyReportApi";
 import LoadingScreen from "../LoadingScreen";
 
 const PAGE_SIZE = 10;
+const API_PAGE_SIZE = 100;
 
 const TYPE_CONFIG = {
     TASK_APPROVAL: {
@@ -89,7 +91,7 @@ async function fetchNotifications(signal) {
             throw new Error("Notification pagination limit exceeded.");
         }
 
-        const response = await notificationApi.list({ page, ...(page === 1 ? { include_counts: true } : {}) }, signal);
+        const response = await notificationApi.list({ page, page_size: API_PAGE_SIZE, ...(page === 1 ? { include_counts: true } : {}) }, signal);
         if (signal?.aborted) return null;
         if (page === 1 && Number.isInteger(response.unread_count) && response.unread_count >= 0) unread = response.unread_count;
         if (page === 1 && Number.isInteger(response.total_count) && response.total_count >= 0) total = response.total_count;
@@ -760,12 +762,13 @@ export default function NotificationCenter({
             </header>
 
             {/* TOOLBAR */}
-            <section aria-label="Find notifications" className="space-y-3">
-                <div className="relative">
-                    <ProjectSearch query={search} delay={0} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search notifications" placeholder="Title or message" />
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <SearchFilterToolbar
+                label="Notification search and filters"
+                search={<ProjectSearch compact query={search} delay={0} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search notifications" labelClassName="sr-only" placeholder="Title or message" />}
+                activeCount={Number(Boolean(type)) + Number(visibility !== "ALL") + Number(sort !== "NEWEST")}
+                onClear={resetFilters}
+            >
+                <div className="space-y-4">
                     {/* Read-state tabs */}
                     <div
                         role="tablist"
@@ -800,8 +803,8 @@ export default function NotificationCenter({
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 sm:flex">
-                        <div className="relative sm:w-48">
+                    <div className="grid gap-3">
+                        <div className="relative min-w-0">
                             <select
                                 value={type}
                                 aria-label="Filter notification type"
@@ -826,7 +829,7 @@ export default function NotificationCenter({
                             />
                         </div>
 
-                        <div className="relative sm:w-40">
+                        <div className="relative min-w-0">
                             <select
                                 value={sort}
                                 aria-label="Sort notifications"
@@ -847,18 +850,7 @@ export default function NotificationCenter({
                         </div>
                     </div>
                 </div>
-
-                {hasFilters && (
-                    <button
-                        type="button"
-                        onClick={resetFilters}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-[#3565A5] transition-colors hover:bg-[#EDF3FC]"
-                    >
-                        <X size={15} />
-                        Clear filters
-                    </button>
-                )}
-            </section>
+            </SearchFilterToolbar>
 
             {/* MESSAGES */}
             {error && (
