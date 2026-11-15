@@ -18,7 +18,7 @@ function Resource({ name, resources, onRetry, children }) {
 }
 
 function Fields({ rows }) {
-    return <dl className="grid gap-3 sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="min-w-0 rounded-xl bg-[#F8F5F0] px-4 py-3"><dt className="text-xs font-medium text-[#716658]">{label}</dt><dd className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-[#3E352B]">{value == null || value === "" ? "Not available" : value}</dd></div>)}</dl>;
+    return <dl className="admin-task-fields grid gap-3 sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="min-w-0 rounded-xl bg-[#F8F5F0] px-4 py-3"><dt className="text-xs font-medium text-[#716658]">{label}</dt><dd className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-[#3E352B]">{value == null || value === "" ? "Not available" : value}</dd></div>)}</dl>;
 }
 
 function ReadableValue({ value }) {
@@ -35,7 +35,7 @@ function Timeline({ task, data }) {
     function taskLink(item) {
         return item ? <Link className="text-[#3565A5] hover:underline" to={`/admin/projects/${task.project}/tasks/${item.id}`}>{item.title}</Link> : "None";
     }
-    return <div className="space-y-6"><Fields rows={[
+    return <div className="admin-task-timeline space-y-6"><Fields rows={[
         ["Current display order", task.display_order], ["Position in approved timeline", index < 0 ? "Outside the approved timeline" : `${index + 1} of ${data.tasks.length}`],
         ["Planned start", formatDate(task.start_date)], ["Planned end", formatDate(task.end_date)],
         ["Timeline status", index < 0 ? "Only approved, non-cancelled tasks appear in the timeline." : formatText(data.tasks[index].work_status)],
@@ -60,7 +60,7 @@ function Documents({ taskId, resources, onRetry, onVersions, onDownload, downloa
         }).catch((error) => { if (!controller.signal.aborted) setState({ key, error: error.response?.data?.detail || error.message || "Unable to load documents." }); });
         return () => controller.abort();
     }, [taskId, search, page, revision, key]);
-    return <div className="space-y-4">
+    return <div className="admin-task-documents space-y-4">
         <ProjectSearch query={search} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search task documents" placeholder="Title, description or filename" loading={!current} suggestions={documents.map((doc) => ({ id: doc.id, name: doc.title, context: doc.current_version?.original_filename }))} />
         {!current && <p role="status" className="text-sm text-[#817669]">Updating documents...</p>}
         {current?.error && <div role="alert" className="text-sm text-red-700">{current.error}<button type="button" className={button} onClick={() => setRevision((value) => value + 1)}>Retry</button></div>}
@@ -76,7 +76,7 @@ function Documents({ taskId, resources, onRetry, onVersions, onDownload, downloa
 }
 
 function ChangeRecords({ records, task, timeline = false }) {
-    return <div className="space-y-4">{!records.length && <p className="text-sm text-[#716658]">No related {timeline ? "timeline order requests" : "task change requests"}.</p>}{records.map((record) => {
+    return <div className="admin-task-changes space-y-4">{!records.length && <p className="text-sm text-[#716658]">No related {timeline ? "timeline order requests" : "task change requests"}.</p>}{records.map((record) => {
         const oldOrder = record.old_values?.timeline?.find((item) => item.task_id === task.id)?.display_order;
         const newOrder = record.new_values?.timeline?.find((item) => item.task_id === task.id)?.display_order;
         return <article key={record.id} className="space-y-4 rounded-2xl border border-[#E7DED2] p-4"><Fields rows={[["Status", formatText(record.status)], ["Requested by", record.requested_by_name], ["Reason", record.reason], ["Requested", formatDate(record.created_at)], ["Admin comment", record.admin_comment], ["Reviewed by", record.reviewed_by_name], ["Reviewed", formatDate(record.reviewed_at)]]} />
@@ -88,7 +88,7 @@ function ChangeRecords({ records, task, timeline = false }) {
 
 function WorkEntries({ entries }) {
     if (!entries.length) return <p className="text-sm text-[#716658]">No submitted work entries for this task.</p>;
-    return <div className="space-y-4">{entries.map((entry) => (
+    return <div className="admin-task-work-entries space-y-4">{entries.map((entry) => (
         <article key={entry.id} className="rounded-2xl border border-[#E7DED2] p-4">
             <Fields rows={[
                 ["Report date", formatDate(entry.report_date)], ["Reported by", entry.reported_by_name],
@@ -104,7 +104,7 @@ function WorkEntries({ entries }) {
 function VerifiedProgress({ data }) {
     let completion = "Not available";
     if (data.is_fully_verified != null) completion = data.is_fully_verified ? "Yes" : "No";
-    return <div className="space-y-4">
+    return <div className="admin-task-progress space-y-4">
         <Fields rows={[
             ["Measurement method", formatText(data.measurement_method)], ["Planned quantity", data.planned_quantity],
             ["Unit", formatText(data.measurement_unit)], ["Verified cumulative quantity", data.verified_quantity],
@@ -117,7 +117,7 @@ function VerifiedProgress({ data }) {
 
 function DelayRecords({ records }) {
     if (!records.length) return <p className="text-sm text-[#716658]">No delay reports.</p>;
-    return <div className="space-y-4">{records.map((record) => (
+    return <div className="admin-task-delays space-y-4">{records.map((record) => (
         <article key={record.id} className="rounded-2xl border border-[#E7DED2] p-4">
             <Fields rows={[
                 ["Type", formatText(record.delay_type)], ["Reason", record.reason], ["Description", record.description],
@@ -157,7 +157,7 @@ export default function AdminTaskSections({ task, tab, onTabChange, resources, o
                 <Icon size={16} aria-hidden="true" />{label}
             </button>;
         })}</nav>
-        <div id="task-section" key={tab} className="task-enter space-y-6 p-4 sm:p-7" style={{ "--task-delay": "0ms" }} aria-label={taskTabs.find(([id]) => id === tab)?.[1]}>
+        <div id="task-section" key={tab} data-task-tab={tab} className="task-enter space-y-6 p-4 sm:p-7" style={{ "--task-delay": "0ms" }} aria-label={taskTabs.find(([id]) => id === tab)?.[1]}>
             {tab === "overview" && <AdminTaskOverview task={task} />}
             {tab === "timeline" && <Resource name="timeline" {...resourceProps}>{(data) => <Timeline task={task} data={data} />}</Resource>}
             {tab === "documents" && <Documents taskId={task.id} {...resourceProps} onVersions={onVersions} onDownload={onDownload} downloading={downloading} downloadError={downloadError} />}

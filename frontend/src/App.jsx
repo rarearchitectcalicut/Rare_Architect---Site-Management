@@ -24,7 +24,7 @@ import SectionPlaceholder from "./pages/SectionPlaceholder";
 //  ADMIN PAGES
 // =====================================================
 import AdminProjectOverview from "./pages/admin/ProjectOverview";
-import AdminProjectTasks, { GlobalTaskRegister } from "./pages/admin/ProjectTasks";
+import AdminProjectTasks, { GlobalTaskRegister, AdminProjectTimeline } from "./pages/admin/ProjectTasks";
 import AdminTaskDetails from "./pages/admin/TaskDetails";
 import Supervisors from "./pages/admin/Supervisors";
 import SupervisorDetails from "./pages/admin/SupervisorDetails";
@@ -288,6 +288,7 @@ export default function App() {
 
           {/* TASKS */}
           <Route path="/admin/projects/:projectId/tasks" element={<AdminProjectTasks />} />
+          <Route path="/admin/projects/:projectId/timeline" element={<AdminProjectTimeline />} />
           <Route path="/admin/projects/:projectId/tasks/:taskId" element={<AdminTaskDetails />} />
           <Route
             path="/admin/tasks"

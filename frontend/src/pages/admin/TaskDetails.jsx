@@ -149,17 +149,19 @@ function TaskDetailsPage({ projectId, taskId }) {
         return () => controller.abort();
     }, [projectId, taskId, revision]);
 
-    return <div className="rare-tasks mx-auto min-w-0 max-w-[1600px] space-y-6 pb-8 text-[#211E1A] sm:space-y-7">
+    return <div className="admin-task-details-page rare-tasks mx-auto min-w-0 max-w-[1600px] space-y-6 pb-8 text-[#211E1A] sm:space-y-7">
         <TaskPageStyles />
         {loading && <LoadingScreen message="Loading task details..." />}
         <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-sm text-[#716658]"><Link to="/admin/projects">Projects</Link><span aria-hidden="true">/</span><Link to={`/admin/projects/${projectId}`}>Project Overview</Link><span aria-hidden="true">/</span><Link to={`/admin/projects/${projectId}/tasks`}>Tasks</Link><span aria-hidden="true">/</span><span aria-current="page">Details</span></nav>
-        <div className="flex flex-wrap items-center justify-between gap-3"><Link to={`/admin/projects/${projectId}/tasks`} className="task-secondary inline-flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#665C50]"><ArrowLeft size={15} aria-hidden="true" />Back to Tasks</Link><button type="button" disabled={loading} onClick={() => setRevision((value) => value + 1)} className="task-secondary flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#665C50] disabled:opacity-50"><RefreshCw size={15} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />Refresh</button></div>
+        <div className="admin-task-detail-actions flex flex-wrap items-center justify-between gap-3"><Link to={`/admin/projects/${projectId}/tasks`} className="task-secondary inline-flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#665C50]"><ArrowLeft size={15} aria-hidden="true" />Back to Tasks</Link><button type="button" aria-label="Refresh task" disabled={loading} onClick={() => setRevision((value) => value + 1)} className="task-secondary flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#665C50] disabled:opacity-50 lg:hidden"><RefreshCw size={15} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" />Refresh</button></div>
         {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{error} Use Refresh to retry.</p>}
         {notice && <p role="status" className="rounded-2xl border border-[#D6E5D8] bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
         {task && project && Object.keys(taskScheduleErrors(task, project)).length > 0 && <p role="status" className="rounded-xl border border-[#E7DED2] bg-[#F1EADF] p-4 text-sm text-[#665E53]">Task schedule conflicts with the current project schedule. <Link className="underline" to={`/admin/projects/${projectId}`}>Review project dates</Link> before approving scheduling changes. Approved deadline changes still require extension approval.</p>}
         {task && <>
-            <header className="rare-page-header task-enter overflow-hidden rounded-[28px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_8px_32px_#422F1608]">
+<header className="admin-task-compact-header hidden lg:grid"><Link to={"/admin/projects/" + projectId + "/tasks"} aria-label="Back to tasks" className="admin-task-compact-back"><ArrowLeft size={16} /></Link><div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-wide text-[#716658]">{task.project_name}</p><div className="mt-1 flex flex-wrap items-center gap-2"><h1 className="break-words text-2xl font-semibold text-[#211E1A]">{task.title}</h1><TaskBadges task={task} /></div>{task.approval_status === "PENDING" && <Link to={"/admin/approvals?tab=tasks&task=" + task.id + "&type=tasks"} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#3565A5]">Open in Approval Center<ArrowUpRight size={14} /></Link>}</div><div className="admin-task-compact-progress"><TaskProgress progress={task.progress} /></div><button type="button" aria-label="Refresh task details" disabled={loading} onClick={() => setRevision((value) => value + 1)} className="admin-task-compact-refresh"><RefreshCw size={16} className={loading ? "motion-safe:animate-spin" : ""} /></button></header>
+            <header className="admin-task-legacy-header rare-page-header task-enter overflow-hidden rounded-[28px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_8px_32px_#422F1608]">
                 <div className="task-hero rounded-xl p-4 text-[#211E1A] sm:p-5">
+                    <button type="button" aria-label="Refresh task details" disabled={loading} onClick={() => setRevision((value) => value + 1)} className="admin-task-header-refresh hidden lg:flex"><RefreshCw size={16} className={loading ? "motion-safe:animate-spin" : ""} aria-hidden="true" /></button>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <p className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#716658]"><Layers3 size={14} className="shrink-0" aria-hidden="true" /><span className="break-words">{task.project_name}</span></p>
                         <span className="rounded-full border border-[#887258]/50 bg-[#F1EADF] px-3 py-1.5 text-xs text-[#716658]">Task order {task.display_order ?? "Not assigned"}</span>
@@ -182,8 +184,9 @@ function TaskDetailsPage({ projectId, taskId }) {
                         <div className="min-w-0"><dt className="text-xs text-[#716658]">{label}</dt><dd className="mt-1 break-words text-sm font-medium text-[#3E352B]">{value}</dd></div>
                     </div>)}
                 </dl>
+                <div className="hidden border-t border-[#EEE6DC] pt-4 lg:block"><TaskProgress progress={task.progress} /></div>
             </header>
-            <TaskProgress progress={task.progress} />
+            <div className="lg:hidden"><TaskProgress progress={task.progress} /></div>
             <TaskExecutionActions key={task.id} role="ADMIN" task={task} onSuccess={() => { setNotice("Task reopened successfully."); setRevision((value) => value + 1); }} />
             <TaskWorkspace key={`${task.id}:${revision}`} task={task} />
         </>}

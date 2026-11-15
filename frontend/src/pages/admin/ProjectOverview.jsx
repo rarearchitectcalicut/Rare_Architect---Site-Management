@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   Ban,
   CalendarDays,
+  CalendarRange,
   Check,
   Clock3,
   FileText,
@@ -602,7 +603,7 @@ export default function ProjectOverview() {
   const coverUrl = getMediaUrl(project?.cover_image);
 
   return (
-    <div className="flex min-w-0 flex-col gap-6 pb-6 sm:gap-7">
+    <div className="admin-project-overview flex min-w-0 flex-col gap-6 pb-6 sm:gap-7">
       <OverviewStyles />
 
       {loadingMessage && <LoadingScreen message={loadingMessage} />}
@@ -649,10 +650,10 @@ export default function ProjectOverview() {
           {/* BREADCRUMB */}
           <nav className="rare-fade flex flex-wrap items-center gap-x-2 gap-y-1 text-xs wrap-anywhere text-[#716658]">
             <Link
-              to="/admin/dashboard"
+              to="/admin/projects"
               className="rounded transition-colors duration-200 hover:text-[#211E1A] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A]/30"
             >
-              Dashboard
+              All Projects
             </Link>
             <span>/</span>
             <Link
@@ -667,7 +668,7 @@ export default function ProjectOverview() {
 
           {/* COVER */}
           <section
-            className="rare-rise group/cover overflow-hidden rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] transition-shadow duration-300 hover:shadow-[0_14px_36px_rgba(33,30,26,0.08)] sm:rounded-[26px]"
+            className="admin-project-cover rare-rise group/cover overflow-hidden rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] transition-shadow duration-300 hover:shadow-[0_14px_36px_rgba(33,30,26,0.08)] sm:rounded-[26px]"
             style={{ "--d": `${stagger(1)}ms` }}
           >
             <div
@@ -783,8 +784,94 @@ export default function ProjectOverview() {
           </section>
 
           {/* INFORMATION */}
-          <section
-            className="rare-rise rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] p-4 transition-shadow duration-300 hover:shadow-[0_10px_30px_rgba(33,30,26,0.05)] sm:rounded-3xl sm:p-7"
+          <div className="admin-project-columns contents"><div className="admin-project-left contents"><section className="admin-project-workspace">
+            <h2 className="mb-4 text-lg font-bold text-[#211E1A] sm:text-xl">
+              Project Workspace
+            </h2>
+
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              {[
+                { name: "Tasks", icon: ListTodo, path: "tasks", tone: "blue" },
+                { name: "Timeline", icon: CalendarRange, path: "timeline", tone: "orange", desktopOnly: true },
+                {
+                  name: "Daily Reports",
+                  icon: FileText,
+                  path: "reports",
+                  tone: "green",
+                },
+                {
+                  name: "Documents",
+                  icon: Files,
+                  path: "documents",
+                  tone: "violet",
+                },
+                {
+                  name: "Delays",
+                  icon: Clock3,
+                  path: "delays",
+                  tone: "orange",
+                },
+              ].map((section, index) => {
+                const Icon = section.icon;
+
+                return (
+                  <div
+                    key={section.path}
+                    className={`rare-rise h-full min-w-0 ${section.desktopOnly ? "hidden lg:block" : ""}`}
+                    style={{ "--d": `${stagger(3 + index)}ms` }}
+                  >
+                    <Link
+                      to={section.path === "timeline" ? `/admin/projects/${projectId}/timeline` : section.path === "tasks" ? `/admin/projects/${projectId}/tasks` : section.path === "reports" ? `/admin/projects/${projectId}/daily-reports` : section.path === "delays" ? `/admin/projects/${projectId}/delays` : section.path === "documents" ? `/admin/projects/${projectId}/documents` : `/admin/${section.path}?project=${projectId}`}
+                      className="
+                                                group block h-full rounded-[18px] border border-[#E7DED2]
+                                                bg-[#FFFDFA] p-4
+                                                transition-all duration-300 ease-out
+                                                hover:-translate-y-1 hover:border-[#D9CCBA]
+                                                hover:shadow-[0_14px_34px_rgba(33,30,26,0.08)]
+                                                active:translate-y-0 active:scale-[0.99]
+                                                focus-visible:outline-none focus-visible:ring-2
+                                                focus-visible:ring-[#211E1A]/30
+                                                motion-reduce:transition-none
+                                                motion-reduce:hover:translate-y-0
+                                                sm:rounded-[20px] sm:p-5
+                                            "
+                    >
+                      <span
+                        className={`
+                                                    inline-flex rounded-xl p-2.5
+                                                    transition-all duration-300 ease-out
+                                                    group-hover:scale-110 group-hover:-rotate-6
+                                                    motion-reduce:transition-none
+                                                    motion-reduce:group-hover:transform-none
+                                                    ${iconTones[section.tone]}
+                                                `}
+                      >
+                        <Icon size={22} strokeWidth={1.8} />
+                      </span>
+
+                      <div className="mt-4 flex items-center justify-between gap-2 sm:mt-5">
+                        <span className="min-w-0 text-sm font-bold text-[#211E1A]">
+                          {section.path === "tasks" ? <><span className="lg:hidden">Tasks</span><span className="hidden lg:inline">Project Tasks</span></> : section.name}
+                        </span>
+                        <ArrowUpRight
+                          size={17}
+                          className="
+                                                        shrink-0 text-[#665E53]
+                                                        transition-all duration-300 ease-out
+                                                        group-hover:-translate-y-0.5 group-hover:translate-x-0.5
+                                                        group-hover:text-[#211E1A]
+                                                        motion-reduce:transition-none
+                                                        motion-reduce:group-hover:transform-none
+                                                    "
+                        />
+                      </div>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          </section><section className="admin-project-description hidden rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-4 lg:block"><h2 className="text-sm font-bold text-[#211E1A]">Project Description</h2><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[#665E53]">{project.description || "No project description has been added."}</p></section></div><div className="admin-project-right contents"><section
+            className="admin-project-information rare-rise rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] p-4 transition-shadow duration-300 hover:shadow-[0_10px_30px_rgba(33,30,26,0.05)] sm:rounded-3xl sm:p-7"
             style={{ "--d": `${stagger(2)}ms` }}
           >
             <h2 className="mb-5 text-lg font-bold text-[#211E1A] sm:mb-6">
@@ -829,99 +916,8 @@ export default function ProjectOverview() {
                 value={(project.status || "").replaceAll("_", " ")}
               />
             </div>
-          </section>
-
-          {/* PROJECT WORKSPACE */}
-          <section>
-            <h2 className="mb-4 text-lg font-bold text-[#211E1A] sm:text-xl">
-              Project Workspace
-            </h2>
-
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-              {[
-                { name: "Tasks", icon: ListTodo, path: "tasks", tone: "blue" },
-                {
-                  name: "Daily Reports",
-                  icon: FileText,
-                  path: "reports",
-                  tone: "green",
-                },
-                {
-                  name: "Documents",
-                  icon: Files,
-                  path: "documents",
-                  tone: "violet",
-                },
-                {
-                  name: "Delays",
-                  icon: Clock3,
-                  path: "delays",
-                  tone: "orange",
-                },
-              ].map((section, index) => {
-                const Icon = section.icon;
-
-                return (
-                  <div
-                    key={section.path}
-                    className="rare-rise h-full min-w-0"
-                    style={{ "--d": `${stagger(3 + index)}ms` }}
-                  >
-                    <Link
-                      to={section.path === "tasks" ? `/admin/projects/${projectId}/tasks` : section.path === "reports" ? `/admin/projects/${projectId}/daily-reports` : section.path === "delays" ? `/admin/projects/${projectId}/delays` : section.path === "documents" ? `/admin/projects/${projectId}/documents` : `/admin/${section.path}?project=${projectId}`}
-                      className="
-                                                group block h-full rounded-[18px] border border-[#E7DED2]
-                                                bg-[#FFFDFA] p-4
-                                                transition-all duration-300 ease-out
-                                                hover:-translate-y-1 hover:border-[#D9CCBA]
-                                                hover:shadow-[0_14px_34px_rgba(33,30,26,0.08)]
-                                                active:translate-y-0 active:scale-[0.99]
-                                                focus-visible:outline-none focus-visible:ring-2
-                                                focus-visible:ring-[#211E1A]/30
-                                                motion-reduce:transition-none
-                                                motion-reduce:hover:translate-y-0
-                                                sm:rounded-[20px] sm:p-5
-                                            "
-                    >
-                      <span
-                        className={`
-                                                    inline-flex rounded-xl p-2.5
-                                                    transition-all duration-300 ease-out
-                                                    group-hover:scale-110 group-hover:-rotate-6
-                                                    motion-reduce:transition-none
-                                                    motion-reduce:group-hover:transform-none
-                                                    ${iconTones[section.tone]}
-                                                `}
-                      >
-                        <Icon size={22} strokeWidth={1.8} />
-                      </span>
-
-                      <div className="mt-4 flex items-center justify-between gap-2 sm:mt-5">
-                        <span className="min-w-0 text-sm font-bold text-[#211E1A]">
-                          {section.name}
-                        </span>
-                        <ArrowUpRight
-                          size={17}
-                          className="
-                                                        shrink-0 text-[#665E53]
-                                                        transition-all duration-300 ease-out
-                                                        group-hover:-translate-y-0.5 group-hover:translate-x-0.5
-                                                        group-hover:text-[#211E1A]
-                                                        motion-reduce:transition-none
-                                                        motion-reduce:group-hover:transform-none
-                                                    "
-                        />
-                      </div>
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* ASSIGNED SUPERVISORS */}
-          <section
-            className="rare-rise rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:rounded-3xl sm:p-7"
+          </section><section
+            className="admin-project-team rare-rise rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:rounded-3xl sm:p-7"
             style={{ "--d": `${stagger(7)}ms` }}
           >
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
@@ -1093,7 +1089,15 @@ export default function ProjectOverview() {
                 })}
               </div>
             )}
-          </section>
+          </section></div></div>
+
+          {/* PROJECT WORKSPACE */}
+          
+
+          
+
+          {/* ASSIGNED SUPERVISORS */}
+          
         </>
       )}
 

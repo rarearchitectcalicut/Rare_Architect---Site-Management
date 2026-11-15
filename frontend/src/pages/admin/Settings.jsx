@@ -867,7 +867,7 @@ export default function AdminSettings() {
     );
 
     return (
-        <div className="space-y-7 pb-8">
+        <div className="settings-page space-y-7 pb-8">
             {(loading || busyMessage) && (
                 <LoadingScreen
                     message={
@@ -913,8 +913,7 @@ export default function AdminSettings() {
           2. CHANGE PASSWORD
           ===================================== */}
 
-            <ChangePasswordForm />
-            <PushPreferences />
+            <div className="settings-security-grid contents"><ChangePasswordForm /><PushPreferences /></div>
 
             {/* =====================================
           3. PROJECT CATEGORY MANAGEMENT
@@ -922,7 +921,7 @@ export default function AdminSettings() {
 
             <section
                 className="
-          rounded-[24px]
+          settings-project-categories rounded-[24px]
           border border-[#E7DED2]
           bg-[#FFFDFA] p-5 sm:p-7
         "

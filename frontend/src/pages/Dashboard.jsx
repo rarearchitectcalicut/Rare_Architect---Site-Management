@@ -57,6 +57,29 @@ const dashboardCss = `
     animation-delay: var(--d, 0ms);
   }
 
+  @media (min-width: 1024px) {
+    .supervisor-summary-cards > a > div {
+      padding: 16px;
+      border-radius: 18px;
+    }
+
+    .supervisor-summary-cards > a > div > p {
+      margin-top: 10px;
+    }
+
+    .supervisor-summary-cards > a > div > p:first-of-type {
+      font-size: 28px;
+    }
+
+    .supervisor-summary-cards > a > div > div {
+      gap: 8px;
+    }
+
+    .supervisor-summary-cards > a > div > div > div {
+      padding: 6px;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .rare-rise,
     .rare-fade {
@@ -454,6 +477,7 @@ function CountRow({ label, value, icon: Icon, tone = "neutral" }) {
   const rowTone = zeroWarning ? "green" : tone;
   return (
     <div
+      data-count-tone={tone}
       className="
         group -mx-2 flex items-center justify-between
         gap-3 rounded-xl border-b border-[#f0e9df]
@@ -509,13 +533,15 @@ function WorkSummary({ tasks, reports, work }) {
     return <Link
       to={item.to || "/supervisor/reports"}
       aria-label={`${item.label} ${item.noun}, ${count}`}
-      className="flex min-h-14 min-w-0 items-center gap-2 rounded-lg border border-[#E7DED2] px-2 py-2 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A] focus-visible:ring-offset-1"
+      data-summary-tone={item.tone}
+      data-summary-empty={count === 0}
+      className="flex min-h-14 min-w-0 items-center gap-2 rounded-lg border border-[#E7DED2] px-2 py-2 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A] focus-visible:ring-offset-1 lg:min-h-11 lg:p-1.5"
     >
-      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconTones[tone] || iconTones.neutral}`}>
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg lg:h-6 lg:w-6 ${iconTones[tone] || iconTones.neutral}`}>
         <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
       </span>
       <span className="min-w-0">
-        <span className="block text-2xl font-bold leading-none tabular-nums text-[#211E1A]">{count}</span>
+        <span className="block text-2xl font-bold leading-none tabular-nums text-[#211E1A] lg:text-lg">{count}</span>
         <span className="mt-1 block break-words text-[12px] font-medium leading-4 text-[#716658]">{item.label}</span>
       </span>
     </Link>;
@@ -523,15 +549,15 @@ function WorkSummary({ tasks, reports, work }) {
   return <section aria-labelledby="work-summary-heading" className="rounded-[20px] border border-[#e8dfd3] bg-[#fffdfa] p-4 shadow-[0_3px_14px_rgba(33,30,26,0.025)]">
     <h2 id="work-summary-heading" className="mb-3 text-base font-bold tracking-tight text-[#211e1a]">Work summary</h2>
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <section aria-labelledby="work-summary-tasks-heading" className="min-w-0">
+      <section aria-labelledby="work-summary-tasks-heading" className="min-w-0 lg:rounded-2xl lg:border lg:border-[#E7DED2] lg:bg-[#F8F4EE] lg:p-4">
         <h3 id="work-summary-tasks-heading" className="mb-2 text-sm font-semibold text-[#211e1a]">Tasks</h3>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 lg:auto-rows-fr lg:[&>a]:bg-[#FFFDFA]">
           {taskItems.map((item) => <SummaryLink key={item.label} item={item} />)}
         </div>
       </section>
-      <section aria-labelledby="work-summary-reports-heading" className="min-w-0">
+      <section aria-labelledby="work-summary-reports-heading" className="min-w-0 lg:rounded-2xl lg:border lg:border-[#E7DED2] lg:bg-[#F8F4EE] lg:p-4">
         <h3 id="work-summary-reports-heading" className="mb-2 text-sm font-semibold text-[#211e1a]">Daily reports &amp; work</h3>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 lg:auto-rows-fr lg:[&>a]:bg-[#FFFDFA]">
           {reportItems.map((item) => <SummaryLink key={item.label} item={item} />)}
         </div>
       </section>
@@ -609,11 +635,11 @@ function AdminDashboard({ summary, reviewQueue }) {
     reviewQueue.recent_activity || [];
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="admin-desktop-dashboard space-y-6 sm:space-y-8">
       <DashboardStyles />
 
       {/* ADMIN OVERVIEW */}
-      <section>
+      <section className="admin-dashboard-overview">
         <SectionHeading
           title="Project Overview"
           subtitle="A live summary of RARE operations."
@@ -663,11 +689,12 @@ function AdminDashboard({ summary, reviewQueue }) {
       </section>
 
       {/* Additional components */}
-      <AdminQuickActions />
-      <ProjectCategories />
+      <div className="admin-dashboard-actions"><AdminQuickActions /></div>
+      <div className="admin-dashboard-categories"><ProjectCategories /></div>
 
       {/* PROJECT AND TASK STATUS */}
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+      <div className="admin-dashboard-work grid gap-3 sm:gap-4 lg:grid-cols-2">
+        <h2 className="hidden text-base font-bold lg:col-span-full lg:block">Work summary</h2>
         <Panel
           delay={stagger(4)}
           title="Projects"
@@ -726,7 +753,7 @@ function AdminDashboard({ summary, reviewQueue }) {
       </div>
 
       {/* REVIEW QUEUES */}
-      <section>
+      <section className="admin-dashboard-approvals">
         <SectionHeading
           title="Approval Center"
           subtitle="Recent items waiting for an Admin decision."
@@ -835,7 +862,7 @@ function AdminDashboard({ summary, reviewQueue }) {
       </section>
 
       {/* RECENT ACTIVITY */}
-      <Panel
+      <div className="admin-dashboard-activity"><Panel
         delay={stagger(12)}
         title="Recent Activity"
         subtitle="Latest recorded system events."
@@ -875,7 +902,7 @@ function AdminDashboard({ summary, reviewQueue }) {
 
                 <div className="min-w-0 flex-1">
                   <p className="break-words text-sm font-medium text-[#211e1a]">
-                    {entry.summary || entry.description || entry.action}
+                    <span className="lg:hidden">{entry.summary || entry.description || entry.action}</span><span className="hidden lg:inline">{entry.summary || entry.description || String(entry.action || "Activity recorded").replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase())}</span>
                   </p>
 
                   <p className="mt-1 text-xs font-medium wrap-anywhere text-[#665e53]">
@@ -902,7 +929,8 @@ function AdminDashboard({ summary, reviewQueue }) {
                     </p>
                   )}
 
-                  <p className="mt-1 break-words text-xs text-[#716658]">
+                  {!entry.metadata?.new_status && <p className="admin-activity-caption hidden text-xs text-[#716658] lg:block">Latest recorded system event</p>}
+                  <p className="admin-activity-record mt-1 break-words text-xs text-[#716658]">
                     {entry.entity_type || "System"}
                     {entry.created_at
                       ? ` · ${new Date(
@@ -915,7 +943,7 @@ function AdminDashboard({ summary, reviewQueue }) {
             ))}
           </div>
         )}
-      </Panel>
+      </Panel></div>
     </div>
   );
 }
@@ -1051,8 +1079,9 @@ function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
         noItemsMessage={hasOtherAttention ? "No immediate task items need attention." : ""}
         onReportDelay={setDelayReport}
       />
-      <section>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+      <div className="space-y-5 sm:space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+      <section className="min-w-0">
+        <div className="supervisor-summary-cards grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-2 lg:gap-3">
           <StatCard
             delay={stagger(0)}
             label="Assigned Projects"
@@ -1086,6 +1115,7 @@ function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
       </section>
 
       <SupervisorQuickActions draftGroup={actionItems.draft_daily_reports} />
+      </div>
       <WorkSummary tasks={tasks} reports={reports} work={summary.project_daily_task_work || {}} />
       {!!pendingDelayItems.length && <section aria-labelledby="my-action-center-heading" className="space-y-3">
         <div><h2 id="my-action-center-heading" className="text-lg font-semibold text-[#211E1A]">My Action Center</h2><p className="text-xs font-medium text-[#716658]">Delay reports awaiting Admin review.</p></div>

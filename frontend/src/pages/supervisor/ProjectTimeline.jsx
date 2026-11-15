@@ -522,7 +522,7 @@ export default function SupervisorProjectTimeline() {
     // =====================================================
 
     return (
-        <div className="space-y-6 pb-8">
+        <div className="supervisor-timeline space-y-6 pb-8">
             {loading && (
                 <LoadingScreen message="Loading project timeline..." />
             )}
@@ -662,7 +662,7 @@ export default function SupervisorProjectTimeline() {
             {!loading && !error && (
                 <>
                     {/* SUMMARY CARDS */}
-                    <TimelineSummary tasks={tasks} />
+                    <div className="supervisor-timeline-summary"><TimelineSummary tasks={tasks} /></div>
 
                     {/* ORDER CHANGE STATUS */}
                     {pendingOrderRequest && (
@@ -697,10 +697,11 @@ export default function SupervisorProjectTimeline() {
                             </div>
                         )}
 
+                    <div className="supervisor-timeline-content space-y-6">
                     {!reorderMode ? (
                         <>
                             {/* TOOLBAR */}
-                            <TimelineToolbar
+                            <div className="supervisor-timeline-toolbar"><TimelineToolbar
                                 search={search}
                                 onSearchChange={setSearch}
                                 approval={approval}
@@ -714,8 +715,9 @@ export default function SupervisorProjectTimeline() {
                                 view={view}
                                 onViewChange={setView}
                                 onClearFilters={clearFilters}
-                            />
+                            /></div>
 
+                            <div className="supervisor-timeline-main space-y-3">
                             {/* RESULTS COUNTER */}
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <p className="text-xs text-[#716658]">
@@ -737,6 +739,10 @@ export default function SupervisorProjectTimeline() {
                                 )}
                             </div>
 
+                            <div className="timeline-desktop-view-heading hidden items-center justify-between gap-4 lg:flex">
+                                <div><h2 className="text-lg font-bold text-[#211E1A]">{view === "sequence" ? "Task Sequence" : "Schedule View"}</h2>{view === "sequence" && <p className="mt-2 text-xs leading-5 text-[#716658]">Tasks arranged in their current timeline order.</p>}</div>
+                                <div className="inline-flex shrink-0 rounded-xl bg-[#F1EADF] p-1">{[["sequence", "Sequence", ClipboardList], ["schedule", "Schedule", CalendarRange]].map(([value, label, Icon]) => <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)} className={"inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold " + (view === value ? "bg-[#211E1A] text-white shadow-sm" : "text-[#716658]")}><Icon size={16} />{label}</button>)}</div>
+                            </div>
                             {/* VIEW SWITCH */}
                             {view === "sequence" ? (
                                 <TimelineSequence
@@ -749,6 +755,7 @@ export default function SupervisorProjectTimeline() {
                                     projectId={projectId}
                                 />
                             )}
+                            </div>
                         </>
                     ) : (
                         <TimelineReorder
@@ -759,13 +766,15 @@ export default function SupervisorProjectTimeline() {
                     )}
 
                     {/* REQUEST HISTORY */}
-                    <div className="border-t border-[#E4DCCD] pt-7">
+                    <div className="supervisor-timeline-history border-t border-[#E4DCCD] pt-7">
                         <TimelineRequestHistory
                             requests={timelineRequests}
+                            tasks={tasks}
                             loading={historyLoading}
                             error={historyError}
                             onRefresh={refreshHistory}
                         />
+                    </div>
                     </div>
                 </>
             )}

@@ -91,6 +91,7 @@ export default function AdminQuickActions() {
                     Quick Actions
                 </h2>
 
+                <Link to="/admin/approvals" className="admin-primary-approval hidden items-center gap-3 rounded-xl border border-[#CDE5D9] bg-[#EFF9F3] p-4 lg:flex"><span className="rounded-full bg-white p-2 text-[#16845B]"><ClipboardCheck size={18} /></span><span className="min-w-0 flex-1"><span className="block text-sm font-bold">Open approvals</span><span className="mt-1 block text-xs text-[#716658]">Recent items waiting for an Admin decision.</span></span><span aria-hidden="true">&rarr;</span></Link>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
                     {quickActions.map((action) => {
                         const Icon = action.icon;

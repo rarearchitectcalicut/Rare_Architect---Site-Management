@@ -95,7 +95,20 @@ function getSnapshot(request, key) {
     return {};
 }
 
-function RequestCard({ request }) {
+function TimelineSnapshot({ value, tasks }) {
+    let entries = value;
+    if (typeof entries === "string") { try { entries = JSON.parse(entries); } catch { return <p className="mt-2 text-xs text-[#665E53]">Timeline snapshot unavailable.</p>; } }
+    if (!Array.isArray(entries)) return <p className="mt-2 text-xs text-[#665E53]">Timeline snapshot unavailable.</p>;
+    const ordered = [...entries].sort((a, b) => Number(a.display_order ?? 0) - Number(b.display_order ?? 0));
+    return <ol className="mt-3 space-y-2">{ordered.map((entry, index) => {
+        const id = entry.task_id ?? entry.task?.id ?? entry.task ?? entry.id;
+        const task = tasks.find((item) => String(item.id) === String(id));
+        const title = entry.task_title || entry.title || entry.task?.title || task?.title || "Task no longer available";
+        return <li key={String(id) + ':' + index} className="flex items-start gap-2 rounded-lg bg-white/60 p-2 text-xs text-[#665E53]"><span className="shrink-0 font-bold">{index + 1}.</span><span className="min-w-0 break-words">{title}</span></li>;
+    })}{!ordered.length && <li className="text-xs text-[#665E53]">No tasks recorded.</li>}</ol>;
+}
+
+function RequestCard({ request, tasks }) {
     const [expanded, setExpanded] = useState(false);
 
     const status = String(
@@ -267,9 +280,7 @@ function RequestCard({ request }) {
                                                     Original
                                                 </p>
 
-                                                <p className="mt-2 whitespace-pre-wrap break-all text-xs text-[#665E53]">
-                                                    {displayValue(oldValues[field])}
-                                                </p>
+                                                {tasks && field === "timeline" ? <><div className="hidden lg:block"><TimelineSnapshot value={oldValues[field]} tasks={tasks} /></div><p className="mt-2 whitespace-pre-wrap break-all text-xs text-[#665E53] lg:hidden">{displayValue(oldValues[field])}</p></> : <p className="mt-2 whitespace-pre-wrap break-all text-xs text-[#665E53]">{displayValue(oldValues[field])}</p>}
                                             </div>
 
                                             <ArrowRight
@@ -282,9 +293,7 @@ function RequestCard({ request }) {
                                                     Proposed
                                                 </p>
 
-                                                <p className="mt-2 whitespace-pre-wrap break-all text-xs text-[#665E53]">
-                                                    {displayValue(newValues[field])}
-                                                </p>
+                                                {tasks && field === "timeline" ? <><div className="hidden lg:block"><TimelineSnapshot value={newValues[field]} tasks={tasks} /></div><p className="mt-2 whitespace-pre-wrap break-all text-xs text-[#665E53] lg:hidden">{displayValue(newValues[field])}</p></> : <p className="mt-2 whitespace-pre-wrap break-all text-xs text-[#665E53]">{displayValue(newValues[field])}</p>}
                                             </div>
                                         </div>
                                     </div>
@@ -350,6 +359,7 @@ export default function TimelineRequestHistory({
     loading = false,
     error = "",
     onRefresh,
+    tasks,
 }) {
     const [status, setStatus] = useState("ALL");
     const [sort, setSort] = useState("NEWEST");
@@ -486,6 +496,7 @@ export default function TimelineRequestHistory({
                                 <RequestCard
                                     key={request.id}
                                     request={request}
+                                    tasks={tasks}
                                 />
                             ))}
                         </div>

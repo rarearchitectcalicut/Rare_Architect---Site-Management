@@ -8,7 +8,14 @@ export default function AdminTaskOverview({ task }) {
         { title: "Measurement baseline", icon: Ruler, fields: [["Measurement method", formatText(task.measurement_method)], ["Planned quantity", task.planned_quantity], ["Measurement unit", formatText(task.measurement_unit)]] },
         { title: "Approval & audit", icon: ShieldCheck, fields: [["Created by", task.created_by_name], ["Approved by", task.approved_by_name], ["Approval date", formatDate(task.approved_at)], ["Created date", formatDate(task.created_at)], ["Updated date", formatDate(task.updated_at)]] },
     ];
-    return <div className="space-y-6">
+    return <><div className="admin-task-overview-desktop hidden lg:grid">
+        <div className="space-y-4">{[
+            { title: "Schedule & team", icon: CalendarDays, fields: [["Worker / team", task.worker_name], ["Start date", formatDate(task.start_date)], ["End date", formatDate(task.end_date)], ["Display order", task.display_order]] },
+            groups[2],
+        ].map(({ title, icon: Icon, fields }) => <section key={title} className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5"><h3 className="mb-4 flex items-center gap-2 text-sm font-semibold"><span className="rounded-lg bg-[#F1E6D5] p-2 text-[#8A6840]"><Icon size={16} /></span>{title}</h3><dl className={'grid gap-4 ' + (fields.length === 4 ? 'grid-cols-4' : 'grid-cols-3')}>{fields.map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-xs font-medium uppercase tracking-wide text-[#716658]">{label}</dt><dd className="mt-1 break-words text-sm font-medium">{value == null || value === "" ? "Not specified" : value}</dd></div>)}</dl></section>)}
+        <section className="grid grid-cols-2 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5">{[["Description", task.description], ["Completion criteria", task.completion_criteria]].map(([label, value], index) => <div key={label} className={index ? "border-l border-[#E7DED2] pl-5" : "pr-5"}><h3 className="text-sm font-semibold">{label}</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[#716658]">{value || "Not specified"}</p></div>)}</section></div>
+        <section className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5"><h3 className="mb-4 flex items-center gap-2 text-sm font-semibold"><span className="rounded-lg bg-[#F1E6D5] p-2 text-[#8A6840]"><ShieldCheck size={16} /></span>Approval &amp; audit</h3><dl className="space-y-4">{groups[3].fields.map(([label, value], index) => <div key={label} className={index === 2 ? "border-t border-[#E7DED2] pt-4" : ""}><dt className="text-xs font-medium uppercase tracking-wide text-[#716658]">{label}</dt><dd className="mt-1 break-words text-sm font-medium">{value == null || value === "" ? "Not specified" : value}</dd></div>)}</dl></section>
+    </div><div className="space-y-6 lg:hidden">
         <div className="grid items-start gap-5 xl:grid-cols-2">{groups.map(({ title, icon: Icon, fields }) => (
             <section key={title} className="rounded-[20px] border border-[#EAE1D5] bg-[#FFFDFA] p-4 sm:p-5">
                 <h3 className="mb-5 flex items-center gap-2.5 text-sm font-semibold"><span className="rounded-lg bg-[#EEE5D8] p-2 text-[#8B6944]"><Icon size={16} aria-hidden="true" /></span>{title}</h3>
@@ -26,5 +33,5 @@ export default function AdminTaskOverview({ task }) {
                 <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[#665C50]">{value || "Not specified"}</p>
             </section>
         ))}</div>
-    </div>;
+    </div></>;
 }
