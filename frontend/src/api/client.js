@@ -80,7 +80,6 @@ export function getRefreshToken() {
 }
 
 
-
 // REQUEST INTERCEPTORS
 api.interceptors.request.use((config) => {
   if (accessToken) {
@@ -168,7 +167,7 @@ api.interceptors.response.use(
 
       return api(originalRequest);
     } catch (refreshError) {
-      if (refreshToken === tokenUsed) {
+      if (refreshToken === tokenUsed && refreshError.response?.status === 401) {
         clearAuthTokens();
         unauthorizedHandler?.();
       }

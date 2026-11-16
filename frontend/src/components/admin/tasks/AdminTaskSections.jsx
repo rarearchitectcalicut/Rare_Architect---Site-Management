@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { taskApi } from "../../../api/taskApi";
 import { ProjectSearch } from "../../daily-reports/ReportProjectPicker";
 import { Link } from "react-router-dom";
-import { CalendarRange, ClipboardList, FileText, GitPullRequest, History, Ruler } from "lucide-react";
+import { ClipboardList, FileText, GitPullRequest, History, Ruler } from "lucide-react";
 import AdminTaskOverview from "./AdminTaskOverview";
 import { formatDate, formatText } from "../../approvals/approvalUtils";
 
-const taskTabs = [["overview", "Overview"], ["timeline", "Timeline"], ["documents", "Documents"], ["work", "Work & Reports"], ["changes", "Changes & Delays"], ["history", "History"]];
-const tabIcons = { overview: ClipboardList, timeline: CalendarRange, documents: FileText, work: Ruler, changes: GitPullRequest, history: History };
+const taskTabs = [["overview", "Overview"], ["documents", "Documents"], ["work", "Work & Reports"], ["changes", "Changes & Delays"], ["history", "History"]];
+const tabIcons = { overview: ClipboardList, documents: FileText, work: Ruler, changes: GitPullRequest, history: History };
 const button = "task-secondary px-3 py-2.5 text-xs font-semibold text-[#74614D] disabled:opacity-50";
 
 function Resource({ name, resources, onRetry, children }) {
@@ -27,20 +27,6 @@ function ReadableValue({ value }) {
     if (Array.isArray(value)) return value.length ? <ul className="space-y-2">{value.map((item, i) => <li key={i}><ReadableValue value={item} /></li>)}</ul> : <span>None</span>;
     if (typeof value === "object") return <dl className="space-y-2">{Object.entries(value).map(([key, item]) => <div key={key} className="border-l-2 border-[#E7DED2] pl-3"><dt className="text-xs text-[#716658]">{formatText(key)}</dt><dd className="mt-1"><ReadableValue value={item} /></dd></div>)}</dl>;
     return <span className="whitespace-pre-wrap break-words">{String(value)}</span>;
-}
-
-function Timeline({ task, data }) {
-    const index = data.tasks.findIndex((item) => item.id === task.id);
-    const overlaps = data.tasks.filter((item) => item.id !== task.id && task.start_date && task.end_date && item.start_date && item.end_date && item.start_date <= task.end_date && item.end_date >= task.start_date);
-    function taskLink(item) {
-        return item ? <Link className="text-[#3565A5] hover:underline" to={`/admin/projects/${task.project}/tasks/${item.id}`}>{item.title}</Link> : "None";
-    }
-    return <div className="admin-task-timeline space-y-6"><Fields rows={[
-        ["Current display order", task.display_order], ["Position in approved timeline", index < 0 ? "Outside the approved timeline" : `${index + 1} of ${data.tasks.length}`],
-        ["Planned start", formatDate(task.start_date)], ["Planned end", formatDate(task.end_date)],
-        ["Timeline status", index < 0 ? "Only approved, non-cancelled tasks appear in the timeline." : formatText(data.tasks[index].work_status)],
-        ["Previous task", index < 0 ? "Not applicable" : taskLink(data.tasks[index - 1])], ["Next task", index < 0 ? "Not applicable" : taskLink(data.tasks[index + 1])],
-    ]} /><div><h3 className="text-sm font-bold">Overlapping approved tasks</h3>{!task.start_date || !task.end_date ? <p className="mt-2 text-sm text-[#716658]">Both task dates are needed to check overlaps.</p> : <ul className="mt-2 space-y-2 text-sm">{overlaps.map((item) => <li key={item.id}>{taskLink(item)} · {formatDate(item.start_date)} – {formatDate(item.end_date)}</li>)}{!overlaps.length && <li>No date overlaps found.</li>}</ul>}</div></div>;
 }
 
 function Documents({ taskId, resources, onRetry, onVersions, onDownload, downloading, downloadError }) {
@@ -159,7 +145,6 @@ export default function AdminTaskSections({ task, tab, onTabChange, resources, o
         })}</nav>
         <div id="task-section" key={tab} data-task-tab={tab} className="task-enter space-y-6 p-4 sm:p-7" style={{ "--task-delay": "0ms" }} aria-label={taskTabs.find(([id]) => id === tab)?.[1]}>
             {tab === "overview" && <AdminTaskOverview task={task} />}
-            {tab === "timeline" && <Resource name="timeline" {...resourceProps}>{(data) => <Timeline task={task} data={data} />}</Resource>}
             {tab === "documents" && <Documents taskId={task.id} {...resourceProps} onVersions={onVersions} onDownload={onDownload} downloading={downloading} downloadError={downloadError} />}
             {tab === "work" && <>
                 <div>

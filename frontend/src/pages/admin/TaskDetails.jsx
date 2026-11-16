@@ -17,11 +17,6 @@ function taskSectionLoaders(task, signal) {
     const related = (record) => record.task === task.id && record.project_id === task.project;
     const all = (fetchPage) => loadTaskPages(fetchPage, signal);
     return {
-        timeline: async () => {
-            const data = await timelineApi.getTimeline(task.project, {}, signal);
-            if (data.project_id !== task.project || !Array.isArray(data.tasks) || data.tasks.some((item) => item.project !== task.project)) throw new Error("Unexpected project timeline response.");
-            return data;
-        },
         history: async () => (await all((params) => taskApi.history(task.id, params, signal)))
             .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id.localeCompare(b.id)),
         progress: async () => {
@@ -38,7 +33,7 @@ function taskSectionLoaders(task, signal) {
     };
 }
 
-const sectionResources = { overview: [], timeline: ["timeline"], documents: [], work: ["progress", "entries"], changes: ["changes", "orders", "delays"], history: ["history"] };
+const sectionResources = { overview: [], documents: [], work: ["progress", "entries"], changes: ["changes", "orders", "delays"], history: ["history"] };
 
 function TaskWorkspace({ task }) {
     const [tab, setTab] = useState("overview");

@@ -54,6 +54,8 @@ export function MobileTaskCard({
     expanded = false,
     onClick,
     className = "",
+    mobilePresentation,
+    narrowMobileOnly = false,
     "aria-label": customAriaLabel,
     ariaLabel,
 }) {
@@ -118,16 +120,21 @@ export function MobileTaskCard({
             ? `${task.title || "Untitled Task"}, ${task.project_name}`
             : `Open task: ${task.title || "Untitled Task"}`);
 
-    return <Link
-        to={to}
-        onClick={onClick}
-        aria-label={computedAriaLabel}
-        className={`group flex min-h-11 min-w-0 flex-col gap-1.5 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] ${className}`}
-    >
+    const row = mobilePresentation === "row";
+    const gallery = mobilePresentation === "gallery";
+    const presentationClass = row
+        ? narrowMobileOnly ? "max-[480px]:flex-row max-[480px]:items-center max-[480px]:gap-2" : "max-md:flex-row max-md:items-center max-md:gap-2"
+        : gallery
+            ? narrowMobileOnly ? "max-[480px]:gap-3 max-[480px]:p-4" : "max-md:gap-3 max-md:p-4"
+            : "";
+    const rowContentClass = narrowMobileOnly
+        ? "contents max-[480px]:flex max-[480px]:min-w-0 max-[480px]:flex-1 max-[480px]:flex-col max-[480px]:gap-1"
+        : "contents max-md:flex max-md:min-w-0 max-md:flex-1 max-md:flex-col max-md:gap-1";
+    const content = <>
         <span className="flex min-w-0 items-center gap-2">
             <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${priorityTone[task.priority] || "bg-[#74614D]"}`} />
-            <span className="min-w-0 flex-1 truncate text-base font-semibold leading-5 text-[#211E1A]">{task.title || "Untitled Task"}</span>
-            <ChevronRight size={18} aria-hidden="true" className={`shrink-0 text-[#716658] transition-transform ${expanded ? "rotate-90" : ""}`} />
+            <span className={`min-w-0 flex-1 truncate text-base font-semibold leading-5 text-[#211E1A] ${gallery ? narrowMobileOnly ? "max-[480px]:whitespace-normal max-[480px]:break-words" : "max-md:whitespace-normal max-md:break-words" : ""}`}>{task.title || "Untitled Task"}</span>
+            <ChevronRight size={18} aria-hidden="true" className={`shrink-0 text-[#716658] transition-transform ${expanded ? "rotate-90" : ""} ${row ? narrowMobileOnly ? "max-[480px]:hidden" : "max-md:hidden" : ""}`} />
         </span>
         {showProject && <span className="truncate text-[12px] font-medium leading-4 text-[#716658]">{task.project_name}</span>}
         <span className="flex min-w-0 flex-wrap gap-1.5">
@@ -147,6 +154,16 @@ export function MobileTaskCard({
         ) : awaitingVerification ? (
             <span className="truncate text-[12px] font-medium text-[#94651D]">Completed, awaiting verification</span>
         ) : null}
+    </>;
+
+    return <Link
+        to={to}
+        onClick={onClick}
+        aria-label={computedAriaLabel}
+        className={`group flex min-h-11 min-w-0 flex-col gap-1.5 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] ${presentationClass} ${className}`}
+    >
+        {row ? <span className={rowContentClass}>{content}</span> : content}
+        {row && <ChevronRight size={18} aria-hidden="true" className={`hidden shrink-0 text-[#716658] transition-transform ${expanded ? "rotate-90" : ""} ${narrowMobileOnly ? "max-[480px]:block" : "max-md:block"}`} />}
     </Link>;
 }
 

@@ -128,42 +128,49 @@ function ProjectReportWorkspace({ projectId, role, user }) {
     const [mutationError, setMutationError] = useState("");
     const inFlight = useRef(false);
     const mounted = useRef(false);
-    const todayDraftStarted = useRef(false);
+    const latestParams = useRef(params);
+    latestParams.current = params;
     const reportId = params.get("report");
     const correctionId = role === "SUPERVISOR" ? params.get("correct") : null;
     const selectedId = correctionId || reportId;
     const canCreate = role === "SUPERVISOR" && !projectError && ["ACTIVE", "MAINTENANCE"].includes(project?.status);
     useEffect(() => {
-        if (params.get("create") !== "true") { todayDraftStarted.current = false; return; }
+        if (params.get("create") !== "true") return;
         if (!project || projectError) return;
-        if (role === "SUPERVISOR" && todayDraftStarted.current) return;
-        if (role === "SUPERVISOR" && !todayDraftStarted.current) {
-            todayDraftStarted.current = true;
-            const next = new URLSearchParams(params);
-            next.delete("create");
-            setParams(next, { replace: true });
-            if (!canCreate || selectedId) {
-                setMutationError("Report creation is unavailable for this project's current status or selection.");
-                return;
-            }
-            const reportDate = new Date().toLocaleDateString("en-CA");
-            dailyReportApi.list(projectId, { status: "DRAFT", reported_by: user.id, page_size: 25 }).then((response) => {
-                const drafts = Array.isArray(response) ? response : response.results || [];
-                const today = drafts.find((draft) => draft.report_date === reportDate);
-                if (today) selectReport(today.id);
-                else create({ report_date: reportDate, work_summary: "", weather_condition: "", site_condition: "", site_notes: "", issues: "", next_day_plan: "" });
-            }).catch((failure) => setMutationError(validationMessage(failure, "Unable to find today's report draft.")));
-            return;
-        }
         const next = new URLSearchParams(params);
         next.delete("create");
+        latestParams.current = next;
         setParams(next, { replace: true });
-        if (canCreate && !selectedId) {
-            setCreating(true);
+        // An explicit report/correction selection takes priority over a stale create flag.
+        if (selectedId || role !== "SUPERVISOR") {
             setMutationError("");
-        } else if (role === "SUPERVISOR") {
-            setMutationError("Report creation is unavailable for this project's current status or selection.");
+            return;
         }
+        if (!canCreate) {
+            setMutationError(`Daily reports can only be created for ACTIVE or MAINTENANCE projects. This project is ${formatText(project.status)}.`);
+            return;
+        }
+        if (inFlight.current) return;
+        inFlight.current = true;
+        setBusy(true);
+        setMutationError("");
+        const reportDate = new Date().toLocaleDateString("en-CA");
+        async function openTodayDraft() {
+            try {
+                const response = await dailyReportApi.list(projectId, { status: "DRAFT", reported_by: user.id, date_from: reportDate, date_to: reportDate, page_size: 25 });
+                if (!mounted.current) return;
+                const drafts = Array.isArray(response) ? response : response.results || [];
+                const today = drafts.find((draft) => draft.report_date === reportDate);
+                const report = today || await dailyReportApi.create(projectId, { report_date: reportDate, work_summary: "", weather_condition: "", site_condition: "", site_notes: "", issues: "", next_day_plan: "" });
+                if (mounted.current) selectReport(report.id);
+            } catch (failure) {
+                if (mounted.current) setMutationError(validationMessage(failure, "Unable to open today's report draft. Please retry."));
+            } finally {
+                inFlight.current = false;
+                if (mounted.current) setBusy(false);
+            }
+        }
+        void openTodayDraft();
     }, [params, setParams, project, projectError, canCreate, selectedId, role, projectId, user.id]);
     const page = Math.max(1, Number(params.get("page")) || 1);
     const filters = Object.fromEntries(["search", "status", "date_from", "date_to", "reported_by", "sort"].map((key) => [key, params.get(key) || (key === "sort" ? "newest" : "")]));
@@ -199,8 +206,8 @@ function ProjectReportWorkspace({ projectId, role, user }) {
         return () => controller.abort();
     }, [key, filterKey, projectId, selectedId, page, role]);
 
-    function selectReport(id, sourceId) { const next = new URLSearchParams(params); next.delete("correct"); next.delete("source"); if (sourceId) next.set("source", sourceId); if (id) next.set("report", id); else { next.delete("report"); next.delete("page"); setRevision((v) => v + 1); } setParams(next); }
-    function startCorrection(id) { const next = new URLSearchParams(params); next.delete("report"); next.delete("source"); next.set("correct", id); setCreating(false); setParams(next); }
+    function selectReport(id, sourceId) { const next = new URLSearchParams(latestParams.current); next.delete("create"); next.delete("correct"); next.delete("source"); if (sourceId) next.set("source", sourceId); if (id) next.set("report", id); else { next.delete("report"); next.delete("page"); setRevision((v) => v + 1); } latestParams.current = next; setMutationError(""); setParams(next); }
+    function startCorrection(id) { const next = new URLSearchParams(latestParams.current); next.delete("create"); next.delete("report"); next.delete("source"); next.set("correct", id); latestParams.current = next; setMutationError(""); setCreating(false); setParams(next); }
     async function create(payload) {
         if (inFlight.current) return;
         inFlight.current = true; setBusy(true); setMutationError("");
@@ -209,7 +216,7 @@ function ProjectReportWorkspace({ projectId, role, user }) {
         finally { inFlight.current = false; if (mounted.current) setBusy(false); }
     }
     const prefix = role === "ADMIN" ? "/admin" : "/supervisor";
-    return <div className={`mx-auto min-w-0 max-w-[1500px] space-y-6 pb-8 text-[#211E1A] ${!selectedId ? "project-reports-desktop-theme" : ""}`}>
+    return <div className={`daily-report-workspace mx-auto min-w-0 max-w-[1500px] space-y-6 pb-8 text-[#211E1A] ${!selectedId ? "project-reports-desktop-theme" : ""}`}>
         {!result && loading && <LoadingScreen message="Loading daily reports..." />}
         {!(role === "SUPERVISOR" && selectedId) && <><nav aria-label="Breadcrumb" className={`flex flex-wrap gap-2 text-xs text-[#716658] ${role === "ADMIN" && selectedId ? "lg:hidden" : ""}`}><Link to={`${prefix}/projects`}>Projects</Link><span>/</span><Link to={`${prefix}/projects/${projectId}`}>{project?.name || "Project Overview"}</Link><span>/</span><span aria-current="page">Daily Reports</span></nav>
         <header className={`rare-page-header relative flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-[#211E1A] shadow-none sm:p-5 ${role === "ADMIN" && selectedId ? "lg:hidden" : ""}`}><div className="min-w-0 border-l-2 border-[#E7DED2] pl-3"><p className="text-xs font-semibold uppercase tracking-wide text-[#716658]">{project?.name || "Project workspace"}</p><h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Daily Reports</h1></div><div className="flex flex-wrap gap-2"><button type="button" disabled={loading || busy} className={action} onClick={() => setRevision((v) => v + 1)}><RefreshCw size={16} aria-hidden="true" />Refresh</button>{canCreate && !selectedId && <button type="button" disabled={busy} className={primaryAction} onClick={() => { if (role === "SUPERVISOR") { const next = new URLSearchParams(params); next.set("create", "true"); setParams(next); } else { setCreating(true); setMutationError(""); } }}><Plus size={18} aria-hidden="true" />{role === "SUPERVISOR" ? "Submit today's report" : "Create Daily Report"}</button>}</div></header></>}
@@ -232,24 +239,68 @@ function ProjectReportWorkspace({ projectId, role, user }) {
     </div>;
 }
 
+function draftClientId() {
+    return globalThis.crypto?.randomUUID?.() || "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (letter) => {
+        const value = Math.floor(Math.random() * 16);
+        return (letter === "x" ? value : (value & 3) | 8).toString(16);
+    });
+}
+
+async function saveReportDrafts(reportId, entries, api = dailyReportApi, assertActive = () => {}) {
+    assertActive();
+    const pending = entries.filter((entry) => entry.dirty);
+    for (const entry of pending) {
+        if (entry.section !== "attachments" && (!entry.snapshot.current || !entry.snapshot.current.validate())) throw new Error(`Check the ${entry.section} form before submitting.`);
+    }
+    for (const entry of pending) {
+        assertActive();
+        const values = entry.values;
+        const payload = entry.snapshot.current?.payload;
+        if (entry.section === "diary") await api.update(reportId, payload);
+        else if (entry.section === "attachments") {
+            for (const file of [...values.files]) {
+                assertActive();
+                const data = new FormData(); data.append("file", file); data.append("caption", values.caption);
+                entry.fileIds ??= new Map();
+                if (!entry.fileIds.has(file)) entry.fileIds.set(file, draftClientId());
+                data.append("client_id", entry.fileIds.get(file));
+                if (values.task_work) data.append("task_work", values.task_work);
+                await api.upload(reportId, data);
+                entry.values = { ...entry.values, files: entry.values.files.filter((item) => item !== file) };
+            }
+        } else {
+            entry.clientId ??= draftClientId();
+            const saved = await api.saveRow(reportId, entry.section, entry.rowId ? payload : { ...payload, client_id: entry.clientId }, entry.rowId);
+            entry.rowId = saved.id;
+        }
+        if (entry.values === values || entry.section === "attachments" && !entry.values.files.length) entry.dirty = false;
+    }
+}
+
+function revealActiveReportTab(container) {
+    if (!container || !container.ownerDocument.defaultView.matchMedia("(max-width: 1023px)").matches) return;
+    const active = container.querySelector('[aria-pressed="true"]');
+    if (!active) return;
+    const bounds = container.getBoundingClientRect();
+    const selected = active.getBoundingClientRect();
+    if (selected.left < bounds.left) container.scrollLeft += selected.left - bounds.left;
+    else if (selected.right > bounds.right) container.scrollLeft += selected.right - bounds.right;
+}
+
 function ReportDetail({ reportId, projectId, role, user, externalRevision, onSelect, correctionMode = false, onCorrectReport, sourceHint }) {
     const [state, setState] = useState({ report: null, error: "" });
     const [revision, setRevision] = useState(0);
     const [tab, setTab] = useState("diary");
-    const [desktop, setDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+    const reportTabsRef = useRef(null);
+    const draftTabsRef = useRef(null);
     const [overview, setOverview] = useState(true);
-    useEffect(() => {
-        const media = window.matchMedia("(min-width: 1024px)");
-        const update = () => setDesktop(media.matches);
-        media.addEventListener("change", update);
-        return () => media.removeEventListener("change", update);
-    }, []);
     const [activityOpen, setActivityOpen] = useState({});
     const [pages, setPages] = useState({});
     const [resources, setResources] = useState({});
     const [editing, setEditing] = useState(null);
     const [busy, setBusy] = useState("");
     const [error, setError] = useState("");
+    const [workSummaryError, setWorkSummaryError] = useState("");
     const [notice, setNotice] = useState("");
     const [taskSearch, setTaskSearch] = useState("");
     const [taskPage, setTaskPage] = useState(1);
@@ -258,6 +309,11 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
     const [choiceRevision, setChoiceRevision] = useState(0);
     const inFlight = useRef(false);
     const mounted = useRef(false);
+    const reportLifecycle = useRef(null);
+    const drafts = useRef({});
+    const draftSequence = useRef(0);
+    const [, setDraftRevision] = useState(0);
+    const [guidedEditors, setGuidedEditors] = useState({});
     const [prefill, setPrefill] = useState(null);
     const [savedDraft, setSavedDraft] = useState(null);
     const [saveStarted, setSaveStarted] = useState(false);
@@ -267,8 +323,11 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
     const version = `${revision}:${externalRevision}`;
     const loading = state.key !== version;
     const report = state.report;
-    const desktopReport = desktop && report?.status === "SUBMITTED";
-    const desktopOverview = desktopReport && overview;
+    const submittedReport = report?.status === "SUBMITTED";
+    const reportOverview = submittedReport && overview;
+    useEffect(() => {
+        revealActiveReportTab(submittedReport ? reportTabsRef.current : draftTabsRef.current);
+    }, [tab, overview, loading, submittedReport]);
     const owner = role === "SUPERVISOR" && report?.reported_by === user.id;
     const canEdit = report?.project_status !== "CANCELLED" && owner && report?.status === "DRAFT" && !loading && !state.error;
     const guidedDraft = role === "SUPERVISOR" && canEdit && !correctionMode;
@@ -279,7 +338,12 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
     const choiceKey = `${editing?.section}:${editing?.row?.id}:${editing?.correction}:${taskSearch}:${taskPage}:${draftPage}:${choiceRevision}:${version}`;
     const choiceData = choices?.key === choiceKey ? choices.data : null;
 
-    useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+    useEffect(() => {
+        const lifecycle = { active: true, reportId, projectId };
+        reportLifecycle.current = lifecycle;
+        mounted.current = true;
+        return () => { lifecycle.active = false; mounted.current = false; };
+    }, [reportId, projectId]);
     useEffect(() => {
         const controller = new AbortController();
         async function load() {
@@ -300,7 +364,7 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
         const selectedPages = JSON.parse(pageKey);
         const sections = guidedDraft
             ? tab === "activity" ? ["work-entries", "manpower", "materials"] : tab === "photos-submit" ? ["work-entries", "manpower", "materials", "attachments"] : []
-            : (desktopOverview || tab === "review") ? ["work-entries", "manpower", "materials", "attachments"] : tab === "diary" ? [] : tab === "attachments" ? ["attachments", "work-entries"] : [tab];
+            : (reportOverview || tab === "review") ? ["work-entries", "manpower", "materials", "attachments"] : tab === "diary" ? [] : tab === "attachments" ? ["attachments", "work-entries"] : [tab];
         for (const section of sections) {
             dailyReportApi.section(reportId, section, { page: selectedPages[section] || 1, page_size: 25 }, controller.signal).then((response) => {
                 const data = reportPage(response, selectedPages[section] || 1);
@@ -309,7 +373,7 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
             }).catch((failure) => { if (!controller.signal.aborted) setResources((v) => ({ ...v, [section]: { key: resourceKey, error: validationMessage(failure, "Unable to load this section.") } })); });
         }
         return () => controller.abort();
-    }, [tab, reportId, pageKey, resourceKey, report, loading, state.error, correctionMode, guidedDraft, desktopOverview]);
+    }, [tab, reportId, pageKey, resourceKey, report, loading, state.error, correctionMode, guidedDraft, reportOverview]);
     useEffect(() => {
         if (editing?.section !== "work-entries" || editing.row && !editing.correction) return;
         const controller = new AbortController();
@@ -324,8 +388,8 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
     function resource(section) { return resources[section]?.key === resourceKey ? resources[section] : null; }
     const guidedIndex = guidedSteps.findIndex(([id]) => id === tab);
     function goStep(index) {
-        const bounded = Math.max(0, Math.min(reportTabs.length - 1, index));
-        setEditing(null);
+        if (inFlight.current) return;
+        const bounded = Math.max(0, Math.min(guidedSteps.length - 1, index));
         setTab(guidedSteps[bounded][0]);
     }
     function changePage(section, delta) { setPages((v) => ({ ...v, [section]: Math.max(1, (v[section] || 1) + delta) })); }
@@ -334,27 +398,72 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
         if (editing && !await confirm({ title: "Discard unsaved edits?", message: "The current form has not been saved.", confirmLabel: "Discard edits" })) return;
         setEditing(null); setError(""); next();
     }
-    async function mutate(kind, payload, section, rowId, onUploaded) {
+    async function mutate(kind, payload, section, rowId, onUploaded, draftKey) {
         if (inFlight.current) return;
+        const lifecycle = reportLifecycle.current;
+        const active = () => mounted.current && lifecycle?.active && reportLifecycle.current === lifecycle;
+        const assertActive = () => { if (!active()) throw new Error("The report editor was closed. Remaining changes were not submitted."); };
         inFlight.current = true; setBusy(kind); setError(""); setNotice("");
         try {
             if (kind === "delete" && !await confirm({ title: "Delete this draft report?", message: "This permanently deletes the draft diary, task work, manpower, materials and its attachments. This cannot be undone.", confirmLabel: "Delete Draft" })) return;
             if (["submit", "remove"].includes(kind) && !await confirm({ title: kind === "submit" ? "Submit this report?" : "Remove this draft record?", message: kind === "submit" ? "The saved diary and all work, manpower, material records and evidence become read-only. Individual work entries remain subject to Admin verification." : "This removes the selected record from the draft.", confirmLabel: kind === "submit" ? "Submit report" : "Remove record" })) return;
-            if (kind === "delete") { await dailyReportApi.deleteDraft(reportId); if (mounted.current) onSelect(null); return; }
+            assertActive();
+            if (kind === "delete") { await dailyReportApi.deleteDraft(reportId); if (active()) onSelect(null); return; }
             let response;
+            if (guidedDraft && ["diary", "row", "upload", "submit"].includes(kind)) {
+                const key = kind === "diary" ? "diary" : kind === "upload" ? "attachments" : draftKey || editing?.draftKey;
+                if (kind === "submit") {
+                    const diary = drafts.current.diary?.values || report;
+                    if (!diary.work_summary?.trim()) { setWorkSummaryError("Work Summary is required."); setTab("diary"); return; }
+                    setWorkSummaryError("");
+                    await saveReportDrafts(reportId, Object.values(drafts.current), dailyReportApi, assertActive);
+                    assertActive();
+                    response = (await dailyReportApi.submit(reportId)).report;
+                    if (!active()) return;
+                    drafts.current = {};
+                    setState({ key: version, report: response, error: "" });
+                    setNotice("Report submitted. Work awaits individual Admin verification.");
+                } else {
+                    const entry = drafts.current[key];
+                    if (!entry) throw new Error("Open the form again before saving.");
+                    entry.dirty = true;
+                    entry.snapshot.current = { ...entry.snapshot.current, payload };
+                    await saveReportDrafts(reportId, [entry], dailyReportApi, assertActive);
+                    if (!active()) return;
+                    if (kind === "row") setGuidedEditors((current) => { const next = { ...current }; delete next[section]; return next; });
+                    setNotice("Saved successfully.");
+                    setRevision((value) => value + 1);
+                }
+                if (active()) setDraftRevision((value) => value + 1);
+                return;
+            }
             if (kind === "diary") response = await dailyReportApi.update(reportId, payload);
             if (kind === "row") response = await dailyReportApi.saveRow(reportId, section, payload, rowId);
-            if (kind === "remove") await dailyReportApi.removeRow(section, rowId);
+            if (kind === "remove") {
+                await dailyReportApi.removeRow(section, rowId);
+                if (!active()) return;
+                const removedKeys = new Set(Object.entries(drafts.current).filter(([, entry]) => entry.section === section && entry.rowId === rowId).map(([key]) => key));
+                for (const key of removedKeys) delete drafts.current[key];
+                setGuidedEditors((current) => {
+                    const editor = current[section];
+                    if (!editor || editor.row?.id !== rowId && !removedKeys.has(editor.draftKey)) return current;
+                    const next = { ...current }; delete next[section]; return next;
+                });
+                setEditing((current) => current?.section === section && (current.row?.id === rowId || removedKeys.has(current.draftKey)) ? null : current);
+            }
             if (kind === "correct") response = await dailyReportApi.correct(rowId, payload);
             if (kind === "submit") response = (await dailyReportApi.submit(reportId)).report;
-            if (kind === "upload") for (const file of payload.files) { const data = new FormData(); data.append("file", file); data.append("caption", payload.caption); if (payload.task_work) data.append("task_work", payload.task_work); await dailyReportApi.upload(reportId, data); if (mounted.current) onUploaded(file); }
-            if (!mounted.current) return;
+            if (kind === "upload") for (const file of payload.files) { const data = new FormData(); data.append("file", file); data.append("caption", payload.caption); if (payload.task_work) data.append("task_work", payload.task_work); await dailyReportApi.upload(reportId, data); if (active()) onUploaded(file); }
+            if (!active()) return;
             setEditing(null); setNotice(kind === "submit" ? "Report submitted. Work awaits individual Admin verification." : "Saved successfully.");
-            if (kind === "submit") setState({ key: version, report: response, error: "" });
-            setRevision((v) => v + 1);
+            if (kind === "diary") setState({ key: version, report: response, error: "" });
+            else {
+                if (kind === "submit") setState({ key: version, report: response, error: "" });
+                setRevision((v) => v + 1);
+            }
             if (kind === "correct") onSelect(response.daily_report);
-        } catch (failure) { if (mounted.current) { setError(validationMessage(failure)); if (["row", "correct"].includes(kind)) setChoiceRevision((value) => value + 1); if (kind === "upload") setRevision((v) => v + 1); } }
-        finally { inFlight.current = false; if (mounted.current) setBusy(""); }
+        } catch (failure) { if (active()) { setError(validationMessage(failure)); if (["row", "correct"].includes(kind)) setChoiceRevision((value) => value + 1); if (kind === "upload") setRevision((v) => v + 1); } }
+        finally { inFlight.current = false; if (active()) setBusy(""); }
     }
     async function savePrefill(submit = false) {
         if (inFlight.current || loading || !prefill) return;
@@ -409,54 +518,83 @@ function ReportDetail({ reportId, projectId, role, user, externalRevision, onSel
         const rows = review ? entry.data.results.slice(0, 5) : entry.data.results;
         return <div className={`report-section-records space-y-4 report-records-${section}`}>
             <p className="text-sm leading-6 text-[#665C50]">{entry.data.count} {section} records{review ? "; previewing up to five from the current page. Use the section tab to review every record." : ""}</p>
-            {section === "attachments" ? <ReportEvidence files={rows} busy={Boolean(busy)} onRemove={canEdit && !review ? (file) => mutate("remove", null, section, file.id) : undefined} /> : rows.map((row) => section === "work-entries" ? <ReportWorkEntry key={row.id} entry={row} role={role} canEdit={canEdit && !review} canCorrect={report?.project_status !== "CANCELLED" && role === "SUPERVISOR" && report?.reported_by === user.id && report.status === "SUBMITTED" && !review} busy={Boolean(busy)} onEdit={() => guidedDraft ? setEditing({ section, row }) : leaveEditor(() => setEditing({ section, row }))} onRemove={() => mutate("remove", null, section, row.id)} onCorrect={() => leaveEditor(() => { setDraftPage(1); setEditing({ section, row, correction: true }); })} /> : <article key={row.id} className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><dl className="grid gap-3 text-sm sm:grid-cols-2">{(section === "manpower" ? ["trade", "contractor_name", "worker_count", "hours_worked", "remarks"] : ["material_name", "entry_type", "quantity", "unit", "remarks"]).map((field) => <div key={field}><dt className="text-xs text-[#716658]">{formatText(field)}</dt><dd className="mt-1 whitespace-pre-wrap break-words">{row[field] ?? "Not specified"}</dd></div>)}</dl>{canEdit && !review && <div className="mt-4 flex gap-2"><button type="button" disabled={Boolean(busy)} className={action} onClick={() => guidedDraft ? setEditing({ section, row }) : leaveEditor(() => setEditing({ section, row }))}>Edit</button><button type="button" disabled={Boolean(busy)} className={action} onClick={() => mutate("remove", null, section, row.id)}>Remove</button></div>}</article>)}
+            {section === "attachments" ? <ReportEvidence files={rows} busy={Boolean(busy)} onRemove={canEdit && !review ? (file) => mutate("remove", null, section, file.id) : undefined} /> : rows.map((row) => section === "work-entries" ? <ReportWorkEntry key={row.id} entry={row} role={role} canEdit={canEdit && !review} canCorrect={report?.project_status !== "CANCELLED" && role === "SUPERVISOR" && report?.reported_by === user.id && report.status === "SUBMITTED" && !review} busy={Boolean(busy)} onEdit={() => guidedDraft ? openGuidedEditor({ section, row }) : leaveEditor(() => setEditing({ section, row }))} onRemove={() => mutate("remove", null, section, row.id)} onCorrect={() => leaveEditor(() => { setDraftPage(1); setEditing({ section, row, correction: true }); })} /> : <article key={row.id} className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><dl className="grid gap-3 text-sm sm:grid-cols-2">{(section === "manpower" ? ["trade", "contractor_name", "worker_count", "hours_worked", "remarks"] : ["material_name", "entry_type", "quantity", "unit", "remarks"]).map((field) => <div key={field}><dt className="text-xs text-[#716658]">{formatText(field)}</dt><dd className="mt-1 whitespace-pre-wrap break-words">{row[field] ?? "Not specified"}</dd></div>)}</dl>{canEdit && !review && <div className="mt-4 flex gap-2"><button type="button" disabled={Boolean(busy)} className={action} onClick={() => guidedDraft ? openGuidedEditor({ section, row }) : leaveEditor(() => setEditing({ section, row }))}>Edit</button><button type="button" disabled={Boolean(busy)} className={action} onClick={() => mutate("remove", null, section, row.id)}>Remove</button></div>}</article>)}
             {section !== "attachments" && !entry.data.count && <p className="py-2 text-sm text-[#716658]">No {section === "work-entries" ? "task work" : section} recorded yet.</p>}
             {!review && entry.data.count > 25 && <nav aria-label={`${section} pages`} className="rare-pagination text-xs"><button type="button" disabled={!entry.data.previous || Boolean(busy)} className={action} onClick={() => changePage(section, -1)}>Previous</button><span aria-live="polite" aria-atomic="true">Page {pages[section] || 1} of {Math.max(1, Math.ceil(entry.data.count / 25))}</span><button type="button" disabled={!entry.data.next || Boolean(busy)} className={action} onClick={() => changePage(section, 1)}>Next</button></nav>}
         </div>;
     }
-    function guidedEditor(section) {
-        if (!guidedDraft || editing?.section !== section) return null;
-        if (section === "work-entries") return <ReportWorkForm key={`${editing.row?.id || "new"}`} guided initial={editing.row} tasks={choiceData} onTaskSearch={(value) => { setTaskSearch(value); setTaskPage(1); }} onTaskPage={(delta) => setTaskPage((v) => Math.max(1, v + delta))} busy={editorBusy} onSave={(payload) => mutate("row", payload, section, editing.row?.id)} onCancel={() => setEditing(null)} />;
-        if (section === "manpower" || section === "materials") return <ReportRowForm key={`${section}:${editing.row?.id || "new"}`} guided section={section} initial={editing.row} busy={editorBusy} onSave={(payload) => mutate("row", payload, section, editing.row?.id)} onCancel={() => setEditing(null)} />;
-        return null;
+    function draftProps(key, defaults, section, rowId) {
+        const entry = drafts.current[key] ??= { values: defaults, section, rowId, dirty: false, snapshot: { current: null } };
+        return { values: entry.values, draftRef: entry.snapshot, onChange: (next) => {
+            entry.values = typeof next === "function" ? next(entry.values) : next;
+            if (key === "diary" && entry.values.work_summary?.trim()) setWorkSummaryError("");
+            entry.dirty = true; setDraftRevision((value) => value + 1);
+        } };
     }
-    return <section className={`min-w-0 space-y-5 pb-24 ${desktopReport ? "desktop-report-detail" : ""}`}>
+    function openGuidedEditor(next) {
+        if (inFlight.current) return;
+        const current = guidedEditors[next.section];
+        if (current && current.row?.id === next.row?.id) {
+            setEditing(current);
+            return;
+        }
+        if (current && drafts.current[current.draftKey]?.dirty) {
+            setError("Save the unfinished record in this section before opening a different editor.");
+            return;
+        }
+        const draftKey = next.row ? next.section + ":" + next.row.id : next.section + ":new:" + (++draftSequence.current);
+        const editor = { ...next, draftKey };
+        setEditing(editor); setGuidedEditors((current) => ({ ...current, [next.section]: editor }));
+    }
+    function guidedEditor(section) {
+        const editor = guidedEditors[section];
+        if (!guidedDraft || !editor) return null;
+        const row = editor.row;
+        const defaults = section === "work-entries" ? { task: row?.task || "", work_description: row?.work_description || "", location_detail: row?.location_detail || "", quantity_completed_today: row?.quantity_completed_today || "", completion_claimed: row?.completion_claimed || false, new_daily_report: "" }
+            : section === "manpower" ? { trade: "MASON", contractor_name: "", worker_count: "1", hours_worked: "", remarks: "", ...row } : { material_name: "", entry_type: "RECEIVED", quantity: "", unit: "", remarks: "", ...row };
+        const fields = section === "manpower" ? ["trade", "contractor_name", "worker_count", "hours_worked", "remarks"] : section === "materials" ? ["material_name", "entry_type", "quantity", "unit", "remarks"] : Object.keys(defaults);
+        const props = draftProps(editor.draftKey, Object.fromEntries(fields.map((field) => [field, defaults[field]])), section, row?.id);
+        const save = (payload) => { setEditing(editor); return mutate("row", payload, section, row?.id, undefined, editor.draftKey); };
+        if (section === "work-entries") return <ReportWorkForm key={editor.draftKey} guided initial={row} tasks={choiceData} {...props} onTaskSearch={(value) => { setTaskSearch(value); setTaskPage(1); }} onTaskPage={(delta) => setTaskPage((v) => Math.max(1, v + delta))} busy={editorBusy} onSave={save} onCancel={() => {}} />;
+        return <ReportRowForm key={editor.draftKey} guided section={section} initial={row} {...props} busy={editorBusy} onSave={save} onCancel={() => {}} />;
+    }
+    return <section className={`daily-report-detail min-w-0 space-y-5 pb-24 ${submittedReport ? "desktop-report-detail" : ""}`}>
         {confirmationModal}
         {loading && <LoadingScreen message="Loading report details..." />}
         {!guidedDraft && <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" className={action} disabled={Boolean(busy)} onClick={() => leaveEditor(() => onSelect(null))}><ArrowLeft size={15} />Back to Report Register</button>
         {canEdit && <button type="button" className={`${deleteAction} sm:ml-3`} disabled={Boolean(busy)} onClick={() => mutate("delete")}>{busy === "delete" ? "Deleting draft…" : "Delete Draft"}</button>}
         </div>}
-        {guidedDraft && <header className="flex min-w-0 flex-wrap items-center justify-between gap-3"><div className="min-w-0"><Link to={`/supervisor/projects/${projectId}/daily-reports`} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"><ArrowLeft size={16}/>Back to Daily Reports</Link><div className="flex flex-wrap items-center gap-2"><h1 className="mt-2 break-words text-xl font-bold">Daily Report · {formatDate(report.report_date)}</h1><ReportStatusBadge status="DRAFT" /></div><p className="text-sm text-[#665C50]">{report.project_name || "Project site diary"}</p><p aria-live="polite" className="text-xs text-[#716658]">{busy ? "Saving..." : notice ? "Saved" : "Draft"}</p></div><details className="relative"><summary aria-label="Report menu" className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-xl border border-[#E7DED2] text-xl focus-visible:outline-2">⋯</summary><button type="button" className={`${deleteAction} absolute right-0 top-12 z-10 whitespace-nowrap`} onClick={() => mutate("delete")}>Delete draft</button></details></header>}
+        {guidedDraft && <header className="report-guided-header flex min-w-0 flex-wrap items-center justify-between gap-3"><div className="min-w-0"><Link to={`/supervisor/projects/${projectId}/daily-reports`} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"><ArrowLeft size={16}/>Back to Daily Reports</Link><div className="flex flex-wrap items-center gap-2"><h1 className="mt-2 break-words text-xl font-bold">Daily Report · {formatDate(report.report_date)}</h1><ReportStatusBadge status="DRAFT" /></div><p className="text-sm text-[#665C50]">{report.project_name || "Project site diary"}</p><p aria-live="polite" className="text-xs text-[#716658]">{busy ? "Saving..." : notice ? "Saved" : "Draft"}</p></div><details className="relative"><summary aria-label="Report menu" className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-xl border border-[#E7DED2] text-xl focus-visible:outline-2">⋯</summary><button type="button" className={`${deleteAction} absolute right-0 top-12 z-10 w-max max-w-none whitespace-nowrap`} onClick={() => mutate("delete")}>Delete draft</button></details></header>}
         {(state.error || error) && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{state.error || error}</p>}
         {notice && <p role="status" className="rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
         {sourceHint && isTaskId(sourceHint) && <Link className={action} to={`/supervisor/projects/${projectId}/daily-reports?report=${sourceHint}`}>View source report used for prefill</Link>}
         {report && <>
             {!!report.correction_summary?.rejected_count && <section className="space-y-3 rounded-2xl border border-[#ECC4BA] bg-[#FFF1EC] p-5 text-[#803D32]"><h3 className="text-lg font-bold">{report.correction_summary.eligible_count ? "Work Corrections Required" : "Work Correction History"}</h3><p className="text-sm">{report.correction_summary.rejected_count} rejected entries. Corrected work is saved in a new independent report.</p>{report.correction_summary.entries.map((entry) => <p key={entry.id} className="whitespace-pre-wrap break-words text-sm leading-6"><strong>{entry.task_title}:</strong> {entry.verification_note}{entry.correction_report && <Link className="ml-2 inline-block font-bold underline" to={`/supervisor/projects/${report.project}/daily-reports?report=${entry.correction_report.id}`}>Existing correction: {formatText(entry.correction_report.status)}</Link>}</p>)}{report.correction_summary.eligible_count > 0 && onCorrectReport && <button type="button" className={primaryAction} disabled={Boolean(busy)} onClick={() => leaveEditor(() => onCorrectReport(report.id))}><Plus size={18} aria-hidden="true" />Create Correction Report</button>}</section>}
-            {desktopReport && <header className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5">
-                <div className="flex items-start justify-between gap-4"><div className="flex items-center gap-3"><span className="rounded-xl bg-[#F1E6D5] p-3"><CalendarDays size={20} /></span><div><p className="text-xs text-[#716658]">Daily site report - {report.project_name || "Project site diary"}</p><h1 className="mt-1 text-2xl font-semibold">{formatDate(report.report_date)}</h1></div></div><div className="flex items-center gap-2"><span className="rounded-full bg-[#F1EADF] px-3 py-1 text-xs">Read-only</span><ReportStatusBadge status={report.status} /></div></div>
-                <dl className="mt-4 grid grid-cols-4 gap-4 border-t border-[#EEE6DC] pt-4">{[["Prepared by", report.reported_by_name || "Supervisor"], ["Weather", formatText(report.weather_condition)], ["Submitted at", report.submitted_at ? new Date(report.submitted_at).toLocaleString("en-IN") : "Not submitted"], ["Task work entries", report.work_entry_count ?? 0]].map(([label, value]) => <div key={label}><dt className="text-xs font-medium uppercase tracking-wide text-[#716658]">{label}</dt><dd className="mt-1 text-sm font-semibold">{value}</dd></div>)}</dl><p className="mt-3 text-xs text-[#716658]">Submitted reports are read-only. Task work is verified individually.</p>
+            {submittedReport && <header className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex min-w-0 items-center gap-3"><span className="rounded-xl bg-[#F1E6D5] p-3"><CalendarDays size={20} /></span><div><p className="text-xs text-[#716658]">Daily site report - {report.project_name || "Project site diary"}</p><h1 className="mt-1 text-2xl font-semibold">{formatDate(report.report_date)}</h1></div></div><div className="flex items-center gap-2"><span className="rounded-full bg-[#F1EADF] px-3 py-1 text-xs">Read-only</span><ReportStatusBadge status={report.status} /></div></div>
+                <dl className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4 border-t border-[#EEE6DC] pt-4">{[["Prepared by", report.reported_by_name || "Supervisor"], ["Weather", formatText(report.weather_condition)], ["Submitted at", report.submitted_at ? new Date(report.submitted_at).toLocaleString("en-IN") : "Not submitted"], ["Task work entries", report.work_entry_count ?? 0]].map(([label, value]) => <div key={label}><dt className="text-xs font-medium uppercase tracking-wide text-[#716658]">{label}</dt><dd className="mt-1 text-sm font-semibold">{value}</dd></div>)}</dl><p className="mt-3 text-xs text-[#716658]">Submitted reports are read-only. Task work is verified individually.</p>
             </header>}
-            <header className={(desktopReport ? "hidden " : "") + "rare-page-header flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5"}><div><div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#716658]"><CalendarDays size={16} aria-hidden="true" />Daily report</div><h2 className="text-xl font-semibold tracking-tight text-[#211E1A] sm:text-2xl">{formatDate(report.report_date)}</h2><p className="mt-2 text-sm leading-6 text-[#716658]">Prepared by {report.reported_by_name || "Supervisor"}</p></div><div className="space-y-2"><ReportStatusBadge status={report.status} /><p className="text-sm text-[#716658]">{report.work_entry_count ?? 0} task work entries{report.status === "SUBMITTED" ? " · Read-only report" : " · Private draft"}</p></div></header>
-            {desktopReport && <nav aria-label="Report desktop sections" className="flex gap-2 border-b border-[#E7DED2]">{[["overview", "Overview"], ["diary", "Site diary"], ["work-entries", "Task work"], ["manpower", "Manpower"], ["materials", "Materials"], ["attachments", "Attachments"]].map(([id, label]) => <button key={id} type="button" disabled={Boolean(busy)} aria-pressed={id === "overview" ? overview : !overview && tab === id} onClick={() => leaveEditor(() => { setOverview(id === "overview"); if (id !== "overview") setTab(id); })} className={"border-b-2 px-3 py-3 text-xs font-semibold " + ((id === "overview" ? overview : !overview && tab === id) ? "border-[#211E1A]" : "border-transparent text-[#716658]")}>{label}{!["overview", "diary"].includes(id) && resource(id)?.data && <span className="ml-2">{resource(id).data.count}</span>}</button>)}</nav>}
-            {desktopOverview && <div className="grid grid-cols-3 items-start gap-5">
-                <section className="col-span-2 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5"><div className="mb-4 flex items-center justify-between"><h2 className="text-sm font-bold">Site diary</h2><button type="button" onClick={() => { setOverview(false); setTab("diary"); }} className="text-xs text-[#3565A5]">Open full diary</button></div><dl className="grid grid-cols-2 gap-3">{[["Work summary", "work_summary"], ["Site condition", "site_condition"], ["Site notes", "site_notes"], ["Issues & safety observations", "issues"], ["Next day plan", "next_day_plan"]].map(([label, field], index) => <div key={field} className={"rounded-xl bg-[#F5F0E7] p-4 " + (index === 0 ? "col-span-2" : "")}><dt className="text-xs font-medium uppercase tracking-wide text-[#716658]">{label}</dt><dd className="mt-2 whitespace-pre-wrap break-words text-sm">{report[field] || "Not recorded"}</dd></div>)}</dl></section>
-                <section className="col-span-3 row-start-2 w-1/2 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><div className="mb-4 flex items-center justify-between gap-2"><h2 className="text-sm font-bold">Attachments{resource("attachments")?.data ? ": " + resource("attachments").data.count : ""}</h2><button type="button" onClick={() => { setOverview(false); setTab("attachments"); }} className="text-xs text-[#3565A5]">Open</button></div>{sectionView("attachments", true)}</section>
-                <div className="col-start-3 row-start-1 grid grid-cols-1 gap-4">{[["work-entries", "Task work"], ["manpower", "Manpower"], ["materials", "Materials"]].map(([section, title]) => <button key={section} type="button" onClick={() => { setOverview(false); setTab(section); }} className="flex items-center justify-between gap-3 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-left"><span><span className="block text-sm font-bold">{title}: {resource(section)?.data?.count ?? "Loading"}</span><span className="mt-1 block text-xs text-[#716658]">{resource(section)?.error ? "Could not load records" : !resource(section)?.data ? "Loading records..." : resource(section).data.count ? "View recorded entries" : "No " + title.toLowerCase() + " recorded yet"}</span></span><span className="text-xs text-[#3565A5]">Open</span></button>)}</div>
+            <header className={(submittedReport || guidedDraft ? "hidden " : "") + "rare-page-header flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5"}><div><div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#716658]"><CalendarDays size={16} aria-hidden="true" />Daily report</div><h2 className="text-xl font-semibold tracking-tight text-[#211E1A] sm:text-2xl">{formatDate(report.report_date)}</h2><p className="mt-2 text-sm leading-6 text-[#716658]">Prepared by {report.reported_by_name || "Supervisor"}</p></div><div className="space-y-2"><ReportStatusBadge status={report.status} /><p className="text-sm text-[#716658]">{report.work_entry_count ?? 0} task work entries{report.status === "SUBMITTED" ? " · Read-only report" : " · Private draft"}</p></div></header>
+            {submittedReport && <nav ref={reportTabsRef} aria-label="Report sections" className="report-detail-tab-row report-section-tabs flex flex-wrap gap-2 border-b border-[#E7DED2]">{[["overview", "Overview"], ["diary", "Site diary"], ["work-entries", "Task work"], ["manpower", "Manpower"], ["materials", "Materials"], ["attachments", "Attachments"]].map(([id, label]) => <button key={id} type="button" disabled={Boolean(busy)} aria-pressed={id === "overview" ? overview : !overview && tab === id} onClick={() => leaveEditor(() => { setOverview(id === "overview"); if (id !== "overview") setTab(id); })} className={"border-b-2 px-3 py-3 text-xs font-semibold " + ((id === "overview" ? overview : !overview && tab === id) ? "border-[#211E1A]" : "border-transparent text-[#716658]")}>{label}{!["overview", "diary"].includes(id) && resource(id)?.data && <span className="ml-2">{resource(id).data.count}</span>}</button>)}</nav>}
+            {reportOverview && <div className="report-overview-grid grid grid-cols-1 items-start gap-4 lg:grid-cols-3 lg:gap-5">
+                <section className="min-w-0 lg:col-span-2 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5"><div className="mb-4 flex items-center justify-between"><h2 className="text-sm font-bold">Site diary</h2><button type="button" onClick={() => { setOverview(false); setTab("diary"); }} className="text-xs text-[#3565A5]">Open full diary</button></div><dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">{[["Work summary", "work_summary"], ["Site condition", "site_condition"], ["Site notes", "site_notes"], ["Issues & safety observations", "issues"], ["Next day plan", "next_day_plan"]].map(([label, field], index) => <div key={field} className={"rounded-xl bg-[#F5F0E7] p-4 " + (index === 0 ? "sm:col-span-2" : "")}><dt className="text-xs font-medium uppercase tracking-wide text-[#716658]">{label}</dt><dd className="mt-2 whitespace-pre-wrap break-words text-sm">{report[field] || "Not recorded"}</dd></div>)}</dl></section>
+                <section className="min-w-0 lg:col-span-3 lg:row-start-2 lg:w-1/2 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><div className="mb-4 flex items-center justify-between gap-2"><h2 className="text-sm font-bold">Attachments{resource("attachments")?.data ? ": " + resource("attachments").data.count : ""}</h2><button type="button" onClick={() => { setOverview(false); setTab("attachments"); }} className="text-xs text-[#3565A5]">Open</button></div>{sectionView("attachments", true)}</section>
+                <div className="min-w-0 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:col-start-3 lg:row-start-1 lg:grid-cols-1">{[["work-entries", "Task work"], ["manpower", "Manpower"], ["materials", "Materials"]].map(([section, title]) => <button key={section} type="button" onClick={() => { setOverview(false); setTab(section); }} className="flex items-center justify-between gap-3 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-left"><span><span className="block text-sm font-bold">{title}: {resource(section)?.data?.count ?? "Loading"}</span><span className="mt-1 block text-xs text-[#716658]">{resource(section)?.error ? "Could not load records" : !resource(section)?.data ? "Loading records..." : resource(section).data.count ? "View recorded entries" : "No " + title.toLowerCase() + " recorded yet"}</span></span><span className="text-xs text-[#3565A5]">Open</span></button>)}</div>
             </div>}
-            {guidedDraft ? <nav aria-label="Daily report steps" className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-3"><p className="mb-2 text-sm font-semibold sm:hidden">Step {guidedIndex + 1} of 3 · {guidedSteps[guidedIndex][1]}</p><ol className="grid grid-cols-3 gap-2">{guidedSteps.map(([id, title], index) => <li key={id}><button type="button" onClick={() => goStep(index)} aria-current={tab === id ? "step" : undefined} className={`rare-button w-full min-h-11 px-2 py-2 text-xs ${tab === id ? "rare-button-primary" : "rare-button-secondary"}`}><span className="hidden sm:inline">{title}</span><span className="sm:hidden">{index + 1}</span></button></li>)}</ol></nav> : <nav hidden={desktopReport} aria-label="Daily report sections" className="flex gap-2 overflow-x-auto rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-3">{reportTabs.map(([id, title]) => <button key={id} type="button" disabled={Boolean(busy)} aria-pressed={tab === id} className={`rare-button shrink-0 ${tab === id ? "rare-button-primary" : "rare-button-secondary"}`} onClick={() => { if (id !== tab) leaveEditor(() => setTab(id)); }}>{id === "review" && (role === "ADMIN" || report.status === "SUBMITTED") ? "Report overview" : title}</button>)}</nav>}
+            {guidedDraft ? <nav aria-label="Daily report steps" className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-3"><p className="mb-2 text-sm font-semibold sm:hidden">Step {guidedIndex + 1} of 3 · {guidedSteps[guidedIndex][1]}</p><ol className="grid grid-cols-3 gap-2">{guidedSteps.map(([id, title], index) => <li key={id}><button type="button" onClick={() => goStep(index)} aria-current={tab === id ? "step" : undefined} className={`rare-button w-full min-h-11 px-2 py-2 text-xs ${tab === id ? "rare-button-primary" : "rare-button-secondary"}`}><span>{title}</span></button></li>)}</ol></nav> : <nav ref={draftTabsRef} hidden={submittedReport} aria-label="Daily report sections" className="report-detail-tab-row flex gap-2 overflow-x-auto rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-3">{reportTabs.map(([id, title]) => <button key={id} type="button" disabled={Boolean(busy)} aria-pressed={tab === id} className={`rare-button shrink-0 ${tab === id ? "rare-button-primary" : "rare-button-secondary"}`} onClick={() => { if (id !== tab) leaveEditor(() => setTab(id)); }}>{id === "review" && (role === "ADMIN" || report.status === "SUBMITTED") ? "Report overview" : title}</button>)}</nav>}
             {choices?.key === choiceKey && choices.error && <p role="alert" className="text-sm text-red-700">{choices.error}<button type="button" className={`${action} ml-3`} onClick={() => setChoiceRevision((v) => v + 1)}>Retry choices</button></p>}
             {allowEditor && !guidedDraft && editing?.section === "diary" && <ReportDiaryForm report={report} busy={editorBusy} onSave={(payload) => mutate("diary", payload)} onCancel={() => leaveEditor(() => {})} />}
             {allowEditor && !guidedDraft && editing?.section === "work-entries" && <ReportWorkForm key={`${editing.row?.id || "new"}:${editing.correction || false}`} initial={editing.row} correction={editing.correction} tasks={choiceData} drafts={choiceData} onTaskSearch={(value) => { setTaskSearch(value); setTaskPage(1); }} onTaskPage={(delta) => setTaskPage((v) => Math.max(1, v + delta))} onDraftPage={(delta) => setDraftPage((v) => Math.max(1, v + delta))} busy={editorBusy} onSave={(payload) => mutate(editing.correction ? "correct" : "row", payload, "work-entries", editing.row?.id)} onCancel={() => leaveEditor(() => {})} />}
             {allowEditor && !guidedDraft && ["manpower", "materials"].includes(editing?.section) && <ReportRowForm key={`${editing.section}:${editing.row?.id || "new"}`} section={editing.section} initial={editing.row} busy={editorBusy} onSave={(payload) => mutate("row", payload, editing.section, editing.row?.id)} onCancel={() => leaveEditor(() => {})} />}
             {allowEditor && !guidedDraft && editing?.section === "attachments" && <ReportAttachmentForm entries={resource("work-entries")?.data} onPage={(delta) => changePage("work-entries", delta)} busy={editorBusy} onSave={(payload, onUploaded) => mutate("upload", payload, "attachments", null, onUploaded)} onCancel={() => leaveEditor(() => {})} />}
-            {!desktopOverview && tab === "diary" && <>{guidedDraft ? <ReportDiaryForm report={report} guided busy={editorBusy} onSave={(payload) => mutate("diary", payload)} onCancel={() => {}} /> : <>{canEdit && !editing && <button type="button" className={primaryAction} onClick={() => setEditing({ section: "diary" })}>Edit Draft Diary</button>}<div className="report-diary-tab"><DailyReportSummary report={report} /></div></>}</>}
-            {guidedDraft && tab === "activity" && <><p className="text-sm text-[#716658]">Task work {resource("work-entries")?.data?.count ?? 0} · Manpower {resource("manpower")?.data?.count ?? 0} · Materials {resource("materials")?.data?.count ?? 0}</p><section className="space-y-3">{[["work-entries", "Task work"], ["manpower", "Manpower"], ["materials", "Materials"]].map(([section, title]) => { const count = resource(section)?.data?.count ?? 0; const open = activityOpen[section] ?? count > 0; const id = "guided-" + section; return <section key={section} className="overflow-hidden rounded-2xl border border-[#E7DED2] bg-[#FFFDFA]"><div className="flex items-center gap-2 p-2"><button type="button" aria-expanded={open} aria-controls={id} onClick={() => setActivityOpen((current) => ({ ...current, [section]: !open }))} className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-2 text-left font-semibold focus-visible:outline-2"><span className="truncate">{title}</span><span className="rounded-full bg-[#F1EADF] px-2.5 py-1 text-xs">{count}</span></button>{canEdit && <button type="button" className={action} disabled={Boolean(busy)} onClick={() => { setActivityOpen((current) => ({ ...current, [section]: true })); setEditing({ section }); }}><Plus size={16}/>Add</button>}</div><div id={id} hidden={!open} className="space-y-3 border-t border-[#EDE5DA] p-3">{sectionView(section)}{guidedEditor(section)}</div>{!count && !open && <p className="px-4 pb-3 text-sm text-[#716658]">No {section === "work-entries" ? "task work" : section} recorded yet</p>}</section>; })}</section></>}
-            {guidedDraft && tab === "photos-submit" && <div className="space-y-5"><section className="space-y-3 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><h2 className="text-base font-semibold text-[#211E1A]">Photos</h2>{sectionView("attachments")}{editing?.section === "attachments" ? <ReportAttachmentForm entries={resource("work-entries")?.data} onPage={(delta) => changePage("work-entries", delta)} busy={editorBusy} onSave={(payload, onUploaded) => mutate("upload", payload, "attachments", null, onUploaded)} onCancel={() => setEditing(null)} /> : canEdit && <button type="button" className={action} onClick={() => setEditing({ section: "attachments" })}>Take photo / Choose files</button>}</section><section className="space-y-3 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><h2 className="text-base font-semibold text-[#211E1A]">Review checklist</h2>{[["Diary", Boolean(report.work_summary?.trim()), 0], ["Site activity", true, 1], ["Photos & Submit", true, 2]].map(([label, done, index]) => <div key={label} className="flex min-h-11 items-center gap-3 border-b border-[#E7DED2] py-2"><span aria-hidden="true">{done ? "✓" : "○"}</span><span className="min-w-0 flex-1 text-sm">{label}{label === "Site activity" ? " · Task work " + (resource("work-entries")?.data?.count ?? 0) + " · Manpower " + (resource("manpower")?.data?.count ?? 0) + " · Materials " + (resource("materials")?.data?.count ?? 0) : ""}</span>{!done && <button type="button" onClick={() => goStep(index)} className="min-h-11 px-3 text-sm text-[#514538] underline">Fix</button>}</div>)}<p className="text-sm leading-6 text-[#716658]">No-work reports are valid when the diary explains why no work took place. Submission does not complete tasks or verify measurements.</p></section></div>}
-            {!desktopOverview && !guidedDraft && !["diary", "review"].includes(tab) && <div className="report-section-panel space-y-5 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#E7DED2] pb-4"><div><h3 className="text-base font-semibold text-[#211E1A]">{reportTabs.find(([id]) => id === tab)?.[1]}</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716658]">{{ "work-entries": "Reported work and measurements, with an individual verification status for each task.", manpower: "Site workforce, trades and working hours recorded for the day.", materials: "Material observations recorded on site for this report.", attachments: "Private site photographs and documents. Select Preview to view supporting evidence." }[tab]}</p></div>{canEdit && !editing && <button type="button" className={primaryAction} onClick={() => { setEditing({ section: tab }); setError(""); }}><Plus size={16} aria-hidden="true" />Add {tab === "attachments" ? "attachments" : "record"}</button>}</div>{sectionView(tab)}</div>}
-            {!desktopOverview && tab === "review" && !guidedDraft && <div className="space-y-5"><DailyReportSummary report={report} />{["work-entries", "manpower", "materials", "attachments"].map((section) => <section key={section} className="space-y-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5"><h3 className="text-base font-semibold text-[#211E1A]">{formatText(section)}</h3>{sectionView(section, true)}</section>)}{canEdit && <div className="rounded-2xl border border-[#E7DED2] bg-[#F1EADF] p-4"><p className="mb-4 text-sm text-[#716658]">A saved work summary is required. No-work reports are valid when the diary explains why no work took place. Submission does not complete tasks or verify measurements.</p><button type="button" disabled={Boolean(busy) || !report.work_summary?.trim() || ["work-entries", "manpower", "materials", "attachments"].some((section) => !resource(section)?.data)} className={submitAction} onClick={() => mutate("submit")}>Confirm and Submit Report</button></div>}</div>}
+            {!reportOverview && tab === "diary" && <>{guidedDraft ? <ReportDiaryForm report={report} guided workSummaryError={workSummaryError} {...draftProps("diary", Object.fromEntries(["report_date", "weather_condition", "site_condition", "work_summary", "site_notes", "issues", "next_day_plan"].map((field) => [field, report[field] || ""])), "diary")} busy={editorBusy} onSave={(payload) => mutate("diary", payload)} onCancel={() => {}} /> : <>{canEdit && !editing && <button type="button" className={primaryAction} onClick={() => setEditing({ section: "diary" })}>Edit Draft Diary</button>}<div className="report-diary-tab"><DailyReportSummary report={report} /></div></>}</>}
+            {guidedDraft && tab === "activity" && <><p className="text-sm text-[#716658]">Task work {resource("work-entries")?.data?.count ?? 0} · Manpower {resource("manpower")?.data?.count ?? 0} · Materials {resource("materials")?.data?.count ?? 0}</p><section className="space-y-3">{[["work-entries", "Task work"], ["manpower", "Manpower"], ["materials", "Materials"]].map(([section, title]) => { const count = resource(section)?.data?.count ?? 0; const open = activityOpen[section] ?? count > 0; const id = "guided-" + section; return <section key={section} className="overflow-hidden rounded-2xl border border-[#E7DED2] bg-[#FFFDFA]"><div className="flex items-center gap-2 p-2"><button type="button" aria-expanded={open} aria-controls={id} onClick={() => setActivityOpen((current) => ({ ...current, [section]: !open }))} className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-2 text-left font-semibold focus-visible:outline-2"><span className="truncate">{title}</span><span className="rounded-full bg-[#F1EADF] px-2.5 py-1 text-xs">{count}</span></button>{canEdit && <button type="button" className={action} disabled={Boolean(busy)} onClick={() => { setActivityOpen((current) => ({ ...current, [section]: true })); openGuidedEditor({ section }); }}><Plus size={16}/>Add</button>}</div><div id={id} hidden={!open} className="space-y-3 border-t border-[#EDE5DA] p-3">{sectionView(section)}{guidedEditor(section)}</div>{!count && !open && <p className="px-4 pb-3 text-sm text-[#716658]">No {section === "work-entries" ? "task work" : section} recorded yet</p>}</section>; })}</section></>}
+            {guidedDraft && tab === "photos-submit" && <div className="space-y-5"><section className="space-y-3 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><h2 className="text-base font-semibold text-[#211E1A]">Photos</h2>{sectionView("attachments")}{editing?.section === "attachments" ? <ReportAttachmentForm {...draftProps("attachments", { files: [], caption: "", task_work: "" }, "attachments")} entries={resource("work-entries")?.data} onPage={(delta) => changePage("work-entries", delta)} busy={editorBusy} onSave={(payload, onUploaded) => mutate("upload", payload, "attachments", null, onUploaded)} onCancel={() => setEditing(null)} /> : canEdit && <button type="button" className={action} onClick={() => setEditing({ section: "attachments" })}>Take photo / Choose files</button>}</section><section className="space-y-3 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><h2 className="text-base font-semibold text-[#211E1A]">Review checklist</h2>{[["Diary", Boolean(report.work_summary?.trim()), 0], ["Site activity", true, 1], ["Photos & Submit", true, 2]].map(([label, done, index]) => <div key={label} className="flex min-h-11 items-center gap-3 border-b border-[#E7DED2] py-2"><span aria-hidden="true">{done ? "✓" : "○"}</span><span className="min-w-0 flex-1 text-sm">{label}{label === "Site activity" ? " · Task work " + (resource("work-entries")?.data?.count ?? 0) + " · Manpower " + (resource("manpower")?.data?.count ?? 0) + " · Materials " + (resource("materials")?.data?.count ?? 0) : ""}</span>{!done && <button type="button" onClick={() => goStep(index)} className="min-h-11 px-3 text-sm text-[#514538] underline">Fix</button>}</div>)}<p className="text-sm leading-6 text-[#716658]">No-work reports are valid when the diary explains why no work took place. Submission does not complete tasks or verify measurements.</p></section></div>}
+            {!reportOverview && !guidedDraft && !["diary", "review"].includes(tab) && <div className="report-section-panel space-y-5 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#E7DED2] pb-4"><div><h3 className="text-base font-semibold text-[#211E1A]">{reportTabs.find(([id]) => id === tab)?.[1]}</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-[#716658]">{{ "work-entries": "Reported work and measurements, with an individual verification status for each task.", manpower: "Site workforce, trades and working hours recorded for the day.", materials: "Material observations recorded on site for this report.", attachments: "Private site photographs and documents. Select Preview to view supporting evidence." }[tab]}</p></div>{canEdit && !editing && <button type="button" className={primaryAction} onClick={() => { setEditing({ section: tab }); setError(""); }}><Plus size={16} aria-hidden="true" />Add {tab === "attachments" ? "attachments" : "record"}</button>}</div>{sectionView(tab)}</div>}
+            {!reportOverview && tab === "review" && !guidedDraft && <div className="space-y-5"><DailyReportSummary report={report} />{["work-entries", "manpower", "materials", "attachments"].map((section) => <section key={section} className="space-y-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5"><h3 className="text-base font-semibold text-[#211E1A]">{formatText(section)}</h3>{sectionView(section, true)}</section>)}{canEdit && <div className="rounded-2xl border border-[#E7DED2] bg-[#F1EADF] p-4"><p className="mb-4 text-sm text-[#716658]">A saved work summary is required. No-work reports are valid when the diary explains why no work took place. Submission does not complete tasks or verify measurements.</p><button type="button" disabled={Boolean(busy) || !report.work_summary?.trim() || ["work-entries", "manpower", "materials", "attachments"].some((section) => !resource(section)?.data)} className={submitAction} onClick={() => mutate("submit")}>Confirm and Submit Report</button></div>}</div>}
         </>}
-        {guidedDraft && <footer className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-[#E7DED2] bg-[#FFFDFA] p-3 shadow-lg"><button type="button" disabled={guidedIndex === 0 || Boolean(busy)} onClick={() => goStep(guidedIndex - 1)} className={action}>Back</button>{guidedIndex === guidedSteps.length - 1 ? <button type="button" className={submitAction} disabled={Boolean(busy)} onClick={() => mutate("submit")}>Submit report</button> : <button type="button" className={primaryAction} disabled={Boolean(busy)} onClick={() => goStep(guidedIndex + 1)}>Next</button>}</footer>}
+        {guidedDraft && <footer className="report-draft-actions flex items-center justify-between gap-3 border border-[#E7DED2] bg-[#FFFDFA] p-3 shadow-lg"><button type="button" disabled={guidedIndex === 0 || Boolean(busy)} onClick={() => goStep(guidedIndex - 1)} className={action}>Back</button>{guidedIndex === guidedSteps.length - 1 ? <button type="button" className={submitAction} disabled={Boolean(busy)} onClick={() => mutate("submit")}>Submit report</button> : <button type="button" className={primaryAction} disabled={Boolean(busy)} onClick={() => goStep(guidedIndex + 1)}>Next</button>}</footer>}
     </section>;
 }
 

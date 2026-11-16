@@ -591,7 +591,7 @@ dialog :where(input, textarea)::placeholder { color: #716658; opacity: 1; }
     .supervisor-project-delays .project-delay-register select[aria-label="Sort delay reports"] option { color: #211E1A; }
 }
 
-@media (min-width: 1024px) {
+@media all {
     .project-reports-desktop-theme { display: flex; flex-direction: column; gap: 16px; }
     .project-reports-desktop-theme > * { margin-block: 0; order: 6; }
     .project-reports-desktop-theme > nav[aria-label="Breadcrumb"] { order: 0; }
@@ -608,7 +608,7 @@ dialog :where(input, textarea)::placeholder { color: #716658; opacity: 1; }
     .project-reports-desktop-theme > section[aria-label="Daily report search and filters"] > div:first-child { gap: 8px; }
     .project-reports-desktop-theme .report-desktop-sort { order: 3; }
     .project-reports-desktop-theme > .project-report-register-heading { display: none; }
-    .project-reports-desktop-theme > .project-report-cards { order: 5; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .project-reports-desktop-theme > .project-report-cards { order: 5; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 16px; }
     .project-reports-desktop-theme .project-report-cards > article { border-radius: 12px; border-left: 3px solid #24A66A; }
     .project-reports-desktop-theme .project-report-cards > article > div:first-child { border-bottom: 0; background: transparent; padding: 16px 16px 0; }
     .project-reports-desktop-theme .project-report-cards > article > div:first-child > div > span { display: none; }
@@ -1094,6 +1094,11 @@ dialog :where(input, textarea)::placeholder { color: #716658; opacity: 1; }
     .admin-project-workspace > div.grid a { min-height: 100px; padding: 12px 8px; }
 }
 
+@media (max-width: 1023px) {
+    .rare-tasks.admin-project-task-page > header.task-hero { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    .admin-project-task-page > header > div > div > p,
+    .admin-project-task-page > header > div > div > a { display: none; }
+}
 @media (min-width: 1024px) {
     .admin-project-task-page { display: grid; grid-template-columns: minmax(0, 1fr) 360px; align-items: center; gap: 16px; }
     .admin-project-task-page > * { grid-column: 1 / -1; margin-block: 0; min-width: 0; }
@@ -1609,3 +1614,65 @@ dialog :where(input, textarea)::placeholder { color: #716658; opacity: 1; }
     .activity-unified-toolbar .activity-unified-search > section > div:first-child > div > div > div { flex-basis: 0; }
     .activity-unified-toolbar > label { display: flex; align-items: center; height: 38px; margin: 0; }
 }
+
+/* Daily reports share one card and detail design across phone, tablet and desktop. */
+.daily-report-workspace,
+.daily-report-project-picker,
+.daily-report-detail { min-width: 0; width: 100%; }
+.daily-report-detail :where(section, article, form, fieldset, dl, nav),
+.daily-report-workspace .project-report-cards > article { min-width: 0; max-width: 100%; }
+.daily-report-detail fieldset { margin: 0; }
+.daily-report-detail :where(input, select, textarea) { width: 100%; }
+.daily-report-detail :where(input[type="checkbox"], input[type="radio"]) { width: auto; flex-shrink: 0; }
+.daily-report-detail [hidden] { display: none !important; }
+.report-section-tabs > button { flex: 1 1 auto; min-width: 0; }
+.report-draft-actions {
+    position: sticky;
+    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    z-index: 30;
+    border-radius: .875rem;
+    margin-top: 1.25rem;
+}
+.report-draft-actions > button { min-width: 0; flex: 1; }
+@media (max-width: 1023px) {
+    .project-reports-desktop-theme { gap: 1rem; }
+    .project-reports-desktop-theme > header > div:last-child { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .project-reports-desktop-theme > section[aria-label="Daily report search and filters"] { width: 100%; }
+    .project-reports-desktop-theme .project-report-metrics section { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .project-reports-desktop-theme .project-report-cards > article > div:first-child { flex-wrap: wrap; gap: .75rem; }
+    .project-reports-desktop-theme .project-report-cards > article > div:nth-child(2) > div:last-of-type { gap: .75rem; }
+    .daily-report-detail { padding-bottom: 1rem; }
+    .daily-report-detail > header { padding: 1rem; }
+    .daily-report-detail > header > div > div { min-width: 0; }
+    .daily-report-detail > header > dl > div { min-width: 0; }
+    .daily-report-detail > header.rare-page-header.hidden { display: none; }
+    .daily-report-detail .report-detail-tab-row { min-width: 0; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; }
+    .daily-report-detail .report-section-tabs { gap: .25rem; padding-bottom: .25rem; }
+    .daily-report-detail .report-detail-tab-row > button { flex: 0 0 auto; white-space: nowrap; }
+    .report-overview-grid > section { padding: 1rem; }
+    .report-overview-grid > section > div:first-child { gap: .75rem; }
+    .daily-report-detail .report-section-records { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+    .daily-report-detail .report-section-records > * { margin-block: 0; }
+    .daily-report-project-picker > header > a { display: inline-flex; }
+}
+@media (max-width: 639px) {
+    .daily-report-workspace > header { align-items: flex-start; gap: .75rem; }
+    .daily-report-workspace > header > div:last-child { width: 100%; }
+    .daily-report-workspace > header > div:last-child > button:last-child:not(:first-child) { flex: 1; }
+    .daily-report-detail form { padding: 1rem; }
+    .daily-report-detail form :where(label, fieldset) { min-width: 0; }
+    .daily-report-detail form > div:last-child > button { flex: 1 1 8rem; }
+    .daily-report-detail input[type="file"] { padding-inline: .5rem; }
+    .daily-report-detail nav[aria-label="Daily report steps"] { padding: .5rem; }
+    .daily-report-detail nav[aria-label="Daily report steps"] ol { gap: .375rem; }
+    .daily-report-detail nav[aria-label="Daily report steps"] button { padding: .625rem .25rem; font-size: .75rem; }
+    .daily-report-project-picker > div { flex-wrap: nowrap; align-items: flex-end; gap: .5rem; }
+    .daily-report-project-picker > div > div { flex-basis: 0; }
+    .daily-report-project-picker > div > button { flex-shrink: 0; }
+}
+@media (min-width: 1024px) {
+    .report-draft-actions { bottom: 1rem; }
+}
+
+.daily-report-detail > .report-guided-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: .75rem; }
+.daily-report-detail > .report-guided-header > details { margin-top: .25rem; }
