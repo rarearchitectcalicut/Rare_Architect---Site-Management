@@ -4,6 +4,7 @@ import { ArrowUpRight, Building2, ChevronLeft, ChevronRight, Filter, FolderKanba
 import { projectApi } from "../../api/projectApi";
 import AddProject from "../../modal/admin/AddProject";
 import HorizontalProjectCard from "../../components/projects/HorizontalProjectCard";
+import { DesktopProjectCard, DesktopProjectStatusTabs } from "../../components/projects/DesktopProjects";
 import LoadingScreen from "../../components/LoadingScreen";
 import { validationMessage } from "../../hooks/useApprovalReview";
 import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
@@ -21,17 +22,17 @@ function projectPage(response, page = 1, pageSize = 12) {
     return { ...response, next: Boolean(response.next), previous: Boolean(response.previous) };
 }
 
-function ProjectFilters({ filters, categories, categoryLoading, onChange, onReset, suggestions, loading }) {
+function ProjectFilters({ filters, categories, categoryLoading, onChange, onReset, suggestions, loading, desktop = false }) {
     const [searchReset, setSearchReset] = useState(0);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const filterButtonRef = useRef(null);
     const filterCount = Number(Boolean(filters.category)) + Number(Boolean(filters.status)) + Number(filters.ordering !== "-created_at");
     const search = filters.search;
     const setSearch = (value) => onChange({ search: value });
-    return <section aria-label="Project search and filters" className="space-y-3">
+    return <section aria-label="Project search and filters" className={desktop ? "desktop-project-filters" : "space-y-3"}>
         <div className="flex w-full min-w-0 items-center gap-2">
             <ProjectSearch suggestionsFiltered key={searchReset} query={search} onSearch={setSearch} suggestions={suggestions} loading={loading} label="Search projects" labelClassName="sr-only" placeholder="Name, client or location" className="min-w-0 flex-1" />
-            <button ref={filterButtonRef} type="button" onClick={() => setFiltersOpen(true)} aria-label={`Filters and sorting, ${filterCount} active filters`} className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#E7DED2] bg-[#FFFDFA] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]">
+            <button ref={filterButtonRef} type="button" onClick={() => setFiltersOpen(true)} aria-label={`Filters and sorting, ${filterCount} active filters`} className={`relative flex shrink-0 items-center justify-center rounded-lg border border-[#E7DED2] bg-[#FFFDFA] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] ${desktop ? "h-10 w-10" : "h-12 w-12"}`}>
                 <Filter size={18} aria-hidden="true" />
                 {filterCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#211E1A] px-1 text-xs font-semibold text-[#FFFDFA]">{filterCount}</span>}
             </button>
@@ -108,6 +109,7 @@ export function ProjectDirectory({ role = "ADMIN", section = "" }) {
     const data = current?.data;
     const loading = !current;
     const admin = role === "ADMIN";
+    const desktopDirectory = section === "" || section === "documents";
     const hasFilters = Boolean(filters.search || filters.category || filters.status);
     const categories = categoryState?.data || [];
     const prefix = admin ? "/admin" : "/supervisor";
@@ -169,7 +171,7 @@ export function ProjectDirectory({ role = "ADMIN", section = "" }) {
     const pageCount = data ? Math.max(1, Math.ceil(data.count / pageSize)) : 1;
     return <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-4 pb-8 text-[#211E1A] sm:space-y-5">
         {!result && loading && <LoadingScreen message="Loading project directory..." />}
-        <header className="flex w-full items-center justify-between gap-3">
+        <header className={`flex w-full items-center justify-between gap-3 ${desktopDirectory ? "lg:hidden" : ""}`}>
             <h1 className="min-w-0 truncate text-xl font-bold tracking-tight text-[#211E1A]">{section === "documents" ? "Project Documents" : admin ? "All Projects" : "My Projects"}</h1>
             <div className="ml-auto flex shrink-0 items-center gap-2">
                 {admin && section !== "documents" && <button type="button" aria-label="Add project" onClick={() => setShowAddProject(true)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#D7C8B5] bg-[#FFFDFA] px-3 py-2 text-sm font-semibold text-[#514538] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"><Plus size={18} aria-hidden="true" /><span className="hidden sm:inline">Add Project</span></button>}
@@ -178,10 +180,18 @@ export function ProjectDirectory({ role = "ADMIN", section = "" }) {
                 </button>
             </div>
         </header>
-        <ProjectFilters filters={filters} categories={categories} categoryLoading={!categoryState} onChange={change} onReset={resetFilters} loading={loading} suggestions={(data?.results || []).map((project) => ({ id: project.id, name: project.name, context: project.location, to: `${prefix}/projects/${project.id}${section === "documents" ? "/documents" : ""}` }))} />
+        {desktopDirectory && <div className="hidden space-y-3 lg:block">
+<div className="flex items-center justify-between gap-4"><h1 className="text-xl font-bold tracking-tight">{section === "documents" ? "Project Documents" : admin ? "All Projects" : "My Projects"}</h1>
+<div className="desktop-project-toolbar flex min-w-0 items-center gap-2">
+{admin && section !== "documents" && <button type="button" aria-label="Add project" onClick={() => setShowAddProject(true)} className="flex h-10 items-center gap-1 rounded-lg border border-[#E7DED2] bg-[#FFFDFA] px-3 text-xs font-semibold"><Plus size={14} />Add Project</button>}
+<div className="w-[310px] min-w-0 [&_input]:h-10 [&_input]:min-h-10 [&_input]:rounded-lg [&_input]:py-2 [&_input]:text-xs"><ProjectFilters desktop filters={filters} categories={categories} categoryLoading={!categoryState} onChange={change} onReset={resetFilters} loading={loading} suggestions={(data?.results || []).map((project) => ({ id: project.id, name: project.name, context: project.location, to: `${prefix}/projects/${project.id}${section === "documents" ? "/documents" : ""}` }))} /></div>
+
+<button type="button" aria-label="Refresh projects" disabled={loading} onClick={() => setRevision((value) => value + 1)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E7DED2] bg-[#FFFDFA] focus-visible:outline-2 focus-visible:outline-[#94651D]"><RefreshCw size={14} className={loading ? "motion-safe:animate-spin" : ""} /></button>
+</div></div><div className="flex min-w-0 items-center justify-between gap-4"><DesktopProjectStatusTabs filters={filters} onChange={change} revision={revision} /><div className="desktop-project-toolbar flex shrink-0 items-center"><div role="group" aria-label="Desktop project view" className="flex h-10 shrink-0 items-center gap-2">{[["list", "List", List], ["grid", "Gallery", LayoutGrid]].map(([value, label, Icon]) => <button key={value} type="button" aria-label={label + " view"} aria-pressed={layout === value} onClick={() => change({ view: value }, false)} className={"flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E7DED2] focus-visible:outline-2 focus-visible:outline-[#94651D] " + (layout === value ? "bg-[#FFFDFA] text-[#211E1A] shadow-sm" : "bg-[#F1EADF] text-[#817669]")}><Icon size={14} /></button>)}</div></div></div></div>}
+        <div className={desktopDirectory ? "lg:hidden" : ""}><ProjectFilters filters={filters} categories={categories} categoryLoading={!categoryState} onChange={change} onReset={resetFilters} loading={loading} suggestions={(data?.results || []).map((project) => ({ id: project.id, name: project.name, context: project.location, to: `${prefix}/projects/${project.id}${section === "documents" ? "/documents" : ""}` }))} /></div>
         {categoryState?.error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E8CE94] bg-[#FFF8E7] p-4"><p className="text-sm leading-6 text-[#795016]">{categoryState.error}</p><button type="button" className={button} onClick={() => { setCategoryState(null); setCategoryRevision((value) => value + 1); }}>Retry categories</button></div>}
         <section aria-label="Project directory" aria-busy={loading} className="space-y-4">
-            <div className="flex w-full min-w-0 items-center justify-between gap-3">
+            <div className={`flex w-full min-w-0 items-center justify-between gap-3 ${desktopDirectory ? "lg:hidden" : ""}`}>
                 <p ref={resultsRef} tabIndex={-1} role="status" aria-live="polite" className="min-w-0 truncate text-sm font-medium text-[#665C50] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#94651D]">{loading ? "Updating projects..." : current.error ? "Projects are unavailable" : `${data.count} ${data.count === 1 ? "project" : "projects"}`}</p>
                 <div role="group" aria-label="Project view" className="ml-auto inline-flex shrink-0 gap-1 rounded-2xl border border-[#D8C7B2] bg-[#F1EADF] p-1">
                     {[["list", "List", List], ["grid", "Gallery", LayoutGrid]].map(([value, label, Icon]) => <button key={value} type="button" aria-label={`${label} view`} aria-pressed={layout === value} onClick={() => change({ view: value }, false)} className={`inline-flex h-11 w-11 min-h-11 items-center justify-center rounded-xl p-0 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#94651D] motion-reduce:transition-none ${layout === value ? "bg-[#FFFDFA] text-[#352D24] shadow-sm" : "text-[#66543D] hover:bg-white/60"}`}><Icon size={18} aria-hidden="true" /></button>)}
@@ -190,12 +200,12 @@ export function ProjectDirectory({ role = "ADMIN", section = "" }) {
             {loading && <div role="status" className="rounded-[24px] border border-[#E2D6C6] bg-[#FFFDFA] p-6"><div className="mb-5 flex items-center gap-3 text-sm font-semibold text-[#66543D]"><LoaderCircle size={20} aria-hidden="true" className="motion-safe:animate-spin" />Finding your projects...</div><div aria-hidden="true" className="space-y-4">{[0, 1, 2].map((value) => <div key={value} className="flex gap-5 rounded-2xl bg-[#F5EFE6] p-5 motion-safe:animate-pulse"><div className="hidden h-24 w-28 shrink-0 rounded-xl bg-[#E8DDCD] sm:block" /><div className="flex-1 space-y-4 py-2"><div className="h-4 w-1/3 rounded-full bg-[#E3D6C4]" /><div className="h-3 w-2/3 rounded-full bg-[#E8DDCD]" /><div className="h-3 w-1/2 rounded-full bg-[#E8DDCD]" /></div></div>)}</div></div>}
             {current?.error && <div role="alert" className="rounded-[24px] border border-[#E7BDB5] bg-[#FFF5F2] p-6"><h3 className="text-lg font-bold text-[#943C2D]">Unable to load projects</h3><p className="mt-2 text-base leading-7 text-[#803D32]">{current.error}</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" className={button} onClick={() => setRevision((value) => value + 1)}>Try again</button><button type="button" className={button} onClick={resetFilters}>Reset filters and page</button></div></div>}
             {data && <>
-                {!!data.results.length && <div className={`project-directory-enter grid gap-4 ${layout === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>{data.results.map((project) => <HorizontalProjectCard key={project.id} project={project} layout={layout} to={`${prefix}/projects/${project.id}${section === "documents" ? "/documents" : ""}`} actionLabel={section === "documents" ? "Open documents" : "View Project"} />)}</div>}
+                {!!data.results.length && <div className={`project-directory-enter grid gap-4 ${layout === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>{data.results.map((project) => <div key={project.id} className="min-w-0">{desktopDirectory && <div className="hidden h-full lg:block"><DesktopProjectCard project={project} to={`${prefix}/projects/${project.id}${section === "documents" ? "/documents" : ""}`} /></div>}<div className={desktopDirectory ? "h-full lg:hidden" : "h-full"}><HorizontalProjectCard project={project} layout={layout} to={`${prefix}/projects/${project.id}${section === "documents" ? "/documents" : ""}`} actionLabel={section === "documents" ? "Open documents" : "View Project"} /></div></div>)}</div>}
                 {!data.results.length && <div className="rounded-[24px] border border-dashed border-[#CCB99F] bg-[#FFFDFA] px-6 py-14 text-center"><span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#F3E7D5] text-[#8A6840]"><FolderKanban size={30} strokeWidth={1.5} aria-hidden="true" /></span><h3 className="mt-5 text-xl font-bold text-[#352D24]">{hasFilters ? "No matching projects" : admin ? "Your next project starts here" : "No projects assigned yet"}</h3><p className="mx-auto mt-3 max-w-md text-base leading-7 text-[#716658]">{hasFilters ? "Try a different name, category or status to find the project you need." : admin ? "Create a project to start organising its tasks, site records and team." : "Projects will appear here when an Administrator assigns them to you."}</p>{hasFilters ? <button type="button" className={`${button} mt-6`} onClick={resetFilters}>Clear filters</button> : admin && <button type="button" className={`${primaryButton} mt-6`} onClick={() => setShowAddProject(true)}><Plus size={19} aria-hidden="true" />Add Project</button>}</div>}
                 {pageCount > 1 && <div className="flex flex-col gap-4 rounded-[22px] border border-[#E2D6C6] bg-[#FFFDFA] p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-3"><p role="status" className="text-sm font-semibold text-[#4F473D]">Showing {from}-{to} of {data.count}</p><label className="flex items-center gap-2 text-sm font-medium text-[#665C50]">Per page<select aria-label="Projects per page" value={pageSize} className="min-h-12 rounded-xl border border-[#D7C8B5] bg-[#FFFDFA] px-3 py-2 text-sm outline-none focus:border-[#94651D] focus:ring-2 focus:ring-[#E8D9BF]" onChange={(event) => change({ page_size: event.target.value })}>{[12, 24, 48].map((size) => <option key={size} value={size}>{size}</option>)}</select></label></div><nav aria-label="Project pagination" className="rare-pagination"><button type="button" className={button} disabled={!data.previous} onClick={() => changePage(page - 1)}><ChevronLeft size={18} aria-hidden="true" />Previous</button><span aria-live="polite" aria-atomic="true" className="text-sm text-[#716658]">Page {page} of {pageCount}</span><button type="button" className={button} disabled={!data.next} onClick={() => changePage(page + 1)}>Next<ChevronRight size={18} aria-hidden="true" /></button></nav></div>}
             </>}
         </section>
-        <footer className="flex items-center gap-2 px-1 text-sm leading-6 text-[#716658] max-[480px]:hidden"><Building2 size={16} aria-hidden="true" className="shrink-0" />{admin ? "Open any project to manage its team, tasks and site records." : "Open a project to access its tasks, daily reports and site records."}<ArrowUpRight size={15} aria-hidden="true" className="shrink-0" /></footer>
+        <footer className={`flex items-center gap-2 px-1 text-sm leading-6 text-[#716658] max-[480px]:hidden ${desktopDirectory ? "lg:hidden" : ""}`}><Building2 size={16} aria-hidden="true" className="shrink-0" />{admin ? "Open any project to manage its team, tasks and site records." : "Open a project to access its tasks, daily reports and site records."}<ArrowUpRight size={15} aria-hidden="true" className="shrink-0" /></footer>
         {admin && <AddProject open={showAddProject} onClose={() => setShowAddProject(false)} onCreated={(project) => { setShowAddProject(false); navigate(`/admin/projects/${project.id}`); }} />}
     </div>;
 }

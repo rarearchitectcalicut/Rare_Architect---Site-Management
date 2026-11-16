@@ -332,7 +332,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
             : "Site Supervisor";
 
     return (
-        <div className="space-y-5">
+        <div className="settings-account-profile space-y-5">
             {busyMessage && (
                 <LoadingScreen message={busyMessage} />
             )}
@@ -372,7 +372,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
             {profile && (
                 <>
                     {/* PROFILE HEADER */}
-                    <section className="overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
+                    <section className="settings-profile-sidebar overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
                         <div className="h-2 bg-linear-to-r from-[#CFBA9D] via-[#EEE5D8] to-[#DCE8EE]" />
 
                         <div className="p-5 sm:p-7">
@@ -448,7 +448,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                     </section>
 
                     {/* EDIT ACCOUNT INFORMATION */}
-                    <section className="rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
+                    <section className="settings-personal-information rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
                         <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
                             <div className="flex items-start gap-3">
                                 <span className="rounded-2xl bg-[#E9F0FC] p-3 text-[#3565A5]">

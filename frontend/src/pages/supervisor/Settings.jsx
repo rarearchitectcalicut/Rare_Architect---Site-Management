@@ -231,7 +231,7 @@ export default function SupervisorSettings() {
     const name = fullName(profile);
 
     return (
-        <div className="space-y-7 pb-8">
+        <div className="settings-page space-y-7 pb-8">
             {busyMessage && (
                 <LoadingScreen message={busyMessage} />
             )}
@@ -285,7 +285,7 @@ export default function SupervisorSettings() {
             {profile && (
                 <>
                     {/* PROFILE HEADER */}
-                    <section className="overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
+                    <section className="settings-profile-sidebar overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
                         <div className="h-2 bg-linear-to-r from-[#D5C0A4] via-[#F0E6D9] to-[#DDE8E1]" />
 
                         <div className="p-5 sm:p-7">
@@ -374,7 +374,7 @@ export default function SupervisorSettings() {
                     </section>
 
                     {/* PERSONAL DETAILS */}
-                    <section className="rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
+                    <section className="settings-personal-information rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
                         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-start gap-3">
                                 <span className="rounded-xl bg-[#E9F0FC] p-3 text-[#3565A5]">
@@ -482,8 +482,7 @@ export default function SupervisorSettings() {
                 </>
             )}
 
-            <ChangePasswordForm />
-            <PushPreferences />
+            <div className="settings-security-grid contents"><ChangePasswordForm /><PushPreferences /></div>
         </div>
     );
 }

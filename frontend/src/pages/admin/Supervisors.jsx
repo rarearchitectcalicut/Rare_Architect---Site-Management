@@ -282,7 +282,7 @@ export default function Supervisors() {
     ).length;
 
     return (
-        <div className="space-y-6 pb-6 sm:space-y-7">
+        <div className="admin-supervisor-directory space-y-6 pb-6 sm:space-y-7">
             <style>{pageCss}</style>
 
             {loading && (
@@ -297,7 +297,7 @@ export default function Supervisors() {
                     </p>
 
                     <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">
-                        Supervisors
+                        Supervisors <span className="ml-2 hidden rounded-full bg-[#F1EADF] px-3 py-1 align-middle text-sm font-semibold lg:inline-block">{loading ? "..." : supervisors.length}</span>
                     </h1>
 
                     <p className="mt-2 text-sm text-[#716658]">
@@ -337,7 +337,7 @@ export default function Supervisors() {
             </div>
 
             {/* SUMMARY */}
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-4 lg:hidden">
                 {[
                     ["Total", supervisors.length, UsersRound, "blue"],
                     ["Active", activeCount, UserCheck, "green"],
@@ -388,8 +388,9 @@ export default function Supervisors() {
                 ))}
             </div>
 
+            <div className="hidden items-center gap-5 text-sm text-[#716658] lg:flex"><span>Total <strong className="ml-1 text-[#211E1A]">{loading ? "..." : supervisors.length}</strong></span><span aria-hidden="true" className="text-[#CDBDAA]">|</span><span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#16A34A]" />Active <strong className="text-[#211E1A]">{loading ? "..." : activeCount}</strong></span><span aria-hidden="true" className="text-[#CDBDAA]">|</span><span>Inactive <strong className="ml-1 text-[#211E1A]">{loading ? "..." : supervisors.length - activeCount}</strong></span></div>
             {/* FILTERS */}
-            <section className="rare-rise" style={{ "--d": `${stagger(4, 70)}ms` }}>
+            <section className="supervisor-directory-toolbar rare-rise" style={{ "--d": `${stagger(4, 70)}ms` }}>
                 <SearchFilterToolbar
                     label="Supervisor search and filters"
                     search={<ProjectSearch compact query={search} delay={0} onSearch={setSearch} label="Search supervisors" labelClassName="sr-only" placeholder="Name, phone, email or username" suggestions={visibleSupervisors.map((person) => ({ id: person.id, name: supervisorName(person), context: person.username, to: `/admin/supervisors/${person.id}` }))} />}
@@ -448,9 +449,10 @@ export default function Supervisors() {
                 </div>
             )}
 
+            {!loading && !error && <section className="supervisor-desktop-table hidden overflow-hidden rounded-b-2xl border border-t-0 border-[#E7DED2] bg-[#FFFDFA] lg:block"><table className="w-full table-fixed text-left text-sm"><thead className="border-y border-[#E7DED2] bg-[#FAF6F0] text-[#716658]"><tr>{[["Supervisor", "28%"], ["Email", "27%"], ["Phone", "17%"], ["Status", "10%"], ["Actions", "18%"]].map(([label, width]) => <th key={label} scope="col" className="px-5 py-4 font-semibold" style={{ width }}>{label}</th>)}</tr></thead><tbody>{visibleSupervisors.map((person) => { const name = supervisorName(person); return <tr key={person.id} className="border-b border-[#EEE6DC] last:border-b-0 hover:bg-[#FAF6F0]"><td className="px-5 py-5"><div className="flex min-w-0 items-center gap-3"><span className={'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-bold ' + avatarTone(name)}>{name.charAt(0).toUpperCase()}</span><div className="min-w-0"><Link to={'/admin/supervisors/' + person.id} className="break-words text-base font-bold text-[#211E1A] hover:underline">{name}</Link><p className="mt-1 break-all text-xs text-[#716658]">@{person.username || "No username"}</p></div></div></td><td className="break-all px-5 py-5 text-[#665E53]">{person.email ? <a href={'mailto:' + person.email} className="hover:underline">{person.email}</a> : "Not provided"}</td><td className="break-words px-5 py-5 text-[#665E53]">{person.phone || "Not provided"}</td><td className="px-5 py-5"><span className="inline-flex items-center gap-2 text-xs"><span className={'h-2 w-2 shrink-0 rounded-full ' + (person.is_active ? 'bg-[#16A34A]' : 'bg-[#94826B]')} />{person.is_active ? "Active" : "Inactive"}</span></td><td className="px-5 py-5"><div className="flex items-center gap-3">{person.phone && <a href={'tel:' + person.phone} aria-label={'Call ' + name} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E7DED2] text-[#296F40] hover:bg-[#E7F2E8]"><Phone size={16} /></a>}<Link to={'/admin/supervisors/' + person.id} className="inline-flex items-center gap-1 border-l border-[#E7DED2] pl-3 text-xs font-semibold text-[#211E1A] hover:underline">View details<ArrowUpRight size={15} /></Link></div></td></tr>; })}</tbody></table>{!visibleSupervisors.length && <p className="p-8 text-center text-sm text-[#716658]">No supervisors match this search or status filter.</p>}<footer className="border-t border-[#E7DED2] px-5 py-4 text-xs text-[#716658]">{visibleSupervisors.length} {visibleSupervisors.length === 1 ? "supervisor" : "supervisors"}</footer></section>}
             {/* DIRECTORY */}
             {!loading && !error && (
-                <section className="space-y-3 sm:space-y-4">
+                <section className="space-y-3 sm:space-y-4 lg:hidden">
                     <p className="rare-fade flex items-center gap-2 text-sm text-[#716658]">
                         <span className="rounded-full bg-[#F1EADF] px-2.5 py-0.5 text-xs font-bold tabular-nums text-[#211E1A]">
                             {visibleSupervisors.length}

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowUpRight, FolderOpen, RefreshCw, Search } from "lucide-react";
+import { DesktopProjectCard } from "../projects/DesktopProjects";
 import { projectApi } from "../../api/projectApi";
 import { validationMessage } from "../../hooks/useApprovalReview";
 
@@ -87,7 +88,7 @@ export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false
                 {!matches.length && <li role="presentation" className="px-3 py-3 text-sm text-[#817669]"><span role="status">{loading || pending ? "Finding matches…" : "No matching names in these results"}</span></li>}
             </ul>}
         </div>
-        {onRefresh && <button type="button" className={button} disabled={loading} onClick={onRefresh}><RefreshCw size={18} aria-hidden="true" />Refresh</button>}
+        {onRefresh && <button type="button" aria-label="Refresh projects" className={button} disabled={loading} onClick={onRefresh}><RefreshCw size={18} aria-hidden="true" />Refresh</button>}
     </div>;
 }
 
@@ -128,7 +129,7 @@ export default function ReportProjectPicker({ role = "ADMIN" }) {
         setParams(next);
     }
 
-    return <div className="mx-auto min-w-0 max-w-[1500px] space-y-6 pb-8 text-[#211E1A]">
+    return <div className="daily-report-project-picker mx-auto min-w-0 max-w-[1500px] space-y-6 pb-8 text-[#211E1A]">
         <header className="rare-page-header space-y-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5">
             <div className="border-l-2 border-[#E7DED2] pl-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#716658]">Site records / {admin ? "Administration" : "Your assigned projects"}</p>
@@ -151,12 +152,12 @@ export default function ReportProjectPicker({ role = "ADMIN" }) {
             {data && <>
                 <p role="status" className="text-sm text-[#716658]">{data.count} matching {data.count === 1 ? "project" : "projects"}{admin ? "" : " assigned to you"}</p>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {data.results.map((project) => <Link key={project.id} to={`${prefix}/projects/${project.id}/daily-reports`} className="group min-w-0 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 transition-[border-color,box-shadow] hover:border-[#9A8872] hover:shadow-md motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A58A67]">
+                    {data.results.map((project) => <div key={project.id} className="min-w-0"><div className="hidden h-full lg:block"><DesktopProjectCard project={project} to={`${prefix}/projects/${project.id}/daily-reports`} /></div><div className="h-full lg:hidden"><Link to={`${prefix}/projects/${project.id}/daily-reports`} className="group min-w-0 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 transition-[border-color,box-shadow] hover:border-[#9A8872] hover:shadow-md motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A58A67]">
                         <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#F1EADF] text-[#514538]"><FolderOpen size={20} aria-hidden="true" /></span>
                         <h2 className="break-words text-base font-semibold text-[#211E1A]">{project.name}</h2>
                         <p className="mt-2 text-sm leading-6 text-[#716658]">{admin ? "View daily reports and site evidence" : "Create reports, manage drafts and view site evidence"}</p>
                         <span className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-[#514538]">Open reports<ArrowUpRight size={16} aria-hidden="true" /></span>
-                    </Link>)}
+                    </Link></div></div>)}
                 </div>
                 {!data.results.length && <div className="rounded-2xl border border-dashed border-[#CCB99F] bg-[#FFFDFA] p-6 text-center">
                     <h2 className="text-base font-semibold text-[#211E1A]">{query ? "No projects match this search" : admin ? "No projects available" : "No projects assigned yet"}</h2>

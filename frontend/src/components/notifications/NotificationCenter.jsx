@@ -371,7 +371,8 @@ function NotificationRow({ notification, busy, onOpen }) {
             type="button"
             disabled={busy}
             onClick={() => onOpen(notification)}
-            className={`group relative flex w-full items-start gap-3.5 px-4 py-4 text-left transition-colors duration-200 focus:outline-none focus-visible:bg-[#EDF3FC] disabled:cursor-wait disabled:opacity-70 sm:gap-4 sm:px-6 sm:py-5 ${unread
+            data-unread={unread}
+            className={`notification-list-row group relative flex w-full items-start gap-3.5 px-4 py-4 text-left transition-colors duration-200 focus:outline-none focus-visible:bg-[#EDF3FC] disabled:cursor-wait disabled:opacity-70 sm:gap-4 sm:px-6 sm:py-5 ${unread
                     ? "bg-[#FAF6FD] hover:bg-[#F5EFFA]"
                     : "bg-[#FFFDFA] hover:bg-[#F8F4EE]"
                 }`}
@@ -707,7 +708,7 @@ export default function NotificationCenter({
         "h-11 w-full appearance-none rounded-xl border border-[#E4DCCD] bg-white pl-4 pr-10 text-sm text-[#211E1A] outline-none transition-all hover:border-[#CFC3B1] focus:border-[#3565A5] focus:ring-4 focus:ring-[#3565A5]/15";
 
     return (
-        <div className="mx-auto max-w-4xl space-y-5 pb-10 sm:space-y-6">
+        <div className="notifications-page mx-auto max-w-4xl space-y-5 pb-10 sm:space-y-6">
             {(loading || openingId) && (
                 <LoadingScreen
                     message={
@@ -718,9 +719,10 @@ export default function NotificationCenter({
                 />
             )}
 
-            {unreadCount > 0 && <div className="flex justify-end"><button type="button" onClick={markAllRead} disabled={markingAll || loading || Boolean(openingId)} className="rare-button rare-button-secondary">{markingAll ? "Marking as read..." : "Mark all as read"}</button></div>}
+            {unreadCount > 0 && <div className="flex justify-end lg:hidden"><button type="button" onClick={markAllRead} disabled={markingAll || loading || Boolean(openingId)} className="rare-button rare-button-secondary">{markingAll ? "Marking as read..." : "Mark all as read"}</button></div>}
+            <header className="notification-desktop-header hidden lg:flex"><div><p className="mb-4 text-xs text-[#716658]">{role === "ADMIN" ? "Admin" : "Supervisor"} / Notifications</p><div className="flex items-center gap-3"><h1 className="text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">Notifications</h1><span className="rounded-full bg-[#F1EADF] px-3 py-1 text-xs font-semibold">{unreadCount == null ? "..." : unreadCount + " unread"}</span></div><p className="mt-2 text-sm text-[#716658]">Stay up to date with your team and projects.</p></div><div className="flex items-center gap-2"><button type="button" onClick={markAllRead} disabled={markingAll || loading || Boolean(openingId) || !unreadCount} className="rare-button rare-button-primary"><CheckCircle2 size={17} />{markingAll ? "Marking as read..." : "Mark all as read"}</button><button type="button" aria-label="Refresh notifications" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading || Boolean(openingId)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#E7DED2] bg-[#FFFDFA]"><RefreshCw size={18} className={loading ? "animate-spin" : ""} /></button></div></header>
             {/* HEADER */}
-            <header className="rare-page-header flex items-start justify-between gap-4">
+            <header className="rare-page-header lg:hidden flex items-start justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-4">
                     <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#211E1A] text-white shadow-lg shadow-[#211E1A]/20">
                         <BellRing size={25} strokeWidth={1.7} />
@@ -762,6 +764,7 @@ export default function NotificationCenter({
             </header>
 
             {/* TOOLBAR */}
+            <div className="notifications-toolbar"><div className="notification-desktop-tabs hidden lg:flex" role="group" aria-label="Notification read status">{tabs.filter((tab) => tab.key !== "READ").map((tab) => <button key={tab.key} type="button" aria-pressed={visibility === tab.key} onClick={() => { setVisibility(tab.key); setPage(1); }} className={'inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold ' + (visibility === tab.key ? 'border-[#211E1A] text-[#211E1A]' : 'border-transparent text-[#716658]')}>{tab.label}<span className="rounded-full bg-[#F1EADF] px-2 py-0.5 text-xs">{tab.count ?? "..."}</span></button>)}</div>
             <SearchFilterToolbar
                 label="Notification search and filters"
                 search={<ProjectSearch compact query={search} delay={0} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search notifications" labelClassName="sr-only" placeholder="Title or message" />}
@@ -851,6 +854,7 @@ export default function NotificationCenter({
                     </div>
                 </div>
             </SearchFilterToolbar>
+            </div>
 
             {/* MESSAGES */}
             {error && (
@@ -873,7 +877,7 @@ export default function NotificationCenter({
 
             {/* INBOX */}
             {!loading && !error && (
-                <section className="overflow-hidden rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_20px_50px_-30px_rgba(33,30,26,0.25)]">
+                <section className="notifications-inbox overflow-hidden rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_20px_50px_-30px_rgba(33,30,26,0.25)]">
                     {groups.length ? (
                         groups.map((group) => (
                             <div key={group.label}>
@@ -923,6 +927,7 @@ export default function NotificationCenter({
                         </div>
                     )}
 
+                    <footer className="hidden border-t border-[#E7DED2] px-6 py-4 text-xs text-[#716658] lg:block">{filtered.length} notifications</footer>
                     {pageCount > 1 && (
                         <nav aria-label="Notification pages" className="rare-pagination border-t border-[#EEE6DC] bg-[#FFFDFA] p-3 sm:px-5">
                             <button

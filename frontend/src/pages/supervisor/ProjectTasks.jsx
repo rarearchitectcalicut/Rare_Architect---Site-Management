@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -165,6 +166,25 @@ function DetailItem({ label, value }) {
     );
 }
 
+function SupervisorDelayCard({ report, taskName }) {
+    const [open, setOpen] = useState(false);
+    const cardRef = useRef(null);
+    useEffect(() => {
+        if (!open) return;
+        function closeOutside(event) {
+            if (event.button === 0 && !cardRef.current?.contains(event.target) && !document.querySelector('dialog[open], [role="dialog"], [role="alertdialog"]')) setOpen(false);
+        }
+        document.addEventListener("pointerdown", closeOutside);
+        return () => document.removeEventListener("pointerdown", closeOutside);
+    }, [open]);
+    return <div ref={cardRef} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA]">
+        <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-start justify-between gap-3 rounded-xl p-3 text-left focus-visible:outline-2 focus-visible:outline-[#94651D]">
+            <span className="min-w-0"><span className="block text-sm font-bold">Delay report</span><span className="mt-1 block break-words text-sm font-semibold">{report.task_title || taskName}</span><span className="mt-1 block text-xs text-[#716658]">{formatDateTime(report.reported_at)}</span></span><ChevronDown size={18} className={'shrink-0 ' + (open ? 'rotate-180' : '')} />
+        </button>
+        {open && createPortal(<div role="dialog" aria-modal="true" aria-label="Delay report details" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6" onPointerDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}><div className="max-h-[85dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-6"><div className="mb-4 flex items-start justify-between gap-4"><div><h2 className="text-lg font-bold">Delay report</h2><p className="mt-1 text-sm">{report.task_title || taskName}</p></div><button type="button" aria-label="Close delay report" onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E7DED2]"><X size={18} /></button></div><DelayReportReview record={report} role="SUPERVISOR" /></div></div>, document.body)}
+    </div>;
+}
+
 function ExpandedTask({
     task,
     loading,
@@ -257,16 +277,16 @@ function ExpandedTask({
             : "Not applicable";
 
     return (
-        <div className="border-t border-[#EEE6DC] bg-[#FFFDFA] p-4 sm:p-6">
+        <div className="expanded-supervisor-task border-t border-[#EEE6DC] bg-[#FFFDFA] p-4 sm:p-6">
             {/* DETAILS HEADER */}
-            <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="expanded-task-heading flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-[#716658]">
                         Task Information
                     </p>
 
                     <h3 className="mt-2 text-lg font-bold text-[#211E1A]">
-                        Complete Task Details
+                        <span className="lg:hidden">Complete Task Details</span><span className="hidden lg:inline">{task.title}</span>
                     </h3>
 
                     <p className="mt-1 text-xs leading-5 text-[#716658]">
@@ -287,7 +307,7 @@ function ExpandedTask({
             </div>
 
             {/* CURRENT STATUSES */}
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="expanded-task-statuses mt-5 flex flex-wrap gap-3">
                 {[
                     ["Approval Status", task.approval_status],
                     ["Work Status", task.work_status],
@@ -307,6 +327,8 @@ function ExpandedTask({
             </div>
 
             {/* START / COMPLETE TASK */}
+            <div className="expanded-task-left contents lg:flex">
+            <div className="expanded-task-execution contents lg:block">
             <TaskExecutionActions
                 key={task.id}
                 task={task}
@@ -314,9 +336,10 @@ function ExpandedTask({
             />
 
             <TaskProgress progress={task.progress} />
+            </div>
 
             {/* DETAILS GRID */}
-            <div className="mt-5 grid gap-4 rounded-[20px] bg-[#F8F4EE] p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
+            <div className="expanded-task-details mt-5 grid gap-4 rounded-[20px] bg-[#F8F4EE] p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
                 <DetailItem label="Task Name" value={task.title} />
                 <DetailItem
                     label="Worker / Team"
@@ -352,6 +375,7 @@ function ExpandedTask({
                 />
             </div>
 
+            <aside className="expanded-task-review contents lg:hidden">
             <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
                 <h4 className="text-sm font-bold text-[#211E1A]">Admin decisions and comments</h4>
                 {!decisionState && <p role="status" className="text-xs text-[#716658]">Loading decision history...</p>}
@@ -380,15 +404,16 @@ function ExpandedTask({
                 {!delayState && <p role="status" className="text-xs text-[#716658]">Loading task delay reports...</p>}
                 {delayState?.error && <p role="alert" className="text-xs text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
                 {delayState?.data?.count === 0 && <p className="text-xs text-[#716658]">No delays have been reported for this task.</p>}
-                {delayState?.data?.results.map((report) => <article key={report.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article>)}
+                {delayState?.data?.results.map((report) => <div key={report.id}><div className="lg:hidden"><article className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article></div><div className="hidden lg:block"><SupervisorDelayCard report={report} taskName={task.title} /></div></div>)}
                 {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="rare-pagination">
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.previous} onClick={() => setDelayPage((page) => page - 1)}>Previous reports</button>
                     <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
                 </nav>}
             </section>
+            </aside>
             {/* DESCRIPTION AND COMPLETION CRITERIA */}
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="expanded-task-description mt-5 grid gap-4 lg:grid-cols-2">
                 <div className="rounded-[18px] border border-[#EEE6DC] p-4 sm:p-5">
                     <h4 className="flex items-center gap-2 text-sm font-bold text-[#211E1A]">
                         <ClipboardList size={18} className="text-[#3565A5]" />
@@ -449,6 +474,44 @@ function ExpandedTask({
                     <TaskDocuments taskId={task.id} readOnly={task.project_status === "CANCELLED"} />
                 )}
             </div>
+            </div>
+            <aside className="expanded-task-review hidden lg:block lg:space-y-4">
+            <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
+                <h4 className="text-sm font-bold text-[#211E1A]">Admin decisions and comments</h4>
+                {!decisionState && <p role="status" className="text-xs text-[#716658]">Loading decision history...</p>}
+                {decisionState?.error && <p role="alert" className="text-xs text-red-700">{decisionState.error} <button type="button" className="underline" onClick={() => setDecisionRevision((value) => value + 1)}>Retry</button></p>}
+                {decisionState?.data?.results.map((decision) => <article key={decision.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4">
+                    <p className={`text-sm font-semibold ${decision.action.endsWith("REJECTED") ? "text-[#B42318]" : "text-[#166534]"}`}>{readable(decision.action)}</p>
+                    <p className="mt-1 text-xs text-[#716658]">{decision.actor_name || "Reviewer unavailable"} / {formatDateTime(decision.created_at)}</p>
+                    <p className="mt-3 whitespace-pre-wrap break-words text-xs text-[#211E1A] sm:text-sm">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
+                </article>)}
+                {decisionState?.data?.count === 0 && <p className="text-xs text-[#716658]">No Admin decision has been recorded yet.</p>}
+                {decisionState?.data && (decisionState.data.next || decisionState.data.previous) && <nav aria-label="Decision history pages" className="rare-pagination">
+                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.previous} onClick={() => setDecisionPage((page) => page - 1)}>Previous decisions</button>
+                    <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
+                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.next} onClick={() => setDecisionPage((page) => page + 1)}>Next decisions</button>
+                </nav>}
+            </section>
+            <section aria-label="Task delay reports" className="mt-5 space-y-4 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h4 className="text-sm font-bold">Delay reports for this task</h4>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {canReportDelay && <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" onClick={() => onReportDelay(task)}>Report delay</button>}
+                        <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" onClick={() => setDelayRevision((value) => value + 1)}>Refresh reports</button>
+                    </div>
+                </div>
+                <p className="text-xs text-[#716658]">Current approved deadline: {formatDate(task.end_date)}. Reporting a delay does not change this deadline; an extension needs separate approval.</p>
+                {!delayState && <p role="status" className="text-xs text-[#716658]">Loading task delay reports...</p>}
+                {delayState?.error && <p role="alert" className="text-xs text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
+                {delayState?.data?.count === 0 && <p className="text-xs text-[#716658]">No delays have been reported for this task.</p>}
+                {delayState?.data?.results.map((report) => <div key={report.id}><div className="lg:hidden"><article className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article></div><div className="hidden lg:block"><SupervisorDelayCard report={report} taskName={task.title} /></div></div>)}
+                {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="rare-pagination">
+                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.previous} onClick={() => setDelayPage((page) => page - 1)}>Previous reports</button>
+                    <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
+                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
+                </nav>}
+            </section>
+            </aside>
         </div>
     );
 }
@@ -805,6 +868,7 @@ export default function SupervisorProjectTasks() {
     const filterButtonRef = useRef(null);
 
     const [expandedId, setExpandedId] = useState(null);
+    const expandedCardRef = useRef(null);
     const [expandedTask, setExpandedTask] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
     const [detailError, setDetailError] = useState("");
@@ -816,6 +880,26 @@ export default function SupervisorProjectTasks() {
     const [delayReportTask, setDelayReportTask] = useState(null);
     const [notice, setNotice] = useState("");
     const [creationError, setCreationError] = useState("");
+
+    useEffect(() => {
+        if (!expandedId) return;
+        function collapseOutside(event) {
+            if (!window.matchMedia("(min-width: 1024px)").matches ||
+                event.button !== 0 || formOpen || bulkOpen || delayReportTask ||
+                filterSheetOpen || document.querySelector('dialog[open], [role="dialog"]:not(.supervisor-task-popup), [role="alertdialog"]') ||
+                !expandedCardRef.current || expandedCardRef.current.contains(event.target)) return;
+            setExpandedId(null);
+            setExpandedTask(null);
+            setDetailError("");
+            setSearchParams((previous) => {
+                const next = new URLSearchParams(previous);
+                next.delete("task");
+                return next;
+            }, { replace: true });
+        }
+        document.addEventListener("pointerdown", collapseOutside);
+        return () => document.removeEventListener("pointerdown", collapseOutside);
+    }, [expandedId, formOpen, bulkOpen, delayReportTask, filterSheetOpen, setSearchParams]);
 
     useEffect(() => {
         if (searchParams.get("create") !== "true" || loading || String(project?.id) !== projectId || error) return;
@@ -1163,7 +1247,7 @@ export default function SupervisorProjectTasks() {
     }, [linkedTaskId, loading, error, tasks, pageSize]);
 
     return (
-        <div className="rare-tasks mx-auto w-full min-w-0 max-w-[1400px] space-y-4 pb-8 text-[#211E1A]">
+        <div className="supervisor-project-tasks rare-tasks mx-auto w-full min-w-0 max-w-[1400px] space-y-4 pb-8 text-[#211E1A]">
             <TaskPageStyles />
             {loading && (
                 <LoadingScreen message="Loading project tasks..." />
@@ -1183,7 +1267,7 @@ export default function SupervisorProjectTasks() {
 
             {/* 2. HEADER ROW: title + refresh, project name caption, then actions row */}
             <header className="min-w-0">
-                <div className="flex w-full min-w-0 items-center justify-between gap-3">
+                <div className="project-task-title-row flex w-full min-w-0 items-center justify-between gap-3">
                     <h1 className="min-w-0 truncate text-xl font-bold tracking-tight text-[#211E1A] sm:text-2xl">
                         Project Tasks
                     </h1>
@@ -1210,7 +1294,7 @@ export default function SupervisorProjectTasks() {
                 )}
 
                 {/* Actions row: side-by-side buttons */}
-                <div className="mt-3 flex min-w-0 items-center gap-2">
+                <div className="project-task-actions mt-3 flex min-w-0 items-center gap-2">
                     <button
                         type="button"
                         onClick={openCreate}
@@ -1276,7 +1360,7 @@ export default function SupervisorProjectTasks() {
             </div>
 
             {/* 4. SEARCH ROW PLUS ICON-ONLY FILTER BUTTON (OPENS BOTTOM SHEET / POPOVER) */}
-            <div className="flex w-full min-w-0 items-center gap-2">
+            <div className="project-task-search flex w-full min-w-0 items-center gap-2">
                 <ProjectSearch
                     query={search}
                     delay={0}
@@ -1367,7 +1451,7 @@ export default function SupervisorProjectTasks() {
             )}
 
             {/* 5. CAPTION AND LIST/GALLERY TOGGLE */}
-            <div className="flex w-full min-w-0 items-center justify-between gap-3">
+            <div className="project-task-view flex w-full min-w-0 items-center justify-between gap-3">
                 <p
                     role="status"
                     aria-live="polite"
@@ -1443,7 +1527,7 @@ export default function SupervisorProjectTasks() {
                                     String(expandedId) === String(task.id);
 
                                 return (
-                                    <div key={task.id} className="min-w-0">
+                                    <div key={task.id} ref={expanded ? expandedCardRef : null} className="min-w-0">
                                         <MobileTaskCard
                                             task={task}
                                             to={`/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`}
@@ -1454,16 +1538,23 @@ export default function SupervisorProjectTasks() {
                                                 toggleTask(task.id);
                                             }}
                                         />
-                                        {!expanded && canReportDelay(task, project) && <div className="-mt-2 flex justify-end rounded-b-xl border-x border-b border-[#E7DED2] bg-[#FFFDFA] px-3 pb-2">
+                                        {!expanded && canReportDelay(task, project) && <div className="-mt-2 flex lg:hidden justify-end rounded-b-xl border-x border-b border-[#E7DED2] bg-[#FFFDFA] px-3 pb-2">
                                             <button type="button" aria-label={`Report delay for ${task.title || "task"}`} onClick={() => setDelayReportTask(task)} className="min-h-11 px-3 text-sm font-semibold text-[#514538] underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]">Report delay</button>
                                         </div>}
+                                        {expanded && createPortal(<div className="supervisor-task-backdrop hidden lg:block" aria-hidden="true" onPointerDown={(event) => {
+                                            if (event.button !== 0) return;
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            toggleTask(task.id);
+                                        }} />, document.body)}
                                         {expanded && (
-                                            <div id={`task-details-${task.id}`} className="overflow-hidden rounded-b-xl border-x border-b border-[#E7DED2] bg-[#FFFDFA]">
+                                            <div id={`task-details-${task.id}`} className="supervisor-task-popup overflow-hidden rounded-b-xl border-x border-b border-[#E7DED2] bg-[#FFFDFA]">
                                                 <ExpandedTask
                                                     key={task.id}
                                                     task={expandedTask}
                                                     loading={detailLoading}
                                                     error={detailError}
+                                                    onCollapse={() => toggleTask(task.id)}
                                                     onRetry={retryDetails}
                                                     onEdit={openEdit}
                                                     onStatusChanged={handleStatusChanged}

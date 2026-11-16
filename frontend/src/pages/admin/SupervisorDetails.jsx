@@ -963,7 +963,7 @@ export default function SupervisorDetails() {
                 : "");
 
     return (
-        <div className="space-y-6 pb-8">
+        <div className="admin-supervisor-detail space-y-6 pb-8">
             {/* GLOBAL LOADER */}
             {loadingMessage && (
                 <LoadingScreen message={loadingMessage} />
@@ -1016,7 +1016,7 @@ export default function SupervisorDetails() {
               PROFILE HERO
               ====================================== */}
 
-                    <section className="overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
+                    <section className="supervisor-detail-profile overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
                         <div className="h-2 bg-linear-to-r from-[#D7C4AA] via-[#EEE5D8] to-[#E3E8EE]" />
 
                         <div className="p-5 sm:p-7">
@@ -1087,7 +1087,7 @@ export default function SupervisorDetails() {
               ACCOUNT DETAILS
               ====================================== */}
 
-                    <section className="rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
+                    <section className="supervisor-detail-account rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
                         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-lg font-bold text-[#211E1A]">
@@ -1225,7 +1225,7 @@ export default function SupervisorDetails() {
               SECURITY & ACCESS
               ====================================== */}
 
-                    <section className="rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
+                    <section className="supervisor-detail-security rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
                         <h2 className="text-lg font-bold text-[#211E1A]">
                             Security & Access
                         </h2>
@@ -1318,7 +1318,7 @@ export default function SupervisorDetails() {
               ASSIGNED PROJECTS
               ====================================== */}
 
-                    <section className="rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
+                    <section className="supervisor-detail-projects rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-lg font-bold text-[#211E1A]">

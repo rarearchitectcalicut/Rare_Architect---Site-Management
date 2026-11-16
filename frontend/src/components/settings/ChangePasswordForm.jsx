@@ -185,7 +185,7 @@ export default function ChangePasswordForm() {
     };
 
     return (
-        <section className="overflow-hidden rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_24px_60px_-30px_rgba(33,30,26,0.25)]">
+        <section className="settings-password-card overflow-hidden rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_24px_60px_-30px_rgba(33,30,26,0.25)]">
             {busy && (
                 <LoadingScreen message="Updating your password..." />
             )}
