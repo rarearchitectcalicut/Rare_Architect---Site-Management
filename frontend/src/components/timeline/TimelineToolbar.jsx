@@ -9,13 +9,13 @@ import SearchFilterToolbar from "../common/SearchFilterToolbar";
 
 const selectClass = `
   h-11 w-full rounded-xl
-  border border-[#E4DCCD]
-  bg-[#FFFDFA] px-3
-  text-sm text-[#211E1A]
+  border border-border
+  bg-surface px-3
+  text-sm text-ink
   outline-none
   transition-all duration-200
-  focus:border-[#B7A58E]
-  focus:ring-4 focus:ring-[#E8DDD0]/50
+  focus:border-border-strong
+  focus:ring-4 focus:ring-pastel-lavender/50
 `;
 
 export default function TimelineToolbar({
@@ -40,22 +40,22 @@ export default function TimelineToolbar({
     onClearFilters,
 }) {
     return (
-        <section className="rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5">
+        <section className="rounded-[22px] border border-border bg-surface p-4 sm:p-5">
             {/* HEADER */}
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <SlidersHorizontal
                         size={18}
-                        className="text-[#716658]"
+                        className="text-muted"
                     />
 
-                    <h2 className="text-sm font-bold text-[#211E1A]">
+                    <h2 className="text-sm font-bold text-ink">
                         Timeline Controls
                     </h2>
                 </div>
 
                 {/* VIEW SWITCH */}
-                <div className="inline-flex rounded-xl bg-[#F1EADF] p-1">
+                <div className="inline-flex rounded-xl bg-app p-1">
                     <button
                         type="button"
                         onClick={() => onViewChange?.("sequence")}
@@ -66,8 +66,8 @@ export default function TimelineToolbar({
               text-xs font-semibold
               transition-all duration-200
               ${view === "sequence"
-                                ? "bg-[#211E1A] text-white shadow-sm"
-                                : "text-[#716658] hover:text-[#211E1A]"
+                                ? "bg-ink text-white shadow-sm"
+                                : "text-muted hover:text-ink"
                             }
             `}
                     >
@@ -85,8 +85,8 @@ export default function TimelineToolbar({
               text-xs font-semibold
               transition-all duration-200
               ${view === "schedule"
-                                ? "bg-[#211E1A] text-white shadow-sm"
-                                : "text-[#716658] hover:text-[#211E1A]"
+                                ? "bg-ink text-white shadow-sm"
+                                : "text-muted hover:text-ink"
                             }
             `}
                     >
@@ -100,7 +100,7 @@ export default function TimelineToolbar({
             <SearchFilterToolbar
                 label="Timeline search and filters"
                 search={<div className="relative">
-                    <Search size={17} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]" />
+                    <Search size={17} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
                     <input type="search" value={search} onChange={(e) => onSearchChange?.(e.target.value)} placeholder="Search task or worker..." aria-label="Search timeline tasks" className={`${selectClass} h-11 min-h-11 py-2 pl-10`} />
                 </div>}
                 activeCount={Number(Boolean(approval)) + Number(Boolean(workStatus)) + Number(Boolean(priority)) + Number(sort !== "order")}

@@ -1,5 +1,6 @@
 import { formatDate, formatText } from "../../approvals/approvalUtils";
-import { CalendarDays, ClipboardList, Ruler, ShieldCheck } from "lucide-react";
+import { CalendarDays, ChevronDown, ClipboardList, Ruler, ShieldCheck } from "lucide-react";
+import InfoCard, { InfoField } from "../../common/InfoCard";
 
 export default function AdminTaskOverview({ task }) {
     const groups = [
@@ -8,30 +9,25 @@ export default function AdminTaskOverview({ task }) {
         { title: "Measurement baseline", icon: Ruler, fields: [["Measurement method", formatText(task.measurement_method)], ["Planned quantity", task.planned_quantity], ["Measurement unit", formatText(task.measurement_unit)]] },
         { title: "Approval & audit", icon: ShieldCheck, fields: [["Created by", task.created_by_name], ["Approved by", task.approved_by_name], ["Approval date", formatDate(task.approved_at)], ["Created date", formatDate(task.created_at)], ["Updated date", formatDate(task.updated_at)]] },
     ];
-    return <><div className="admin-task-overview-desktop hidden lg:grid">
-        <div className="space-y-4">{[
-            { title: "Schedule & team", icon: CalendarDays, fields: [["Worker / team", task.worker_name], ["Start date", formatDate(task.start_date)], ["End date", formatDate(task.end_date)], ["Display order", task.display_order]] },
-            groups[2],
-        ].map(({ title, icon: Icon, fields }) => <section key={title} className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5"><h3 className="mb-4 flex items-center gap-2 text-sm font-semibold"><span className="rounded-lg bg-[#F1E6D5] p-2 text-[#8A6840]"><Icon size={16} /></span>{title}</h3><dl className={'grid gap-4 ' + (fields.length === 4 ? 'grid-cols-4' : 'grid-cols-3')}>{fields.map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-xs font-medium uppercase tracking-wide text-[#716658]">{label}</dt><dd className="mt-1 break-words text-sm font-medium">{value == null || value === "" ? "Not specified" : value}</dd></div>)}</dl></section>)}
-        <section className="grid grid-cols-2 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5">{[["Description", task.description], ["Completion criteria", task.completion_criteria]].map(([label, value], index) => <div key={label} className={index ? "border-l border-[#E7DED2] pl-5" : "pr-5"}><h3 className="text-sm font-semibold">{label}</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[#716658]">{value || "Not specified"}</p></div>)}</section></div>
-        <section className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5"><h3 className="mb-4 flex items-center gap-2 text-sm font-semibold"><span className="rounded-lg bg-[#F1E6D5] p-2 text-[#8A6840]"><ShieldCheck size={16} /></span>Approval &amp; audit</h3><dl className="space-y-4">{groups[3].fields.map(([label, value], index) => <div key={label} className={index === 2 ? "border-t border-[#E7DED2] pt-4" : ""}><dt className="text-xs font-medium uppercase tracking-wide text-[#716658]">{label}</dt><dd className="mt-1 break-words text-sm font-medium">{value == null || value === "" ? "Not specified" : value}</dd></div>)}</dl></section>
-    </div><div className="space-y-6 lg:hidden">
-        <div className="grid items-start gap-5 xl:grid-cols-2">{groups.map(({ title, icon: Icon, fields }) => (
-            <section key={title} className="rounded-[20px] border border-[#EAE1D5] bg-[#FFFDFA] p-4 sm:p-5">
-                <h3 className="mb-5 flex items-center gap-2.5 text-sm font-semibold"><span className="rounded-lg bg-[#EEE5D8] p-2 text-[#8B6944]"><Icon size={16} aria-hidden="true" /></span>{title}</h3>
-                <dl className="grid gap-x-5 gap-y-4 sm:grid-cols-2">{fields.map(([label, value]) => (
-                    <div key={label} className="min-w-0 border-t border-[#F0E9DF] pt-3">
-                        <dt className="text-xs font-medium text-[#716658]">{label}</dt>
-                        <dd className="mt-1.5 break-words text-sm font-medium leading-6 text-[#3E352B]">{value == null || value === "" ? "Not specified" : value}</dd>
-                    </div>
-                ))}</dl>
-            </section>
-        ))}</div>
-        <div className="grid gap-5 lg:grid-cols-2">{[["Description", task.description], ["Completion criteria", task.completion_criteria]].map(([label, value]) => (
-            <section key={label} className="rounded-[20px] border border-[#E7DED2] bg-[#F5F0E8] p-5 sm:p-6">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8B6944]">{label}</h3>
-                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[#665C50]">{value || "Not specified"}</p>
-            </section>
-        ))}</div>
-    </div></>;
+    return <div className="rare-task-overview">
+        <div className="space-y-4">
+            <InfoCard title={groups[0].title} eyebrow="The brief" icon={ClipboardList}>
+                <dl className="rare-info-grid">{groups[0].fields.map(([label, value]) => <InfoField key={label} label={label} value={value} />)}</dl>
+            </InfoCard>
+            <InfoCard title={groups[2].title} eyebrow="Approved scope" icon={Ruler}>
+                <dl className="rare-info-grid">{groups[2].fields.map(([label, value]) => <InfoField key={label} label={label} value={value} />)}</dl>
+                <p className="mt-4 text-xs leading-5 text-muted">Progress is based on Admin-verified work against this baseline.</p>
+            </InfoCard>
+        </div>
+        <InfoCard title={groups[1].title} eyebrow="Execution" icon={CalendarDays}>
+            <dl className="rare-info-grid">{groups[1].fields.map(([label, value]) => <InfoField key={label} label={label} value={value} />)}</dl>
+            <details className="rare-task-audit">
+                <summary><span className="inline-flex items-center gap-2"><ShieldCheck size={16} aria-hidden="true" />Approval &amp; audit</span><ChevronDown size={16} aria-hidden="true" /></summary>
+                <dl className="rare-info-grid">{groups[3].fields.map(([label, value]) => <InfoField key={label} label={label} value={value} />)}</dl>
+            </details>
+        </InfoCard>
+        <div className="rare-task-overview-description">{[["Description", task.description], ["Completion criteria", task.completion_criteria]].map(([label, value]) =>
+            <section key={label} className="rare-info-card"><h3>{label}</h3><p>{value || "Not specified"}</p></section>)}
+        </div>
+    </div>;
 }

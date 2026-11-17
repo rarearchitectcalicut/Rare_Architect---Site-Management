@@ -1,3 +1,5 @@
+import { withoutRecordIds, isRecordId, isRecordIdField } from "../../utils/recordPresentation";
+
 export const formatText = (value) => {
     if (value === null || value === undefined || value === "") {
         return "Not specified";
@@ -60,10 +62,10 @@ export async function getAllPages(fetchPage) {
 export function getError(error, fallback) {
     const data = error?.response?.data;
 
-    if (typeof data?.detail === "string") return data.detail;
+    if (typeof data?.detail === "string") return withoutRecordIds(data.detail);
 
     if (Array.isArray(data?.non_field_errors)) {
-        return data.non_field_errors.join(" ");
+        return withoutRecordIds(data.non_field_errors.join(" "));
     }
 
     if (error?.response?.status === 403) {
@@ -74,7 +76,7 @@ export function getError(error, fallback) {
         return "This record is no longer available.";
     }
 
-    return fallback;
+    return withoutRecordIds(fallback);
 }
 
 export function referenceId(value) {
@@ -124,7 +126,7 @@ export function getCreatorName(entry) {
         entry?.supervisor;
 
     if (typeof creator === "string") {
-        return creator;
+        return isRecordId(creator) ? "Supervisor" : creator;
     }
 
     if (creator && typeof creator === "object") {
@@ -235,7 +237,7 @@ export function getChanges(record) {
     ) {
         return Object.entries(data).filter(
             ([key]) =>
-                !["id", "project", "created_by"].includes(key)
+                !isRecordIdField(key) && !["project", "created_by"].includes(key)
         );
     }
 

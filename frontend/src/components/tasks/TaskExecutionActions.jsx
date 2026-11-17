@@ -39,7 +39,7 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
     }, [dialogAction]);
 
     if (!task?.id) return null;
-    if (task.project_status === "CANCELLED") return <p role="status" className="mt-5 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-sm text-[#716658]">This project has been cancelled. Existing records remain available for reference.</p>;
+    if (task.project_status === "CANCELLED") return <p role="status" className="mt-5 rounded-xl border border-border bg-surface p-4 text-sm text-muted">This project has been cancelled. Existing records remain available for reference.</p>;
     const approved = task.approval_status === "APPROVED";
     const supervisor = role === "SUPERVISOR";
     const canStart = supervisor && approved && task.work_status === "NOT_STARTED";
@@ -83,14 +83,14 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
     }
 
     const secondary = "rare-button rare-button-secondary";
-    return <section aria-label="Task execution" className="mt-5 rounded-[20px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
-        {task.cancellation_pending && <p role="status" className="mb-3 text-sm text-[#716658]">Cancellation awaiting Admin approval.</p>}
+    return <section aria-label="Task execution" className="mt-5 rounded-[20px] border border-border bg-surface-soft p-4 sm:p-5">
+        {task.cancellation_pending && <p role="status" className="mb-3 text-sm text-muted">Cancellation awaiting Admin approval.</p>}
         <div className="flex flex-wrap items-center justify-between gap-4">
-            <div><h4 className="text-sm font-bold text-[#211E1A]">{role === "ADMIN" ? "Task lifecycle" : "Task execution"}</h4>
-                <p className="mt-1 text-xs leading-5 text-[#716658]">{finished ? "This task is completed." : cancelled ? "This task is cancelled. Historical records are preserved." : "Update the task as work progresses on site."}</p>
+            <div><h4 className="text-sm font-bold text-ink">{role === "ADMIN" ? "Task lifecycle" : "Task execution"}</h4>
+                <p className="mt-1 text-xs leading-5 text-muted">{finished ? "This task is completed." : cancelled ? "This task is cancelled. Historical records are preserved." : "Update the task as work progresses on site."}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-                {supervisor && (finished || cancelled) && <span className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold ${cancelled ? "bg-[#EEE8E0] text-[#74695D]" : "bg-[#E7F2E8] text-[#296F40]"}`}>{cancelled ? <Ban size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}{cancelled ? "Cancelled" : "Completed"}</span>}
+                {supervisor && (finished || cancelled) && <span className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold ${cancelled ? "bg-border text-muted" : "bg-pastel-mint text-success"}`}>{cancelled ? <Ban size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}{cancelled ? "Cancelled" : "Completed"}</span>}
                 {(canStart || canComplete) && <button type="button" disabled={Boolean(busy)} onClick={() => run(canStart ? "start" : "complete")} className={`rare-button ${canComplete ? "rare-button-success" : "rare-button-primary"}`}>{canStart ? <Play size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}{busy ? "Updating..." : canStart ? "Start Task" : "Complete Task"}</button>}
                 {canCancel && <button type="button" disabled={Boolean(busy)} onClick={() => openDialog("cancel")} className="rare-button rare-button-danger-outline"><Ban size={16} aria-hidden="true" />Request Cancellation</button>}
                 {canReopen && <button type="button" disabled={Boolean(busy)} onClick={() => openDialog("reopen")} className={`${secondary} inline-flex items-center gap-2`}><RotateCcw size={16} aria-hidden="true" />Reopen Task</button>}
@@ -100,12 +100,12 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
         {dialogAction && createPortal(<dialog ref={dialogRef} aria-labelledby={titleId} aria-describedby={descriptionId} aria-modal="true"
             onCancel={(event) => { event.preventDefault(); event.stopPropagation(); closeDialog(); }}
             onKeyDown={(event) => { if (event.key === "Escape") event.stopPropagation(); }}
-            className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-6 text-[#211E1A] shadow-2xl backdrop:bg-[#211E1A]/55 backdrop:backdrop-blur-sm">
+            className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-3xl border border-border bg-surface p-6 text-ink shadow-2xl backdrop:bg-ink/55 backdrop:backdrop-blur-sm">
             <form onSubmit={(event) => { event.preventDefault(); run(dialogAction); }}>
                 <h2 id={titleId} className="text-xl font-bold">{dialogAction === "cancel" ? "Request task cancellation?" : "Reopen this task?"}</h2>
-                <p id={descriptionId} className="mt-3 text-sm leading-6 text-[#716658]">{dialogAction === "cancel" ? "Your cancellation request will be sent to Admin for approval. The task keeps its current status until Admin approves." : "The task will return to In Progress. Existing verified work and progress remain unchanged; reopening does not create a new measurement baseline."}</p>
-                <label htmlFor={reasonId} className="mt-5 block text-xs font-semibold text-[#665C50]">Required explanation</label>
-                <textarea id={reasonId} autoFocus required maxLength={1000} rows={4} value={reason} disabled={Boolean(busy)} onChange={(event) => { setReason(event.target.value); setError(""); }} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} className="mt-2 w-full rounded-xl border border-[#E4DCCD] bg-[#F8F4EE] px-4 py-3 text-sm outline-none focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]" />
+                <p id={descriptionId} className="mt-3 text-sm leading-6 text-muted">{dialogAction === "cancel" ? "Your cancellation request will be sent to Admin for approval. The task keeps its current status until Admin approves." : "The task will return to In Progress. Existing verified work and progress remain unchanged; reopening does not create a new measurement baseline."}</p>
+                <label htmlFor={reasonId} className="mt-5 block text-xs font-semibold text-muted">Required explanation</label>
+                <textarea id={reasonId} autoFocus required maxLength={1000} rows={4} value={reason} disabled={Boolean(busy)} onChange={(event) => { setReason(event.target.value); setError(""); }} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} className="mt-2 w-full rounded-xl border border-border bg-surface-soft px-4 py-3 text-sm outline-none focus:border-subtle focus:ring-2 focus:ring-pastel-lavender" />
                 {error && <p id={errorId} role="alert" className="mt-3 text-xs leading-5 text-red-700">{error}</p>}
                 <div className="rare-action-footer mt-6 flex flex-wrap justify-end gap-3"><button type="button" disabled={Boolean(busy)} onClick={closeDialog} className={secondary}>Back</button><button type="submit" disabled={Boolean(busy) || !reason.trim()} className={`rare-button ${dialogAction === "cancel" ? "rare-button-danger" : "rare-button-primary"}`}>{busy ? "Saving..." : dialogAction === "cancel" ? "Submit Cancellation Request" : "Confirm Reopen"}</button></div>
             </form>
@@ -114,7 +114,7 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
 }
 
 
-export function TaskProgress({ progress }) {
+export function TaskProgress({ progress, compact = false }) {
     const raw = progress?.progress_percentage;
     const percent = typeof raw === "number" || (typeof raw === "string" && raw.trim()) ? Number(raw) : NaN;
     const quantity = progress?.measurement_method === "QUANTITY";
@@ -122,14 +122,19 @@ export function TaskProgress({ progress }) {
     const valid = Number.isFinite(percent) && ["QUANTITY", "COMPLETION_ONLY"].includes(progress?.measurement_method)
         && (quantity || percent === 0 || percent === 100)
         && (!quantity || validQuantity(progress.verified_quantity) && validQuantity(progress.planned_quantity) && Number(progress.planned_quantity) > 0 && typeof progress.measurement_unit === "string" && progress.measurement_unit.trim());
-    if (!valid) return <span className="my-3 block text-xs text-[#716658]">Progress unavailable / Awaiting approval/baseline</span>;
+    if (!valid) return <span className="my-3 block text-xs text-muted">Progress unavailable / Awaiting approval/baseline</span>;
     const width = Math.min(100, Math.max(0, percent));
-    return <span className="my-3 block min-w-0 space-y-2 text-xs text-[#211E1A]">
-        <span className="flex flex-wrap justify-between gap-2"><span>Admin-verified progress</span><strong className="text-[#166534]">{percent}%</strong></span>
+    if (compact) return <span className="rare-compact-verified-progress">
+        <span className="flex flex-wrap items-center justify-between gap-1 text-xs"><span className="text-muted">Verified progress</span><strong className="text-success">{quantity ? `${progress.verified_quantity} / ${progress.planned_quantity} ${progress.measurement_unit} · ` : ""}{percent}%</strong></span>
+        <span role="progressbar" aria-label="Admin-verified task progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={width} className="block h-1.5 overflow-hidden rounded-full bg-pastel-mint"><span className="block h-full rounded-full bg-success" style={{ width: `${width}%` }} /></span>
+        {!quantity && <span className="sr-only">{percent === 100 ? "Completion verified" : "Completion not yet verified"}</span>}
+    </span>;
+    return <span className="my-3 block min-w-0 space-y-2 text-xs text-ink">
+        <span className="flex flex-wrap justify-between gap-2"><span>Admin-verified progress</span><strong className="text-success">{percent}%</strong></span>
         <span role="progressbar" aria-label="Admin-verified task progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={width} className="block h-2.5 overflow-hidden rounded-full bg-[#DCECE0]">
             <span className="block h-full rounded-full bg-[#15803D]" style={{ width: `${width}%` }} />
         </span>
-        <span className="block break-words leading-5 text-[#716658]">{quantity
+        <span className="block break-words leading-5 text-muted">{quantity
             ? `${progress.verified_quantity} / ${progress.planned_quantity} ${progress.measurement_unit} verified`
             : percent === 100 ? "Completion verified" : "Completion not yet verified"}</span>
     </span>;

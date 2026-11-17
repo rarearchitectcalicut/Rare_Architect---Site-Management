@@ -132,19 +132,19 @@ export default function TimelineReorder({
     }
 
     return (
-        <section className="overflow-hidden rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA]">
+        <section className="overflow-hidden rounded-[24px] border border-border bg-surface">
             {/* HEADER */}
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#EEE6DC] p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
                 <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#716658]">
+                    <p className="text-xs font-bold uppercase tracking-[0.15em] text-muted">
                         Supervisor / Timeline Management
                     </p>
 
-                    <h2 className="mt-2 text-lg font-bold text-[#211E1A]">
+                    <h2 className="mt-2 text-lg font-bold text-ink">
                         Reorder Project Tasks
                     </h2>
 
-                    <p className="mt-2 max-w-xl text-xs leading-6 text-[#716658]">
+                    <p className="mt-2 max-w-xl text-xs leading-6 text-muted">
                         Drag tasks into the proposed sequence or use
                         the arrow buttons to move them individually.
                         Your changes are not applied until reviewed.
@@ -155,7 +155,7 @@ export default function TimelineReorder({
                     type="button"
                     onClick={onCancel}
                     disabled={disabled}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#E4DCCD] px-4 py-2.5 text-xs font-bold text-[#665E53] hover:bg-[#F1EADF] disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-xs font-bold text-muted hover:bg-app disabled:opacity-50"
                 >
                     <X size={16} />
                     Cancel
@@ -163,13 +163,13 @@ export default function TimelineReorder({
             </div>
 
             {/* EXPLANATION */}
-            <div className="mx-4 mt-4 flex items-start gap-3 rounded-2xl bg-[#E9F0FC] p-4 sm:mx-6">
+            <div className="mx-4 mt-4 flex items-start gap-3 rounded-2xl bg-pastel-sky p-4 sm:mx-6">
                 <Info
                     size={18}
-                    className="mt-0.5 shrink-0 text-[#3565A5]"
+                    className="mt-0.5 shrink-0 text-info"
                 />
 
-                <p className="text-xs leading-6 text-[#3565A5]">
+                <p className="text-xs leading-6 text-info">
                     <strong>Approval required:</strong> Reordering
                     approved tasks creates an Admin-reviewed order
                     change request. The official timeline remains
@@ -180,14 +180,14 @@ export default function TimelineReorder({
             {/* CHANGE SUMMARY */}
             <div className="mx-4 mt-4 flex flex-wrap items-center justify-between gap-3 sm:mx-6">
                 <div className="flex flex-wrap items-center gap-3">
-                    <span className="rounded-full bg-[#F1EADF] px-3 py-2 text-xs font-bold text-[#74614D]">
+                    <span className="rounded-full bg-app px-3 py-2 text-xs font-bold text-muted">
                         {proposedTasks.length} tasks
                     </span>
 
                     <span
                         className={`rounded-full px-3 py-2 text-xs font-bold ${changed
-                                ? "bg-[#FFF2D8] text-[#94651D]"
-                                : "bg-[#E7F2E8] text-[#296F40]"
+                                ? "bg-pastel-butter text-warning"
+                                : "bg-pastel-mint text-success"
                             }`}
                     >
                         {changed
@@ -200,7 +200,7 @@ export default function TimelineReorder({
                     type="button"
                     onClick={reset}
                     disabled={!changed || disabled}
-                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-[#716658] hover:bg-[#F1EADF] disabled:opacity-40"
+                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-muted hover:bg-app disabled:opacity-40"
                 >
                     <RotateCcw size={15} />
                     Reset Order
@@ -210,7 +210,7 @@ export default function TimelineReorder({
             {/* REORDERABLE TASK LIST */}
             <div className="space-y-3 p-4 sm:p-6">
                 {proposedTasks.length === 0 && (
-                    <div className="rounded-2xl bg-[#F8F4EE] p-8 text-center text-sm text-[#716658]">
+                    <div className="rounded-2xl bg-surface-soft p-8 text-center text-sm text-muted">
                         There are no project tasks to reorder.
                     </div>
                 )}
@@ -269,10 +269,10 @@ export default function TimelineReorder({
                 transition-all duration-200
                 sm:gap-4 sm:p-4
                 ${dropTarget && !dragging
-                                    ? "border-[#3565A5] bg-[#EFF5FF]"
+                                    ? "border-info bg-[#EFF5FF]"
                                     : moved
                                         ? "border-[#E2C78F] bg-[#FFF9EB]"
-                                        : "border-[#E7DED2] bg-[#FFFDFA]"
+                                        : "border-border bg-surface"
                                 }
                 ${dragging
                                     ? "opacity-40"
@@ -283,7 +283,7 @@ export default function TimelineReorder({
                             {/* DRAG HANDLE */}
                             <span
                                 title="Drag to reorder"
-                                className="hidden cursor-grab text-[#B6A997] active:cursor-grabbing sm:block"
+                                className="hidden cursor-grab text-muted active:cursor-grabbing sm:block"
                                 aria-hidden="true"
                             >
                                 <GripVertical size={20} />
@@ -296,8 +296,8 @@ export default function TimelineReorder({
                   items-center justify-center
                   rounded-xl text-sm font-bold
                   ${moved
-                                        ? "bg-[#FFF0CC] text-[#94651D]"
-                                        : "bg-[#F1EADF] text-[#74614D]"
+                                        ? "bg-[#FFF0CC] text-warning"
+                                        : "bg-app text-muted"
                                     }
                 `}
                             >
@@ -306,11 +306,11 @@ export default function TimelineReorder({
 
                             {/* TASK DETAILS */}
                             <div className="min-w-0 flex-1">
-                                <p className="break-words text-sm font-bold text-[#211E1A]">
+                                <p className="break-words text-sm font-bold text-ink">
                                     {task.title || "Untitled Task"}
                                 </p>
 
-                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#716658]">
+                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
                                     <span>
                                         {String(
                                             task.approval_status || "PENDING"
@@ -325,7 +325,7 @@ export default function TimelineReorder({
                                 </div>
 
                                 {moved && (
-                                    <p className="mt-2 text-xs font-bold text-[#94651D]">
+                                    <p className="mt-2 text-xs font-bold text-warning">
                                         Originally position {originallyAt + 1}
                                     </p>
                                 )}
@@ -341,7 +341,7 @@ export default function TimelineReorder({
                                     onClick={() =>
                                         moveByButton(index, -1)
                                     }
-                                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F1EADF] text-[#665E53] hover:bg-[#E8DCCB] disabled:cursor-not-allowed disabled:opacity-35"
+                                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-app text-muted hover:bg-border disabled:cursor-not-allowed disabled:opacity-35"
                                 >
                                     <ArrowUp size={17} />
                                 </button>
@@ -357,7 +357,7 @@ export default function TimelineReorder({
                                     onClick={() =>
                                         moveByButton(index, 1)
                                     }
-                                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F1EADF] text-[#665E53] hover:bg-[#E8DCCB] disabled:cursor-not-allowed disabled:opacity-35"
+                                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-app text-muted hover:bg-border disabled:cursor-not-allowed disabled:opacity-35"
                                 >
                                     <ArrowDown size={17} />
                                 </button>
@@ -368,8 +368,8 @@ export default function TimelineReorder({
             </div>
 
             {/* FOOTER */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#EEE6DC] bg-[#F8F4EE] p-5 sm:px-6">
-                <div className="flex items-center gap-2 text-xs text-[#716658]">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-surface-soft p-5 sm:px-6">
+                <div className="flex items-center gap-2 text-xs text-muted">
                     {changed ? (
                         <>
                             <Info size={16} />
@@ -391,7 +391,7 @@ export default function TimelineReorder({
                         // Pass the entire ordered task array, not a filtered subset.
                         onReview?.([...proposedTasks]);
                     }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#39332B] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     <Send size={17} />
                     Review Proposed Order

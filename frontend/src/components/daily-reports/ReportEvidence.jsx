@@ -13,9 +13,9 @@ function EvidencePreview({ file, preview, onClose, onDownload, loading, button }
         dialog.showModal();
         return () => dialog.close();
     }, []);
-    return createPortal(<dialog ref={dialogRef} aria-labelledby={titleId} aria-modal="true" onCancel={(event) => { event.preventDefault(); event.stopPropagation(); onClose(); }} onKeyDown={(event) => { if (event.key === "Escape") event.stopPropagation(); }} className="fixed inset-0 m-auto max-h-[94dvh] w-[calc(100%-1rem)] max-w-5xl overflow-auto rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 shadow-2xl backdrop:bg-black/65 sm:p-6">
-        <div className="mb-4 flex items-center justify-between gap-3"><h4 id={titleId} className="break-all text-sm font-semibold leading-6 text-[#211E1A]">{file.original_filename}</h4><button type="button" autoFocus onClick={onClose} className={button}>Close preview</button></div>
-        {preview.type.startsWith("image/") ? <img src={preview.url} alt={file.caption || file.original_filename} className="mx-auto max-h-[72dvh] max-w-full object-contain" /> : <><iframe src={preview.url} title={`PDF preview: ${file.original_filename}`} className="h-[68dvh] w-full rounded-lg border border-[#E7DED2]" /><p className="mt-3 text-xs text-[#716658]">PDF viewing depends on your browser. If the preview is unavailable, download the file to view it.</p></>}
+    return createPortal(<dialog ref={dialogRef} aria-labelledby={titleId} aria-modal="true" onCancel={(event) => { event.preventDefault(); event.stopPropagation(); onClose(); }} onKeyDown={(event) => { if (event.key === "Escape") event.stopPropagation(); }} className="fixed inset-0 m-auto max-h-[94dvh] w-[calc(100%-1rem)] max-w-5xl overflow-auto rounded-2xl border border-border bg-surface p-4 shadow-2xl backdrop:bg-black/65 sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-3"><h4 id={titleId} className="break-all text-sm font-semibold leading-6 text-ink">{file.original_filename}</h4><button type="button" autoFocus onClick={onClose} className={button}>Close preview</button></div>
+        {preview.type.startsWith("image/") ? <img src={preview.url} alt={file.caption || file.original_filename} className="mx-auto max-h-[72dvh] max-w-full object-contain" /> : <><iframe src={preview.url} title={`PDF preview: ${file.original_filename}`} className="h-[68dvh] w-full rounded-lg border border-border" /><p className="mt-3 text-xs text-muted">PDF viewing depends on your browser. If the preview is unavailable, download the file to view it.</p></>}
         <button type="button" disabled={loading} onClick={onDownload} className={`${button} mt-4`}>Download</button>
     </dialog>, document.body);
 }
@@ -85,20 +85,20 @@ function EvidenceFile({ file, onRemove, busy, fileApi = dailyReportApi }) {
         finally { inFlight.current = false; if (!request.current?.signal.aborted) setLoading(false); }
     }
     const button = "rare-button rare-button-secondary";
-    return <li className="flex min-w-0 flex-col rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5">
-            <p className="break-all text-sm font-semibold leading-6 text-[#211E1A]">{file.original_filename}</p>
-            {preview?.type.startsWith("image/") && <button type="button" onClick={view} aria-label={`Enlarge ${file.original_filename}`} className="mt-4 flex min-h-32 items-center sm:min-h-44 justify-center rounded-xl border border-[#E9E1D6] bg-[#F8F4EE] p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3565A5]"><img src={preview.url} alt={file.caption || file.original_filename} className="max-h-40 max-w-full rounded-lg sm:max-h-48 object-contain" /></button>}
-            {file.caption && <p className="mt-1 text-xs text-[#716658]">{file.caption}</p>}
+    return <li className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-4 sm:p-5">
+            <p className="break-all text-sm font-semibold leading-6 text-ink">{file.original_filename}</p>
+            {preview?.type.startsWith("image/") && <button type="button" onClick={view} aria-label={`Enlarge ${file.original_filename}`} className="mt-4 flex min-h-32 items-center sm:min-h-44 justify-center rounded-xl border border-border bg-surface-soft p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info"><img src={preview.url} alt={file.caption || file.original_filename} className="max-h-40 max-w-full rounded-lg sm:max-h-48 object-contain" /></button>}
+            {file.caption && <p className="mt-1 text-xs text-muted">{file.caption}</p>}
             {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
-            <div className="mt-3 flex flex-wrap gap-2">{previewable && <button type="button" disabled={loading} onClick={view} className={`${button} !border-[#211E1A] !bg-[#211E1A] !text-[#FFFDFA] hover:!bg-[#39332B]`}>{loading ? "Loading…" : "Preview"}</button>}<button type="button" disabled={loading} onClick={download} className={button}>Download</button></div>
-            {!previewable && <p className="mt-2 text-xs text-[#716658]">Download to open with a compatible application on your device.</p>}
+            <div className="mt-3 flex flex-wrap gap-2">{previewable && <button type="button" disabled={loading} onClick={view} className={`${button} !border-ink !bg-ink !text-surface hover:!bg-primary-hover`}>{loading ? "Loading…" : "Preview"}</button>}<button type="button" disabled={loading} onClick={download} className={button}>Download</button></div>
+            {!previewable && <p className="mt-2 text-xs text-muted">Download to open with a compatible application on your device.</p>}
             {onRemove && <button type="button" disabled={busy} onClick={() => onRemove(file)} className="rare-button rare-button-danger-outline mt-3">Remove attachment</button>}
             {open && <EvidencePreview file={file} preview={preview} onClose={() => setOpen(false)} onDownload={download} loading={loading} button={button} />}
         </li>;
 }
 
 export default function ReportEvidence({ files = [], onRemove, busy = false, fileApi = dailyReportApi, title = "Evidence and attachments" }) {
-    return <section><h3 className="text-base font-semibold text-[#211E1A]">{title}</h3>
-        {files.length ? <ul className="mt-4 grid items-start gap-4 xl:grid-cols-2">{files.map((file) => <EvidenceFile key={file.id} file={file} onRemove={onRemove} busy={busy} fileApi={fileApi} />)}</ul> : <p className="mt-4 rounded-2xl border border-dashed border-[#CCB99F] bg-[#F8F4EE] px-5 py-6 text-center text-sm leading-6 text-[#716658]">No evidence attached to this entry or report.</p>}
+    return <section><h3 className="text-base font-semibold text-ink">{title}</h3>
+        {files.length ? <ul className="mt-4 grid items-start gap-4 xl:grid-cols-2">{files.map((file) => <EvidenceFile key={file.id} file={file} onRemove={onRemove} busy={busy} fileApi={fileApi} />)}</ul> : <p className="mt-4 rounded-2xl border border-dashed border-border-strong bg-surface-soft px-5 py-6 text-center text-sm leading-6 text-muted">No evidence attached to this entry or report.</p>}
     </section>;
 }

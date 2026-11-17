@@ -31,7 +31,7 @@ async function workspace({ workSummary = "Saved summary", uploadFailure = false,
         "hooks/useConfirmation.jsx": { useConfirmation: () => ({ confirm, confirmationModal: null }) },
         "api/dailyReportApi.js": { dailyReportApi: {
             get: async () => report, section: async (_id, section) => ({ results: section === "manpower" ? records : [], count: section === "manpower" ? records.length : 0 }),
-            update: async (_id, data) => { calls.push(["diary", data]); if (updateGate) await updateGate; return { ...report, ...data }; },
+            update: async (_id, data) => { calls.push(["diary", data]); if (updateGate) await updateGate; Object.assign(report, data); return { ...report }; },
             saveRow: async (_id, section, data) => { calls.push([section, data]); return { id: "saved-row" }; },
             upload: async () => { calls.push(["upload"]); if (uploadGate) await uploadGate; if (uploadFailure) throw new Error("Upload failed"); },
             removeRow: async () => { calls.push(["remove"]); if (removeFailure) throw new Error("Delete failed"); },
@@ -85,6 +85,36 @@ async function saver() {
     return (await loadSource("pages/admin/DailyReports.jsx", { append: "\nexport { saveReportDrafts }; const FormData = class { fields = {}; append(k,v) { this.fields[k] = v; } };" })).exports.saveReportDrafts;
 }
 const entry = (section, payload, valid = true) => ({ section, values: payload, dirty: true, snapshot: { current: { payload, validate: () => valid } } });
+
+test("Save & Next checkpoints the draft before advancing and ignores repeated clicks", async () => {
+    let finish;
+    const ui = await workspace({ updateGate: new Promise((resolve) => { finish = resolve; }) });
+    ui.props("ReportDiaryForm").onChange((v) => ({ ...v, work_summary: "Blockwork carried out." }));
+    ui.render(); ui.form("ReportDiaryForm");
+    const next = ui.find((node) => node.type === "button" && JSON.stringify(node.props.children).includes("Save & Next"));
+    const first = next.props.onClick(); next.props.onClick(); await flush(); ui.render();
+    assert.equal(ui.calls.filter(([kind]) => kind === "diary").length, 1);
+    assert.ok(ui.props("ReportDiaryForm"));
+    finish(); assert.equal(await first, true);
+    ui.render(); await flush(); ui.render(); await flush(); ui.render();
+    const nav = ui.find((node) => node.props?.["aria-label"] === "Daily report steps");
+    assert.ok(find(nav, (node) => node.type === "button" && node.props["aria-current"] === "step" && JSON.stringify(node.props.children).includes("Work & crew")));
+    ui.unmount();
+});
+
+test("Save & Next failure preserves edits and stays on the current step for retry", async () => {
+    let fail;
+    const ui = await workspace({ updateGate: new Promise((_, reject) => { fail = reject; }) });
+    ui.props("ReportDiaryForm").onChange((v) => ({ ...v, work_summary: "Keep this draft" }));
+    ui.render(); ui.form("ReportDiaryForm");
+    const next = ui.find((node) => node.type === "button" && JSON.stringify(node.props.children).includes("Save & Next"));
+    const pending = next.props.onClick();
+    await flush(); fail(new Error("Offline"));
+    assert.equal(await pending, false); ui.render();
+    assert.equal(ui.props("ReportDiaryForm").values.work_summary, "Keep this draft");
+    assert.ok(ui.find((node) => node.props?.role === "alert"));
+    ui.unmount();
+});
 
 test("validation failure preserves every pending value and performs no writes", async () => {
     const save = await saver(); const drafts = [entry("diary", { work_summary: "Keep" }), entry("manpower", { worker_count: "bad" }, false)]; let writes = 0;

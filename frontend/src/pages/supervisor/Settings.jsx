@@ -237,15 +237,15 @@ export default function SupervisorSettings() {
             )}
 
             <header>
-                <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
+                <p className="text-xs font-bold uppercase tracking-[0.17em] text-muted">
                     Supervisor / My Account
                 </p>
 
-                <h1 className="mt-2 text-2xl font-bold text-[#211E1A] sm:text-3xl">
+                <h1 className="mt-2 text-2xl font-bold text-ink sm:text-3xl">
                     Settings
                 </h1>
 
-                <p className="mt-2 text-sm text-[#716658]">
+                <p className="mt-2 text-sm text-muted">
                     Manage your personal information and account security.
                 </p>
             </header>
@@ -275,7 +275,7 @@ export default function SupervisorSettings() {
             {notice && (
                 <div
                     role="status"
-                    className="flex items-center gap-2 rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]"
+                    className="flex items-center gap-2 rounded-xl bg-pastel-mint p-4 text-sm text-success"
                 >
                     <CheckCircle2 size={18} />
                     {notice}
@@ -285,29 +285,29 @@ export default function SupervisorSettings() {
             {profile && (
                 <>
                     {/* PROFILE HEADER */}
-                    <section className="settings-profile-sidebar overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
-                        <div className="h-2 bg-linear-to-r from-[#D5C0A4] via-[#F0E6D9] to-[#DDE8E1]" />
+                    <section className="settings-profile-sidebar overflow-hidden rounded-[26px] border border-border bg-surface">
+                        <div className="h-2 bg-linear-to-r from-border-strong via-border to-[#DDE8E1]" />
 
                         <div className="p-5 sm:p-7">
                             <div className="flex flex-wrap items-start gap-4">
-                                <div className="flex h-17 w-17 shrink-0 items-center justify-center rounded-[22px] bg-linear-to-br from-[#D6C1A8] to-[#F1EADF] text-2xl font-bold text-[#514232] shadow-sm">
+                                <div className="flex h-17 w-17 shrink-0 items-center justify-center rounded-[22px] bg-linear-to-br from-border-strong to-app text-2xl font-bold text-ink shadow-sm">
                                     {name.charAt(0).toUpperCase()}
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
+                                    <p className="text-xs font-bold uppercase tracking-[0.17em] text-muted">
                                         RARE / Site Supervisor
                                     </p>
 
-                                    <h2 className="mt-2 wrap-break-word text-2xl font-bold text-[#211E1A]">
+                                    <h2 className="mt-2 wrap-break-word text-2xl font-bold text-ink">
                                         {name}
                                     </h2>
 
-                                    <p className="mt-1 break-all text-sm text-[#716658]">
+                                    <p className="mt-1 break-all text-sm text-muted">
                                         @{profile.username || "Not specified"}
                                     </p>
 
-                                    <span className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#E7F2E8] px-3 py-1.5 text-xs font-semibold text-[#296F40]">
+                                    <span className="mt-3 inline-flex items-center gap-2 rounded-full bg-pastel-mint px-3 py-1.5 text-xs font-semibold text-success">
                                         <ShieldCheck size={14} />
                                         {profile.is_active === false
                                             ? "Inactive Account"
@@ -316,25 +316,25 @@ export default function SupervisorSettings() {
                                 </div>
                             </div>
 
-                            <div className="mt-6 grid gap-4 border-t border-[#EEE6DC] pt-5 sm:grid-cols-3">
+                            <div className="mt-6 grid gap-4 border-t border-border pt-5 sm:grid-cols-3">
                                 {[
                                     {
                                         icon: CalendarDays,
                                         label: "Last Login",
                                         value: formatLastLogin(profile.last_login),
-                                        tone: "bg-[#F0EAF8] text-[#7C5BA4]",
+                                        tone: "bg-pastel-lavender text-violet",
                                     },
                                     {
                                         icon: Phone,
                                         label: "Mobile",
                                         value: profile.phone,
-                                        tone: "bg-[#E7F2E8] text-[#368250]",
+                                        tone: "bg-pastel-mint text-success",
                                     },
                                     {
                                         icon: Mail,
                                         label: "Email",
                                         value: profile.email,
-                                        tone: "bg-[#E9F0FC] text-[#3565A5]",
+                                        tone: "bg-pastel-sky text-info",
                                     },
                                     {
                                         icon: CalendarDays,
@@ -342,7 +342,7 @@ export default function SupervisorSettings() {
                                         value: formatDate(
                                             profile.date_joined || profile.created_at
                                         ),
-                                        tone: "bg-[#F0EAF8] text-[#7C5BA4]",
+                                        tone: "bg-pastel-lavender text-violet",
                                     },
                                 ].map((item) => {
                                     const Icon = item.icon;
@@ -359,10 +359,10 @@ export default function SupervisorSettings() {
                                             </span>
 
                                             <div className="min-w-0">
-                                                <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
+                                                <p className="text-xs font-bold uppercase tracking-wide text-muted">
                                                     {item.label}
                                                 </p>
-                                                <p className="mt-1 wrap-break-word text-xs font-semibold text-[#211E1A] sm:text-sm">
+                                                <p className="mt-1 wrap-break-word text-xs font-semibold text-ink sm:text-sm">
                                                     {item.value || "Not provided"}
                                                 </p>
                                             </div>
@@ -374,18 +374,18 @@ export default function SupervisorSettings() {
                     </section>
 
                     {/* PERSONAL DETAILS */}
-                    <section className="settings-personal-information rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
+                    <section className="settings-personal-information rounded-3xl border border-border bg-surface p-5 sm:p-7">
                         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-start gap-3">
-                                <span className="rounded-xl bg-[#E9F0FC] p-3 text-[#3565A5]">
+                                <span className="rounded-xl bg-pastel-sky p-3 text-info">
                                     <UserRound size={21} />
                                 </span>
 
                                 <div>
-                                    <h2 className="text-lg font-bold text-[#211E1A]">
+                                    <h2 className="text-lg font-bold text-ink">
                                         Personal Information
                                     </h2>
-                                    <p className="mt-1 text-xs text-[#716658]">
+                                    <p className="mt-1 text-xs text-muted">
                                         Keep your contact and account details current.
                                     </p>
                                 </div>
@@ -398,7 +398,7 @@ export default function SupervisorSettings() {
                                         setErrors({});
                                         setEditing(true);
                                     }}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#39332B]"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white hover:bg-primary-hover"
                                 >
                                     <Pencil size={16} />
                                     Edit Profile
@@ -412,7 +412,7 @@ export default function SupervisorSettings() {
                                     <div key={field.key} className="min-w-0">
                                         <label
                                             htmlFor={`settings-${field.key}`}
-                                            className="text-xs font-bold uppercase tracking-wide text-[#716658]"
+                                            className="text-xs font-bold uppercase tracking-wide text-muted"
                                         >
                                             {field.label}
                                         </label>
@@ -431,7 +431,7 @@ export default function SupervisorSettings() {
                                                     }
                                                     disabled={Boolean(busyMessage)}
                                                     aria-invalid={Boolean(errors[field.key])}
-                                                    className="mt-2 h-12 w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-4 text-sm text-[#211E1A] outline-none focus:border-[#211E1A]"
+                                                    className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-4 text-sm text-ink outline-none focus:border-ink"
                                                 />
 
                                                 {errors[field.key] && (
@@ -444,7 +444,7 @@ export default function SupervisorSettings() {
                                                 )}
                                             </>
                                         ) : (
-                                            <p className="mt-2 wrap-break-word text-sm font-semibold text-[#211E1A]">
+                                            <p className="mt-2 wrap-break-word text-sm font-semibold text-ink">
                                                 {profile[field.key] || "Not provided"}
                                             </p>
                                         )}
@@ -453,7 +453,7 @@ export default function SupervisorSettings() {
                             </div>
 
                             {editing && (
-                                <div className="mt-6 flex justify-end gap-3 border-t border-[#EEE6DC] pt-5">
+                                <div className="mt-6 flex justify-end gap-3 border-t border-border pt-5">
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -461,7 +461,7 @@ export default function SupervisorSettings() {
                                             setErrors({});
                                             setEditing(false);
                                         }}
-                                        className="inline-flex items-center gap-2 rounded-xl border border-[#E4DCCD] px-4 py-3 text-sm font-semibold text-[#211E1A]"
+                                        className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-ink"
                                     >
                                         <X size={16} />
                                         Cancel
@@ -470,7 +470,7 @@ export default function SupervisorSettings() {
                                     <button
                                         type="submit"
                                         disabled={Boolean(busyMessage)}
-                                        className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#39332B] disabled:opacity-50"
+                                        className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50"
                                     >
                                         <Save size={17} />
                                         Save Changes

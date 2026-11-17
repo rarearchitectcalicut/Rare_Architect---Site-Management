@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => {
   // Django admin and other backend routes remain server-controlled.
   const id = '[0-9a-fA-F-]{36}'
 
-  const admin = `admin/(?:dashboard|settings|projects(?:/(?:new|${id})(?:/(?:tasks(?:/${id})?|daily-reports|documents|delays))?)?|categories/[^/?]+|tasks|approvals|supervisors(?:/(?:new|[0-9]+|${id}))?|reports|daily-reports|documents|delays|notifications|activity)`
+  const admin = `admin/(?:dashboard|settings|projects(?:/(?:new|${id})(?:/(?:tasks(?:/${id})?|timeline|daily-reports|documents|delays))?)?|categories/[^/?]+|tasks|approvals|supervisors(?:/(?:new|[0-9]+|${id}))?|reports|daily-reports|documents|delays|notifications|activity)`
 
   const supervisor = `supervisor/(?:dashboard|settings|projects(?:/${id}(?:/(?:tasks|timeline|delays|documents|daily-reports|overview))?)?|tasks|reports|documents|delays|notifications)`
 
@@ -89,9 +89,9 @@ export default defineConfig(({ mode }) => {
 
           display: 'standalone',
 
-          theme_color: '#f1eadf',
+          theme_color: '#f8f9fc',
 
-          background_color: '#f1eadf',
+          background_color: '#f8f9fc',
 
           icons: [
             {

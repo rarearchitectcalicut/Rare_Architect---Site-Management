@@ -265,15 +265,16 @@ async function reportDetailHarness({ role = "SUPERVISOR", submitted = false, del
 test("report submission lazily loads the review sections, prevents duplicate requests and locks editing", async () => {
     const ui = await reportDetailHarness();
     assert.equal(ui.calls.length, 0);
-    const review = ui.find((node) => node.type === "button" && node.props.children === "Review & Submit");
+    const review = ui.find((node) => node.type === "button" && JSON.stringify(node.props.children).includes("Photos & review"));
     await review.props.onClick(); ui.render(); await ui.flush(); ui.render();
     assert.equal(ui.calls.filter((call) => call.method === "section").length, 4);
-    const submit = ui.find((node) => node.type === "button" && node.props.children === "Confirm and Submit Report");
+    const submit = ui.find((node) => node.type === "button" && node.props.children === "Submit report");
     assert.equal(submit.props.disabled, false);
-    const first = submit.props.onClick(); submit.props.onClick(); await ui.flush();
+    const first = submit.props.onClick(); submit.props.onClick();
+    for (let i = 0; i < 8 && !ui.calls.some((call) => call.method === "submit"); i++) await ui.flush();
     assert.equal(ui.calls.filter((call) => call.method === "submit").length, 1);
     ui.completeSubmit(); await first; ui.render(); await ui.flush(); ui.render();
-    assert.equal(ui.find((node) => node.type === "button" && node.props.children === "Confirm and Submit Report"), undefined);
+    assert.equal(ui.find((node) => node.type === "button" && node.props.children === "Submit report"), undefined);
     ui.cleanup();
 });
 
@@ -281,26 +282,26 @@ test("Admin and submitted Supervisor report details never offer ordinary draft e
     for (const options of [{ role: "ADMIN" }, { role: "SUPERVISOR", submitted: true }]) {
         const ui = await reportDetailHarness(options);
         assert.equal(ui.find((node) => node.type === "button" && node.props.children === "Edit Draft Diary"), undefined);
-        assert.equal(ui.find((node) => node.type === "button" && node.props.children === "Delete Draft"), undefined);
+        assert.equal(ui.find((node) => node.type === "button" && node.props.children === "Delete draft"), undefined);
         ui.cleanup();
     }
 });
 
 test("draft deletion waits for server success, prevents duplicates and preserves failures for retry", async () => {
     const ui = await reportDetailHarness();
-    const button = ui.find((node) => node.type === "button" && node.props.children === "Delete Draft");
+    const button = ui.find((node) => node.type === "button" && node.props.children === "Delete draft");
     const first = button.props.onClick(); button.props.onClick(); await ui.flush(); ui.render();
     assert.equal(ui.calls.filter((call) => call.method === "delete").length, 1);
     assert.equal(ui.selections.length, 0);
-    assert.equal(ui.find((node) => node.type === "button" && node.props.children === "Deleting draft…").props.disabled, true);
+    assert.equal(ui.find((node) => node.type === "button" && String(node.props.children).startsWith("Deleting draft")).props.disabled, true);
     ui.completeDelete(); await first;
     assert.deepEqual(ui.selections, [null]); ui.cleanup();
     const failed = await reportDetailHarness({ deleteError: true });
-    await failed.find((node) => node.type === "button" && node.props.children === "Delete Draft").props.onClick();
+    await failed.find((node) => node.type === "button" && node.props.children === "Delete draft").props.onClick();
     failed.render();
     assert.equal(failed.selections.length, 0);
     assert(failed.find((node) => node.props?.role === "alert"));
-    assert.equal(failed.find((node) => node.type === "button" && node.props.children === "Delete Draft").props.disabled, false);
+    assert.equal(failed.find((node) => node.type === "button" && node.props.children === "Delete draft").props.disabled, false);
     failed.cleanup();
 });
 
@@ -776,7 +777,8 @@ test("Admin delay register reviews pending reports in place and Supervisors stay
     assert.ok(!html.includes("Report delay</button>"));
     const supervisor = render(exports.default, { role: "SUPERVISOR" }, "/supervisor/delays?project=project&request=report");
     assert.ok(!/>Approve Request<\/button>/.test(supervisor)); assert.ok(!/>Reject Request<\/button>/.test(supervisor));
-    assert.ok(supervisor.includes("aspect-square"));
+    assert.ok(supervisor.includes("rare-delay-card"));
+    assert.ok(!supervisor.includes("aspect-square"));
     assert.ok(!html.includes("aspect-square"));
 });
 
@@ -1073,14 +1075,14 @@ test("project editing offers active categories and preserves an unchanged inacti
 test("notification presentation uses audited events and keeps ambiguous legacy records neutral", async () => {
     const { exports } = await loadSource("components/notifications/NotificationCenter.jsx", { append: "\nexport { configFor, NotificationRow, resolveDestination };" });
     const rejected = exports.configFor({ notification_type: "TASK_APPROVAL", title: "Task approved", event: "TASK_REJECTED" });
-    assert.match(rejected.tone, /B42318/); assert.match(rejected.label, /Rejected/);
-    assert.match(exports.configFor({ notification_type: "TASK_APPROVAL", event: "TASK_APPROVED" }).tone, /166534/);
-    assert.match(exports.configFor({ notification_type: "PROJECT_ASSIGNMENT", event: "SUPERVISOR_ASSIGNED" }).tone, /3565A5/);
-    assert.match(exports.configFor({ notification_type: "SYSTEM", event: "PROJECT_CANCELLED" }).tone, /B42318/);
-    assert.match(exports.configFor({ notification_type: "SYSTEM", event: "PROJECT_DATES_CHANGED" }).tone, /3565A5/);
-    assert.match(exports.configFor({ notification_type: "TASK_APPROVAL", title: "Task approved" }).tone, /74614D/);
+    assert.match(rejected.tone, /text-danger/); assert.match(rejected.label, /Rejected/);
+    assert.match(exports.configFor({ notification_type: "TASK_APPROVAL", event: "TASK_APPROVED" }).tone, /text-success/);
+    assert.match(exports.configFor({ notification_type: "PROJECT_ASSIGNMENT", event: "SUPERVISOR_ASSIGNED" }).tone, /text-info/);
+    assert.match(exports.configFor({ notification_type: "SYSTEM", event: "PROJECT_CANCELLED" }).tone, /text-danger/);
+    assert.match(exports.configFor({ notification_type: "SYSTEM", event: "PROJECT_DATES_CHANGED" }).tone, /text-info/);
+    assert.match(exports.configFor({ notification_type: "TASK_APPROVAL", title: "Task approved" }).tone, /text-muted/);
     const html = render(exports.NotificationRow, { notification: { id: "rejected", notification_type: "TASK_APPROVAL", title: "Rejected task", event: "TASK_REJECTED", is_read: false, message: "Read the Admin comment" } });
-    assert.match(html, /Rejected task/); assert.match(html, /B42318/); assert.match(html, /Task approval \/ Rejected/);
+    assert.match(html, /Rejected task/); assert.match(html, /text-danger/); assert.match(html, /Task approval \/ Rejected/);
 });
 
 test("project notifications and task batches use supported contextual destinations", async () => {
@@ -1289,7 +1291,7 @@ test("Supervisor Quick Actions omit dashboard delay shortcuts", async () => {
     const draw = () => { tree = state.render(() => exports.SupervisorQuickActions()); };
     draw();
     const contents = JSON.stringify(tree);
-    for (const text of ["Submit today's report", "My Projects", "My Tasks", "Create Task", "grid-cols-2", "sm:grid-cols-3", "/supervisor/projects", "/supervisor/tasks"]) assert.ok(contents.includes(text));
+    for (const text of ["Submit today's report", "My Projects", "My Tasks", "Create Task", "grid-cols-3", "flex-col", "/supervisor/projects", "/supervisor/tasks"]) assert.ok(contents.includes(text));
     assert.ok(!contents.includes("Report Delay"));
     assert.ok(!contents.includes(">Delays<"));
     assert.ok(!contents.includes("/supervisor/delays"));
@@ -1339,8 +1341,8 @@ test("Supervisor attention rows flag stale drafts and open their exact records",
     assert.ok(html.includes('aria-label="Verified work, 12"'));
     assert.ok(html.includes("Work summary"));
     assert.ok(html.includes("<h3"));
-    assert.ok(html.includes("grid-cols-1 gap-4 md:grid-cols-2"));
-    assert.ok(!html.includes("Rejected"));
+    assert.ok(html.includes("rare-work-chart-grid"));
+    assert.ok(html.includes('aria-label="Rejected tasks, 0"'));
     assert.ok(!html.includes("Task pipeline"));
     assert.ok(!html.includes("Created tasks"));
     assert.ok(!html.includes("Unread notifications"));
@@ -1444,7 +1446,7 @@ test("one Supervisor project selector handles eligible projects, errors, search 
     }
 });
 
-test("dashboard create links open existing Supervisor task/report forms only for eligible projects and never save on navigation", async () => {
+test("dashboard create links open tasks or reuse today's report draft only for eligible projects without creating duplicate reports", async () => {
     const Router = await import("react-router-dom");
     const projectId = "00000000-0000-4000-8000-000000000001";
     const { exports: helpers } = await loadSource("api/taskApi.js", { overrides: { "api/client.js": { api: {} } } });
@@ -1457,19 +1459,20 @@ test("dashboard create links open existing Supervisor task/report forms only for
                 "react-router-dom": { ...Router, useParams: () => ({ projectId }), useSearchParams: () => [query, setQuery] },
                 "api/projectApi.js": { projectApi: { getProject: async () => ({ id: projectId, status }), getProjectOverview: async () => ({ id: projectId, status }) } },
                 "api/taskApi.js": { ...helpers, taskApi: { list: async () => [] } },
-                "api/dailyReportApi.js": { dailyReportApi: { list: async () => ({ count: 0, results: [], summary: { total: 0, drafts: 0, submitted: 0, pending_work: 0 } }) } },
+                "api/dailyReportApi.js": { dailyReportApi: { list: async () => ({ count: 1, results: [{ id: "existing-today-draft", report_date: new Date().toLocaleDateString("en-CA") }], summary: { total: 1, drafts: 1, submitted: 0, pending_work: 0 } }), create: async () => { throw new Error("An existing draft must be reused"); } } },
             }, append: kind === "report" ? "\nexport { ProjectReportWorkspace };" : "" });
             let tree;
             const draw = () => { tree = state.render(() => kind === "task" ? exports.default() : exports.ProjectReportWorkspace({ projectId, role: "SUPERVISOR", user: { id: "supervisor" } })); };
-            draw(); await flushDelay(); draw(); draw();
+            draw(); await flushDelay(); draw(); await flushDelay(); draw(); await flushDelay(); draw();
             const eligible = ["ACTIVE", "MAINTENANCE"].includes(status);
             if (kind === "task") {
                 const form = quickFind(tree, (node) => node.type?.name === "TaskForm");
                 assert.equal(form.props.open, eligible);
             } else {
-                const breadcrumb = quickFind(tree, (node) => node.type === "span" && node.props["aria-current"] === "page" && node.props.children === "Daily Reports");
-                assert.ok(breadcrumb);
-                assert.equal(Boolean(quickFind(tree, (node) => node.type?.name === "ReportDiaryForm")), eligible);
+                const detail = quickFind(tree, (node) => node.type?.name === "ReportDetail");
+                assert.equal(Boolean(detail), eligible);
+                assert.equal(query.get("report"), eligible ? "existing-today-draft" : null);
+                if (eligible) assert.equal(detail.props.reportId, "existing-today-draft");
             }
             assert.equal(query.has("create"), false);
             state.cleanup();

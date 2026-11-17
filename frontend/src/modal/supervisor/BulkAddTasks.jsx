@@ -40,13 +40,13 @@ const UNITS = [
 ];
 
 const inputClass = `
-  w-full rounded-xl border border-[#E4DCCD]
-  bg-[#FFFDFA] px-3.5 py-3 text-sm
-  text-[#211E1A] outline-none
+  w-full rounded-xl border border-border
+  bg-surface px-3.5 py-3 text-sm
+  text-ink outline-none
   transition-all duration-200
-  placeholder:text-[#A99D8E]
-  focus:border-[#B7A58E]
-  focus:ring-4 focus:ring-[#E8DDD0]/50
+  placeholder:text-subtle
+  focus:border-border-strong
+  focus:ring-4 focus:ring-pastel-lavender/50
 `;
 
 function errorText(value) {
@@ -110,7 +110,7 @@ function serializeRow(row) {
 function FormField({ label, error, children }) {
     return (
         <div className="min-w-0">
-            <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#716658]">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted">
                 {label}
             </label>
 
@@ -300,7 +300,7 @@ export default function BulkAddTasks({
                     event.stopPropagation();
                     if (!savingRef.current) onClose();
                 }}
-                className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-[#211E1A]/55 p-0 text-[#211E1A] backdrop-blur-sm backdrop:bg-transparent sm:p-6"
+                className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-ink/55 p-0 text-ink backdrop-blur-sm backdrop:bg-transparent sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -311,28 +311,28 @@ export default function BulkAddTasks({
                 }}
             >
                 <section
-                    className="rare-mobile-sheet flex max-h-[94dvh] w-full max-w-[900px] flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-2xl"
+                    className="rare-mobile-sheet flex max-h-[94dvh] w-full max-w-[900px] flex-col overflow-hidden rounded-[26px] border border-border bg-surface shadow-2xl"
                 >
                     {/* HEADER */}
-                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-3 border-b border-[#EEE6DC] p-5 sm:p-7">
+                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-3 border-b border-border p-5 sm:p-7">
                         <div className="flex items-start gap-3">
-                            <span className="rounded-2xl bg-[#E9F0FC] p-3 text-[#3565A5]">
+                            <span className="rounded-2xl bg-pastel-sky p-3 text-info">
                                 <ClipboardList size={24} />
                             </span>
 
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
+                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted">
                                     Supervisor / Task Management
                                 </p>
 
                                 <h2
                                     id="bulk-task-title"
-                                    className="mt-1 text-xl font-bold text-[#211E1A] sm:text-2xl"
+                                    className="mt-1 text-xl font-bold text-ink sm:text-2xl"
                                 >
                                     Bulk Add Tasks
                                 </h2>
 
-                                <p className="mt-2 text-xs leading-5 text-[#716658]">
+                                <p className="mt-2 text-xs leading-5 text-muted">
                                     Prepare multiple tasks and submit them together
                                     for Admin review.
                                 </p>
@@ -344,7 +344,7 @@ export default function BulkAddTasks({
                             onClick={onClose}
                             disabled={saving}
                             aria-label="Close bulk tasks"
-                            className="rounded-full bg-[#F1EADF] p-2.5 text-[#211E1A] disabled:opacity-50"
+                            className="rounded-full bg-app p-2.5 text-ink disabled:opacity-50"
                         >
                             <X size={19} />
                         </button>
@@ -356,29 +356,29 @@ export default function BulkAddTasks({
                         noValidate
                         className="flex min-h-0 flex-1 flex-col"
                     >
-                        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-[#F8F4EE] p-4 sm:p-6">
-                            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#E9F0FC] px-4 py-3">
-                                <p className="text-xs font-bold text-[#3565A5]">
+                        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-surface-soft p-4 sm:p-6">
+                            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-pastel-sky px-4 py-3">
+                                <p className="text-xs font-bold text-info">
                                     {rows.length}{" "}
                                     {rows.length === 1 ? "task" : "tasks"} in batch
                                 </p>
 
-                                <p className="text-xs text-[#3565A5]">
+                                <p className="text-xs text-info">
                                     All tasks begin Pending Approval
                                 </p>
                             </div>
 
-                            {(project?.start_date || project?.end_date) && <p className="rounded-xl bg-[#F1EADF] p-3 text-sm text-[#665E53]">Project schedule: {projectScheduleText(project)}. Adjust task dates to this schedule or ask Admin to review the project deadline.</p>}
+                            {(project?.start_date || project?.end_date) && <p className="rounded-xl bg-app p-3 text-sm text-muted">Project schedule: {projectScheduleText(project)}. Adjust task dates to this schedule or ask Admin to review the project deadline.</p>}
                             {rows.map((row, index) => {
                                 const errors = { ...rowErrors[row.key], ...taskScheduleErrors(row, project) };
 
                                 return (
                                     <article
                                         key={row.key}
-                                        className={`overflow-hidden rounded-[21px] border bg-[#FFFDFA] ${Object.values(errors).some(Boolean) ? "border-red-400" : "border-[#E7DED2]"}`}
+                                        className={`overflow-hidden rounded-[21px] border bg-surface ${Object.values(errors).some(Boolean) ? "border-red-400" : "border-border"}`}
                                     >
-                                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEE6DC] bg-[#F7F0E7] p-4">
-                                            <h3 className="text-sm font-bold text-[#211E1A]">
+                                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-soft p-4">
+                                            <h3 className="text-sm font-bold text-ink">
                                                 Task {index + 1}
                                             </h3>
 
@@ -387,7 +387,7 @@ export default function BulkAddTasks({
                                                     type="button"
                                                     onClick={() => duplicateRow(row)}
                                                     disabled={saving}
-                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#E9F0FC] px-3 py-2 text-xs font-bold text-[#3565A5]"
+                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-pastel-sky px-3 py-2 text-xs font-bold text-info"
                                                 >
                                                     <CopyPlus size={15} />
                                                     Duplicate
@@ -397,7 +397,7 @@ export default function BulkAddTasks({
                                                     type="button"
                                                     onClick={() => removeRow(row.key)}
                                                     disabled={saving || rows.length === 1}
-                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#FCE9E6] px-3 py-2 text-xs font-bold text-[#B5473E] disabled:opacity-40"
+                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-pastel-blush px-3 py-2 text-xs font-bold text-danger disabled:opacity-40"
                                                 >
                                                     <Trash2 size={15} />
                                                     Remove
@@ -517,8 +517,8 @@ export default function BulkAddTasks({
                                                 </FormField>
                                             </div>
 
-                                            <div className="sm:col-span-2 rounded-2xl bg-[#F8F4EE] p-4">
-                                                <p className="mb-4 text-xs font-bold uppercase tracking-wider text-[#716658]">
+                                            <div className="sm:col-span-2 rounded-2xl bg-surface-soft p-4">
+                                                <p className="mb-4 text-xs font-bold uppercase tracking-wider text-muted">
                                                     Measurement & Completion
                                                 </p>
 
@@ -625,7 +625,7 @@ export default function BulkAddTasks({
                                 type="button"
                                 onClick={addRow}
                                 disabled={saving}
-                                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#D7C7B4] bg-[#FFFDFA] px-5 py-5 text-sm font-bold text-[#665E53] transition-colors hover:border-[#AB987F] hover:bg-[#F1EADF]"
+                                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border-strong bg-surface px-5 py-5 text-sm font-bold text-muted transition-colors hover:border-muted hover:bg-app"
                             >
                                 <Plus size={19} />
                                 Add Another Task
@@ -643,8 +643,8 @@ export default function BulkAddTasks({
                         </div>
 
                         {/* FOOTER */}
-                        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#EEE6DC] bg-[#FFFDFA] p-5 sm:px-7">
-                            <p className="text-xs text-[#716658]">
+                        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-surface p-5 sm:px-7">
+                            <p className="text-xs text-muted">
                                 {rows.length} tasks · One atomic submission
                             </p>
 
@@ -653,7 +653,7 @@ export default function BulkAddTasks({
                                     type="button"
                                     disabled={saving}
                                     onClick={onClose}
-                                    className="rounded-xl border border-[#E4DCCD] px-4 py-3 text-sm font-semibold text-[#211E1A]"
+                                    className="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-ink"
                                 >
                                     Cancel
                                 </button>
@@ -661,7 +661,7 @@ export default function BulkAddTasks({
                                 <button
                                     type="submit"
                                     disabled={saving || rows.some((row) => Object.keys(taskScheduleErrors(row, project)).length > 0)}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#39332B] disabled:opacity-50"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
                                 >
                                     <Send size={17} />
                                     Submit All ({rows.length})

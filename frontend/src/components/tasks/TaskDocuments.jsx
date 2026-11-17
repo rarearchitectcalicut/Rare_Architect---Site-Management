@@ -28,7 +28,7 @@ const DOCUMENT_TYPES = [
 ];
 
 const inputClass =
-    "w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-4 py-3 text-sm text-[#211E1A] outline-none focus:border-[#B7A58E] focus:ring-4 focus:ring-[#E8DDD0]/50";
+    "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-border-strong focus:ring-4 focus:ring-pastel-lavender/50";
 
 function getItems(data) {
     if (Array.isArray(data)) return data;
@@ -176,11 +176,11 @@ function DocumentUploadForm({
     return (
         <form
             onSubmit={submit}
-            className="space-y-4 rounded-2xl border border-[#D8C7B2] bg-[#FFFDFA] p-4 sm:p-5"
+            className="space-y-4 rounded-2xl border border-border-strong bg-surface p-4 sm:p-5"
         >
             {confirmationModal}
             <div className="flex items-center justify-between gap-3">
-                <h4 className="text-sm font-bold text-[#211E1A]">
+                <h4 className="text-sm font-bold text-ink">
                     {versionMode
                         ? "Upload New Document Version"
                         : "Upload Task Document"}
@@ -191,7 +191,7 @@ function DocumentUploadForm({
                     disabled={saving}
                     onClick={onCancel}
                     aria-label="Close upload form"
-                    className="rounded-lg bg-[#F1EADF] p-2 text-[#665E53]"
+                    className="rounded-lg bg-app p-2 text-muted"
                 >
                     <X size={16} />
                 </button>
@@ -200,7 +200,7 @@ function DocumentUploadForm({
             {!versionMode && (
                 <>
                     <div>
-                        <label className="mb-2 block text-xs font-semibold text-[#665E53]">
+                        <label className="mb-2 block text-xs font-semibold text-muted">
                             Document Title *
                         </label>
                         <input
@@ -214,7 +214,7 @@ function DocumentUploadForm({
 
                     <div className="grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label className="mb-2 block text-xs font-semibold text-[#665E53]">
+                            <label className="mb-2 block text-xs font-semibold text-muted">
                                 Document Type
                             </label>
                             <select
@@ -232,7 +232,7 @@ function DocumentUploadForm({
                     </div>
 
                     <div>
-                        <label className="mb-2 block text-xs font-semibold text-[#665E53]">
+                        <label className="mb-2 block text-xs font-semibold text-muted">
                             Description
                         </label>
                         <textarea
@@ -247,7 +247,7 @@ function DocumentUploadForm({
             )}
 
             <div>
-                <label className="mb-2 block text-xs font-semibold text-[#665E53]">
+                <label className="mb-2 block text-xs font-semibold text-muted">
                     Attachment *
                 </label>
 
@@ -264,15 +264,15 @@ function DocumentUploadForm({
 
                 <label
                     htmlFor={`document-upload-${taskId}-${documentId || "new"}`}
-                    className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#D9CBBB] bg-[#F8F4EE] px-4 py-5 text-center transition-colors hover:bg-[#F1EADF]"
+                    className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-surface-soft px-4 py-5 text-center transition-colors hover:bg-app"
                 >
-                    <UploadCloud size={27} className="text-[#716658]" />
+                    <UploadCloud size={27} className="text-muted" />
 
-                    <span className="break-all text-sm font-semibold text-[#211E1A]">
+                    <span className="break-all text-sm font-semibold text-ink">
                         {file ? file.name : "Choose a file"}
                     </span>
 
-                    <span className="text-xs text-[#716658]">
+                    <span className="text-xs text-muted">
                         {file
                             ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
                             : "Supported file types and size are enforced by Django"}
@@ -292,7 +292,7 @@ function DocumentUploadForm({
             <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#39332B] disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
             >
                 <UploadCloud size={17} />
                 {saving ? "Uploading..." : versionMode
@@ -365,23 +365,23 @@ function DocumentRow({
     }
 
     return (
-        <article className="overflow-hidden rounded-[17px] border border-[#E7DED2] bg-[#FFFDFA]">
+        <article className="overflow-hidden rounded-[17px] border border-border bg-surface">
             <div className="flex flex-wrap items-center gap-3 p-4">
-                <span className="rounded-xl bg-[#F0EAF8] p-3 text-[#7C5BA4]">
+                <span className="rounded-xl bg-pastel-lavender p-3 text-violet">
                     <FileText size={20} />
                 </span>
 
                 <div className="min-w-0 flex-1">
-                    <p className="break-words text-sm font-bold text-[#211E1A]">
+                    <p className="break-words text-sm font-bold text-ink">
                         {record.title || "Task Document"}
                     </p>
 
-                    <p className="mt-1 text-xs text-[#716658]">
+                    <p className="mt-1 text-xs text-muted">
                         {(record.document_type || "OTHER").replaceAll("_", " ")}
                     </p>
 
                     {record.description && (
-                        <p className="mt-1 text-xs leading-5 text-[#716658]">
+                        <p className="mt-1 text-xs leading-5 text-muted">
                             {record.description}
                         </p>
                     )}
@@ -392,13 +392,13 @@ function DocumentRow({
                     onClick={download}
                     disabled={downloading}
                     title="Download current version"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E9F0FC] text-[#3565A5] hover:bg-[#D8E7FA] disabled:opacity-50"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-pastel-sky text-info hover:bg-[#D8E7FA] disabled:opacity-50"
                 >
                     <Download size={18} />
                 </button>
             </div>
 
-            <div className="flex flex-wrap gap-2 border-t border-[#EEE6DC] px-4 py-3">
+            <div className="flex flex-wrap gap-2 border-t border-border px-4 py-3">
                 <button
                     type="button"
                     onClick={() => {
@@ -408,7 +408,7 @@ function DocumentRow({
                             loadVersions();
                         }
                     }}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#F1EADF] px-3 py-2 text-xs font-semibold text-[#665E53]"
+                    className="inline-flex items-center gap-2 rounded-xl bg-app px-3 py-2 text-xs font-semibold text-muted"
                 >
                     <History size={15} />
                     Version History
@@ -422,7 +422,7 @@ function DocumentRow({
                     type="button"
                     onClick={() => setShowVersionUpload((value) => !value)}
                     disabled={readOnly}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#E7F2E8] px-3 py-2 text-xs font-semibold text-[#296F40]"
+                    className="inline-flex items-center gap-2 rounded-xl bg-pastel-mint px-3 py-2 text-xs font-semibold text-success"
                 >
                     <FilePlus2 size={15} />
                     New Version
@@ -436,35 +436,35 @@ function DocumentRow({
             )}
 
             {showVersions && (
-                <div className="space-y-2 border-t border-[#EEE6DC] bg-[#F8F4EE] p-4">
-                    <p className="flex items-center gap-2 text-xs font-bold text-[#665E53]">
+                <div className="space-y-2 border-t border-border bg-surface-soft p-4">
+                    <p className="flex items-center gap-2 text-xs font-bold text-muted">
                         <Clock3 size={15} />
                         Stored Versions
                     </p>
 
                     {versionsLoading ? (
-                        <p className="text-xs text-[#716658]">
+                        <p className="text-xs text-muted">
                             Loading versions...
                         </p>
                     ) : versions.length ? (
                         versions.map((version, index) => (
                             <div
                                 key={version.id || index}
-                                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#FFFDFA] p-3"
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface p-3"
                             >
                                 <div className="min-w-0">
-                                    <p className="text-xs font-bold text-[#211E1A]">
+                                    <p className="text-xs font-bold text-ink">
                                         Version {version.version_number || index + 1}
                                         {version.is_current ? " · Current" : ""}
                                     </p>
 
-                                    <p className="mt-1 break-all text-xs text-[#716658]">
+                                    <p className="mt-1 break-all text-xs text-muted">
                                         {version.original_filename ||
                                             "Filename unavailable"}
                                     </p>
                                 </div>
 
-                                <p className="text-xs text-[#716658]">
+                                <p className="text-xs text-muted">
                                     {version.created_at
                                         ? String(version.created_at).slice(0, 10)
                                         : ""}
@@ -472,7 +472,7 @@ function DocumentRow({
                             </div>
                         ))
                     ) : (
-                        <p className="text-xs text-[#716658]">
+                        <p className="text-xs text-muted">
                             No version records returned.
                         </p>
                     )}
@@ -486,7 +486,7 @@ function DocumentRow({
             )}
 
             {showVersionUpload && !readOnly && (
-                <div className="border-t border-[#EEE6DC] p-4">
+                <div className="border-t border-border p-4">
                     <DocumentUploadForm
                         taskId={taskId}
                         documentId={record.id}
@@ -539,7 +539,7 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
     }, [taskId, search, page, refreshKey, requestKey]);
 
     return (
-        <section className="mt-4 rounded-[20px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
+        <section className="mt-4 rounded-[20px] border border-border bg-surface-soft p-4 sm:p-5">
             {busy && (
                 <LoadingScreen
                     message={
@@ -552,11 +552,11 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
 
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h3 className="text-base font-bold text-[#211E1A]">
+                    <h3 className="text-base font-bold text-ink">
                         Task Documents
                     </h3>
 
-                    <p className="mt-1 text-xs text-[#716658]">
+                    <p className="mt-1 text-xs text-muted">
                         Drawings, instructions and supporting files
                     </p>
                 </div>
@@ -566,7 +566,7 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
                         type="button"
                         onClick={load}
                         aria-label="Refresh task documents"
-                        className="rounded-xl bg-[#FFFDFA] p-3 text-[#665E53]"
+                        className="rounded-xl bg-surface p-3 text-muted"
                     >
                         <RefreshCw size={17} />
                     </button>
@@ -575,7 +575,7 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
                         type="button"
                         onClick={() => setShowUpload((value) => !value)}
                         disabled={readOnly}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-xs font-semibold text-white"
+                        className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-xs font-semibold text-white"
                     >
                         <FilePlus2 size={17} />
                         Upload Document
@@ -584,8 +584,8 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
             </div>
 
             <ProjectSearch query={search} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search task documents" placeholder="Title, description or filename" loading={loading} suggestions={(loading ? [] : documents).map((doc) => ({ id: doc.id, name: doc.title, context: doc.current_version?.original_filename }))} className="mt-4" />
-            {loading && <p role="status" className="mt-3 text-sm text-[#817669]">Updating documents...</p>}
-            {!loading && !error && <nav aria-label="Task document pages" className="rare-pagination mt-4 text-sm text-[#817669]"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className="min-h-12 rounded-xl border border-[#E7DED2] px-3 disabled:opacity-40">Previous</button><span aria-live="polite" aria-atomic="true">Page {page} of {Math.max(1, Math.ceil(count / 8))}<span className="block text-xs">{count} documents</span></span><button type="button" disabled={page * 8 >= count} onClick={() => setPage(page + 1)} className="min-h-12 rounded-xl border border-[#E7DED2] px-3 disabled:opacity-40">Next</button></nav>}
+            {loading && <p role="status" className="mt-3 text-sm text-muted">Updating documents...</p>}
+            {!loading && !error && <nav aria-label="Task document pages" className="rare-pagination mt-4 text-sm text-muted"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className="min-h-12 rounded-xl border border-border px-3 disabled:opacity-40">Previous</button><span aria-live="polite" aria-atomic="true">Page {page} of {Math.max(1, Math.ceil(count / 8))}<span className="block text-xs">{count} documents</span></span><button type="button" disabled={page * 8 >= count} onClick={() => setPage(page + 1)} className="min-h-12 rounded-xl border border-border px-3 disabled:opacity-40">Next</button></nav>}
             {showUpload && !readOnly && (
                 <div className="mt-5">
                     <DocumentUploadForm
@@ -624,17 +624,17 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
                     ))}
 
                     {!documents.length && !error && (
-                        <div className="rounded-xl bg-[#FFFDFA] px-5 py-10 text-center">
+                        <div className="rounded-xl bg-surface px-5 py-10 text-center">
                             <FileText
                                 size={27}
-                                className="mx-auto text-[#716658]"
+                                className="mx-auto text-muted"
                             />
 
-                            <p className="mt-3 text-sm font-semibold text-[#211E1A]">
+                            <p className="mt-3 text-sm font-semibold text-ink">
                                 {search ? "No matching documents" : "No documents uploaded yet"}
                             </p>
 
-                            <p className="mt-2 text-xs text-[#716658]">
+                            <p className="mt-2 text-xs text-muted">
                                 Upload drawings, instructions or supporting files
                                 related to this task.
                             </p>

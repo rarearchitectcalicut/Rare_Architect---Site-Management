@@ -9,11 +9,11 @@ export default function ApprovalDecisionModal({ action, label, busy, error, onCl
         <form className="space-y-5 p-6 sm:p-8" onSubmit={(event) => { event.preventDefault(); onSubmit(comment); }}>
             <div className="flex items-start justify-between gap-3">
                 <h2 className="text-xl font-bold">{rejecting ? "Reject" : "Approve"} {label}</h2>
-                <button type="button" disabled={Boolean(busy)} onClick={onClose} aria-label="Close decision" className="rounded-full bg-[#F1EADF] p-2"><X size={18} /></button>
+                <button type="button" disabled={Boolean(busy)} onClick={onClose} aria-label="Close decision" className="rounded-full bg-app p-2"><X size={18} /></button>
             </div>
-            <p className="text-sm leading-6 text-[#716658]">{rejecting ? "Explain what needs to be corrected. The supervisor will be able to read your feedback." : "Confirm that you have reviewed this request and its supporting details."}</p>
+            <p className="text-sm leading-6 text-muted">{rejecting ? "Explain what needs to be corrected. The supervisor will be able to read your feedback." : "Confirm that you have reviewed this request and its supporting details."}</p>
             <label className="block text-sm font-semibold">{rejecting ? "Rejection reason (required)" : "Admin comment (optional)"}
-                <textarea autoFocus required={rejecting} maxLength={1000} rows={4} value={comment} onChange={(event) => setComment(event.target.value)} className="mt-2 w-full rounded-xl border border-[#E4DCCD] p-3 text-sm outline-none focus:border-[#3565A5]" />
+                <textarea autoFocus required={rejecting} maxLength={1000} rows={4} value={comment} onChange={(event) => setComment(event.target.value)} className="mt-2 w-full rounded-xl border border-border p-3 text-sm outline-none focus:border-info" />
             </label>
             <div className="rare-action-footer flex flex-wrap justify-end gap-3">
                 <button type="button" disabled={Boolean(busy)} onClick={onClose} className="rare-button rare-button-secondary">Cancel</button>

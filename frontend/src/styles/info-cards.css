@@ -1,0 +1,193 @@
+/* Stable information hierarchy shared by portfolio cards and detail workspaces. */
+.rare-delay-card { display: flex; flex-direction: column; min-width: 0; gap: .625rem; width: 100%; padding: .875rem; border: 1px solid var(--color-border); border-radius: 1.125rem; background: var(--color-surface); text-align: left; color: var(--color-ink); box-shadow: var(--shadow-float); transition: border-color 160ms, box-shadow 160ms; }
+.rare-delay-card:hover { border-color: var(--color-border-strong); box-shadow: 0 8px 24px rgb(49 64 91 / .07); }
+.rare-delay-card:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.rare-delay-card-heading { display: flex; align-items: flex-start; gap: .625rem; width: 100%; }
+.rare-delay-card-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; flex-shrink: 0; border-radius: .75rem; background: var(--color-pastel-blush); color: var(--color-warning); }
+.rare-delay-card-project { display: flex; align-items: center; gap: .375rem; margin-bottom: .25rem; color: var(--color-muted); font-size: .6875rem; line-height: 1.5; }
+.rare-delay-card-project svg { flex-shrink: 0; }
+.rare-delay-card-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font-size: .9375rem; line-height: 1.4; font-weight: 650; letter-spacing: -.02em; }
+.rare-delay-card-status { display: flex; flex-wrap: wrap; gap: .375rem; }
+.rare-delay-card-status > span { padding: .25rem .5rem; border-radius: 999px; font-size: .6875rem; line-height: 1.5; font-weight: 600; }
+.rare-delay-card-reason { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .5rem; font-size: .75rem; line-height: 1.5; }
+.rare-delay-card-reason strong { color: var(--color-muted); font-weight: 500; }
+.rare-delay-card-reason > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.rare-delay-card-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; width: 100%; padding-block: .5rem; border-top: 1px solid var(--color-border); }
+.rare-delay-field-label { display: flex; align-items: center; gap: .25rem; color: var(--color-muted); font-size: .6875rem; line-height: 1.5; }
+.rare-delay-card-dates strong { display: block; margin-top: .25rem; font-size: .75rem; line-height: 1.5; font-weight: 600; }
+.rare-delay-card-footer { display: flex; justify-content: space-between; align-items: center; gap: .5rem; width: 100%; margin-top: auto; font-size: .6875rem; color: var(--color-muted); }
+.rare-delay-card-footer > span:first-child { flex: 1; }
+.rare-delay-review-reason { display: grid; gap: 1rem; border: 1px solid var(--color-border); border-radius: 1.25rem; background: var(--color-surface); padding: 1rem; }
+@media (min-width: 640px) { .rare-delay-review-reason { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 639px) { .rare-delay-card { gap: .5rem; padding: .75rem; } .rare-delay-card-reason > span { -webkit-line-clamp: 1; } }
+.rare-report-controls { display: grid; gap: .875rem; align-items: center; padding: .875rem 1rem; border: 1px solid var(--color-border); border-radius: 1.25rem; background: var(--color-surface); box-shadow: var(--shadow-float); }
+.rare-report-project-picker { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.rare-report-project-picker-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: .875rem; color: var(--color-info); background: var(--color-pastel-lavender); }
+.rare-report-project-caption { font-size: .625rem; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); margin-bottom: .375rem; }
+.rare-app main h2.rare-report-project-name { font-size: clamp(1rem, 1.4vw, 1.125rem); font-weight: 700; line-height: 1.5; letter-spacing: -.025em; }
+.rare-report-project-name > span { padding: .125rem .4rem; margin-left: -.4rem; border-radius: .375rem; background: #ebe9ff80; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+@media (min-width: 768px) { .rare-report-controls { grid-template-columns: minmax(13rem, 1fr) minmax(0, 2fr); gap: 1.5rem; } }
+.rare-info-card { min-width: 0; padding: 1rem; border: 1px solid var(--color-border); border-radius: 1.25rem; background: var(--color-surface); box-shadow: var(--shadow-float); }
+.rare-info-card-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding-bottom: .875rem; }
+.rare-info-card-heading-copy { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.rare-info-card-heading-copy > div { min-width: 0; }
+.rare-info-card-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.75rem; height: 2.75rem; border: 1px solid #e0e7f9; border-radius: 1rem; background: linear-gradient(135deg, var(--color-pastel-lavender), var(--color-pastel-sky)); color: var(--color-info); }
+.rare-info-eyebrow { margin: 0 0 .25rem; color: var(--color-muted); font-size: .6875rem; line-height: 1.5; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+.rare-app main .rare-info-card-heading h2 { margin: 0; font-size: 1.0625rem; font-weight: 650; letter-spacing: -.025em; }
+.rare-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .875rem 1rem; margin: 0; }
+.rare-info-field { min-width: 0; }
+.rare-info-field dt { display: flex; align-items: center; gap: .375rem; margin-bottom: .2rem; color: var(--color-muted); font-size: .75rem; line-height: 1.5; }
+.rare-info-field dt svg { flex-shrink: 0; }
+.rare-info-field dd { margin: 0; color: var(--color-ink); font-size: .875rem; font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.rare-info-hint { display: block; margin-top: .2rem; font-size: .75rem; font-weight: 400; color: var(--color-muted); }
+.rare-project-information .rare-info-grid { border-top: 1px solid var(--color-border); padding-top: .875rem; }
+.rare-project-card { display: flex; flex-direction: column; min-width: 0; height: 100%; overflow: hidden; isolation: isolate; border: 1px solid var(--color-border); border-radius: 1.5rem; background: var(--color-surface); color: var(--color-ink); box-shadow: 0 6px 24px rgb(49 64 91 / .035); transition: border-color 180ms, box-shadow 180ms, transform 180ms; }
+.rare-project-card:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 4px; }
+.rare-project-card-cover { position: relative; flex-shrink: 0; height: 10rem; overflow: hidden; background: var(--color-pastel-sky); }
+.rare-project-mobile-open { display: none; }
+.rare-project-card-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 200ms; }
+.rare-project-card-cover .rare-project-cover { position: absolute; inset: 0; display: grid; place-items: center; }
+.rare-project-card-cover .rare-project-cover > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 1.2rem; background: rgb(255 255 255 / .6); border: 1px solid rgb(255 255 255 / .8); color: var(--color-info); }
+.rare-project-card-body { display: flex; flex: 1; flex-direction: column; min-width: 0; padding: 1.25rem; }
+.rare-project-card-context { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem; }
+.rare-project-card-context > p { color: var(--color-muted); font-size: .6875rem; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; }
+.rare-project-card h3 { margin: 1rem 0 .5rem; font-size: 1.1875rem; line-height: 1.45; font-weight: 650; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.rare-project-card-location { display: flex; align-items: flex-start; gap: .375rem; color: var(--color-muted); font-size: .8125rem; line-height: 1.6; }
+.rare-project-card-location svg { flex-shrink: 0; margin-top: .2rem; }
+.rare-project-card .rare-info-grid { gap: 1rem; margin: 1.25rem 0; padding-top: 1rem; border-top: 1px solid var(--color-border); }
+.rare-project-card-client { grid-column: 1 / -1; }
+.rare-project-card .rare-info-field dd { font-size: .8125rem; }
+.rare-project-card-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; margin-top: auto; border-top: 1px solid var(--color-border); padding-top: 1rem; }
+.rare-project-card-footer > span:first-child { color: var(--color-muted); font-size: .75rem; }
+.rare-project-card-action { display: flex; align-items: center; gap: .5rem; min-height: 2.75rem; font-size: .8125rem; font-weight: 650; }
+.rare-project-card-action svg { display: block; padding: .5rem; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: var(--color-pastel-lavender); transition: background 180ms; }
+.rare-premium-task-card { border: 1px solid var(--color-border); border-radius: 1.5rem; background: var(--color-surface); box-shadow: var(--shadow-float); overflow: hidden; }
+.rare-tasks .rare-premium-task-card.task-panel { padding: 1rem; border-radius: 1.25rem; box-shadow: var(--shadow-float); }
+.rare-task-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: .625rem; }
+.rare-task-card-heading h2 { font-size: 1.125rem; font-weight: 650; line-height: 1.5; letter-spacing: -.03em; }
+.rare-task-card-heading h2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.rare-task-card-heading .rare-info-eyebrow { display: none; }
+.rare-task-card-heading > span { display: grid; place-items: center; flex-shrink: 0; width: 2.5rem; height: 2.5rem; border-radius: .875rem; background: var(--color-surface-soft); border: 1px solid var(--color-border); color: var(--color-muted); }
+.rare-task-card-project { margin-bottom: .375rem; font-size: .75rem; color: var(--color-muted); font-weight: 500; }
+.rare-task-card-meta { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .5rem; margin: .625rem 0; padding: 0; }
+.rare-task-card-meta .rare-info-field:nth-child(n+3) { display: none; }
+.rare-task-card-meta .rare-info-field dd { font-size: .8125rem; }
+.rare-task-card-meta .rare-info-field dd { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.rare-task-card-meta .is-overdue dd { color: var(--color-danger); }
+.rare-task-card-description { display: none; }
+.rare-task-card-progress > span { margin-block: .375rem; }
+.rare-compact-verified-progress { display: grid; gap: .375rem; margin: .375rem 0 .75rem; }
+.rare-task-card-footer { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem .5rem; border-top: 1px solid var(--color-border); padding-top: .25rem; }
+.rare-task-card-footer > a:first-child { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; margin-left: auto; order: 2; min-height: 2.75rem; border-radius: .5rem; padding: .25rem 0; color: var(--color-ink); font-size: .8125rem; font-weight: 650; }
+.rare-task-card-footer > a:last-child:not(:first-child) { order: 1; font-size: .75rem; color: var(--color-info); padding-block: .25rem; }
+.rare-task-card-heading > span { display: none; }
+.rare-premium-task-card.task-panel > .rare-task-badges { gap: .375rem; }
+.rare-premium-task-card.task-panel > .rare-task-badges > span { padding: .25rem .5rem; font-size: .6875rem; line-height: 1.5; }
+.rare-task-summary { padding: 1.125rem; }
+.rare-task-summary .rare-task-summary-title { white-space: normal; overflow: visible; font-size: 1rem; line-height: 1.5; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.rare-task-summary .rare-task-summary-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .375rem; white-space: normal; overflow: visible; line-height: 1.6; margin-top: .35rem; }
+.rare-task-summary-meta .truncate { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+.rare-task-summary-progress { display: grid; gap: .375rem; margin-top: .75rem; }
+.rare-task-card-item { border: 1px solid var(--color-border); border-radius: 1.5rem; background: var(--color-surface); box-shadow: var(--shadow-float); overflow: hidden; }
+.rare-task-card-item > .rare-premium-task-card { border: 0; border-radius: 0; box-shadow: none; }
+.rare-task-card-item:focus-within { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.rare-task-card-actions { padding: .5rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-surface-soft); }
+.expanded-supervisor-task .expanded-task-details.rare-info-grid { grid-template-columns: minmax(0, 1fr); border-radius: 1.25rem; background: var(--color-surface); padding: 1.25rem; }
+.rare-task-overview { display: grid; gap: 1rem; }
+.rare-task-overview .rare-info-card { align-self: start; }
+.rare-task-overview-description { display: grid; gap: 1rem; }
+.rare-task-overview-description h3 { font-size: .875rem; font-weight: 600; }
+.rare-task-overview-description p { font-size: .875rem; line-height: 1.8; color: var(--color-muted); white-space: pre-wrap; overflow-wrap: anywhere; margin-top: .5rem; }
+.rare-task-audit { padding-top: 1rem; border-top: 1px solid var(--color-border); margin-top: 1.5rem; }
+.rare-task-audit summary { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-height: 2.75rem; cursor: pointer; color: var(--color-ink); font-size: .8125rem; font-weight: 600; list-style: none; }
+.rare-task-audit summary::-webkit-details-marker { display: none; }
+.rare-task-audit[open] summary svg { transform: rotate(180deg); }
+.rare-task-audit .rare-info-grid { padding-block: 1rem .25rem; }
+@media (min-width: 640px) {
+  .expanded-supervisor-task .expanded-task-details.rare-info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rare-project-card { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); align-items: center; gap: .875rem; padding: .875rem; border-radius: 1.25rem; }
+  .rare-project-card-cover, .rare-project-card[data-layout="list"] .rare-project-card-cover { width: 4.5rem; height: 5.5rem; min-height: 0; margin: 0; border-radius: .75rem; }
+  .rare-project-card-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .5rem; padding: 0; }
+  .rare-project-card-cover .rare-project-cover > span { width: 2.5rem; height: 2.5rem; border-radius: .75rem; }
+  .rare-project-card-cover .rare-project-cover > span svg { width: 24px; height: 24px; }
+  .rare-project-card-context { grid-area: 1 / 1 / auto / -1; gap: .375rem; }
+  .rare-project-card-context > p { font-size: .625rem; }
+  .rare-project-card-context > span { font-size: .6875rem; padding: .25rem .5rem; }
+  .rare-project-card h3 { grid-area: 2 / 1 / auto / -1; margin: 0; font-size: 1rem; line-height: 1.4; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .rare-project-card-location { grid-area: 3 / 1 / auto / -1; font-size: .75rem; }
+  .rare-project-card-location span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .rare-project-card .rare-info-grid { display: contents; }
+  .rare-project-card .rare-info-field dt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .rare-project-card .rare-info-field dd { font-size: .75rem; font-weight: 500; line-height: 1.6; }
+  .rare-project-card .rare-project-card-client { grid-area: 4 / 1 / auto / -1; min-width: 0; }
+  .rare-project-card .rare-project-card-client dd { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .rare-project-card .rare-project-card-client dd::before { content: "Client: "; color: var(--color-muted); }
+  .rare-project-card .rare-info-field:nth-child(2) { display: none; }
+  .rare-project-card .rare-info-field:last-child { grid-area: 5 / 1 / auto / -1; }
+  .rare-project-card .rare-info-field:last-child dd { color: var(--color-muted); }
+  .rare-project-card .rare-info-field:last-child dd::before { content: "Due "; }
+  .rare-project-card-footer { display: none; }
+  .rare-project-mobile-open { position: absolute; bottom: .25rem; right: .25rem; display: grid; place-items: center; width: 1.25rem; height: 1.25rem; border-radius: 50%; background: var(--color-surface); color: var(--color-ink); }
+
+}
+@media (min-width: 1024px) {
+  .rare-task-overview { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
+  .rare-task-overview-description { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 359px) {
+  .rare-project-card-cover { height: 7rem; }
+}
+/* Phone directories favour scan density: a thumbnail beside the information. */
+@media (max-width: 639px) {
+  .rare-project-card { display: grid; grid-template-columns: 4rem minmax(0, 1fr); align-items: center; gap: .75rem; padding: .75rem; border-radius: 1.125rem; }
+  .rare-project-card-cover { width: 4rem; height: 5.5rem; border-radius: .75rem; }
+  .rare-project-mobile-open { position: absolute; bottom: .25rem; right: .25rem; display: grid; place-items: center; width: 1.25rem; height: 1.25rem; border-radius: 50%; background: var(--color-surface); color: var(--color-ink); }
+  .rare-project-card-cover .rare-project-cover > span { width: 2.5rem; height: 2.5rem; border-radius: .75rem; }
+  .rare-project-card-cover .rare-project-cover > span svg { width: 24px; height: 24px; }
+  .rare-project-card-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .5rem; padding: 0; }
+  .rare-project-card h3 { grid-area: 1 / 1 / auto / -1; margin: 0; font-size: .9375rem; line-height: 1.4; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .rare-project-card-location { grid-area: 2 / 1 / auto / -1; min-width: 0; font-size: .75rem; line-height: 1.5; }
+  .rare-project-card-location span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rare-project-card-location svg { width: 12px; height: 12px; margin-top: .2rem; }
+  .rare-project-card .rare-info-grid { display: contents; }
+  .rare-project-card .rare-info-field dt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .rare-project-card .rare-info-field dd { font-size: .75rem; font-weight: 500; line-height: 1.6; }
+  .rare-project-card .rare-project-card-client { grid-area: 3 / 1 / auto / -1; overflow: hidden; }
+  .rare-project-card .rare-project-card-client dd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rare-project-card .rare-info-field:nth-child(2) { display: none; }
+  .rare-project-card .rare-info-field:last-child { grid-area: 4 / 1; align-self: center; }
+  .rare-project-card .rare-info-field:last-child dd { font-size: .6875rem; color: var(--color-muted); }
+  .rare-project-card .rare-info-field:last-child dd::before { content: "Due "; }
+  .rare-project-card-context { grid-area: 4 / 2; justify-self: end; gap: 0; }
+  .rare-project-card-context > p { display: none; }
+  .rare-project-card-context > span { padding: .25rem .5rem; gap: .375rem; font-size: .6875rem; line-height: 1.5; }
+  .rare-project-card-footer { display: none; }
+  .rare-task-summary { padding: .75rem; border-radius: 1.125rem; gap: .375rem; }
+  .rare-task-summary .rare-task-summary-title { font-size: .9375rem; line-height: 1.4; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .rare-task-summary-progress { gap: .25rem; margin-top: .375rem; }
+  .rare-task-card-item { border-radius: 1.125rem; }
+  .rare-task-card-actions { padding: 0 .5rem; }
+  .rare-tasks .rare-premium-task-card.task-panel { padding: .875rem; border-radius: 1.125rem; }
+  .rare-task-card-project { margin-bottom: .375rem; font-size: .6875rem; }
+  .rare-task-card-heading { margin-bottom: .5rem; gap: .5rem; }
+  .rare-task-card-heading h2 { font-size: .9375rem; line-height: 1.4; }
+  .rare-task-card-heading > span { width: 2rem; height: 2rem; }
+  .rare-task-card-description { display: none; }
+  .rare-task-card-meta { gap: .5rem; margin: .75rem 0; padding: 0; border: 0; background: transparent; }
+  .rare-task-card-meta .rare-info-field:nth-child(n+3) { display: none; }
+  .rare-task-card-meta .rare-info-field dt { font-size: .6875rem; margin-bottom: .125rem; }
+  .rare-task-card-meta .rare-info-field dd { font-size: .75rem; line-height: 1.5; }
+  .rare-task-card-progress > span { margin-block: .375rem; }
+  .rare-task-card-footer { padding-top: .5rem; }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .rare-project-card:hover { transform: translateY(-3px); border-color: var(--color-border-strong); box-shadow: 0 14px 36px rgb(49 64 91 / .085); }
+  .rare-project-card:hover img { transform: scale(1.025); }
+  .rare-project-card:hover .rare-project-card-action svg { background: var(--color-pastel-sky); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rare-project-card, .rare-project-card img, .rare-project-card-action svg { transition: none; }
+}
+@media (max-width: 767px) {
+  .rare-app .rare-report-register-header { flex-direction: column; align-items: stretch; gap: 16px; }
+}

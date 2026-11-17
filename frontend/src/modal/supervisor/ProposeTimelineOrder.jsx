@@ -237,7 +237,7 @@ export default function ProposeTimelineOrder({
         }
 
         if (!projectId) {
-            setError("Project ID is missing.");
+            setError("Choose a project to continue.");
             return;
         }
 
@@ -277,7 +277,7 @@ export default function ProposeTimelineOrder({
             )}
 
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/55 p-0 backdrop-blur-sm sm:p-6"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 p-0 backdrop-blur-sm sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -291,28 +291,28 @@ export default function ProposeTimelineOrder({
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="timeline-order-modal-title"
-                    className="rare-mobile-sheet flex max-h-[92dvh] w-full max-w-[760px] flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-2xl"
+                    className="rare-mobile-sheet flex max-h-[92dvh] w-full max-w-[760px] flex-col overflow-hidden rounded-[26px] border border-border bg-surface shadow-2xl"
                 >
                     {/* HEADER */}
-                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] px-5 py-5 sm:px-7">
+                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-5 sm:px-7">
                         <div className="flex items-start gap-3">
-                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#E9F0FC] text-[#3565A5]">
+                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-pastel-sky text-info">
                                 <ArrowRightLeft size={23} />
                             </span>
 
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
+                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted">
                                     Supervisor / Timeline
                                 </p>
 
                                 <h2
                                     id="timeline-order-modal-title"
-                                    className="mt-1 text-xl font-bold text-[#211E1A]"
+                                    className="mt-1 text-xl font-bold text-ink"
                                 >
                                     Propose Timeline Order
                                 </h2>
 
-                                <p className="mt-2 text-xs leading-5 text-[#716658]">
+                                <p className="mt-2 text-xs leading-5 text-muted">
                                     Review the changes before submitting
                                     them for approval.
                                 </p>
@@ -324,7 +324,7 @@ export default function ProposeTimelineOrder({
                             disabled={saving}
                             onClick={() => onClose?.()}
                             aria-label="Close order proposal"
-                            className="rounded-full bg-[#F1EADF] p-2.5 text-[#665E53] hover:bg-[#E8DCCB] disabled:opacity-50"
+                            className="rounded-full bg-app p-2.5 text-muted hover:bg-border disabled:opacity-50"
                         >
                             <X size={19} />
                         </button>
@@ -338,35 +338,35 @@ export default function ProposeTimelineOrder({
                         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-7">
                             {/* CHANGE SUMMARY */}
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="rounded-2xl bg-[#F8F4EE] p-4">
-                                    <p className="text-xs text-[#716658]">
+                                <div className="rounded-2xl bg-surface-soft p-4">
+                                    <p className="text-xs text-muted">
                                         Project Tasks
                                     </p>
 
-                                    <p className="mt-2 text-2xl font-bold text-[#211E1A]">
+                                    <p className="mt-2 text-2xl font-bold text-ink">
                                         {original.length}
                                     </p>
                                 </div>
 
-                                <div className="rounded-2xl bg-[#FFF2D8] p-4">
-                                    <p className="text-xs text-[#94651D]">
+                                <div className="rounded-2xl bg-pastel-butter p-4">
+                                    <p className="text-xs text-warning">
                                         Positions Changed
                                     </p>
 
-                                    <p className="mt-2 text-2xl font-bold text-[#94651D]">
+                                    <p className="mt-2 text-2xl font-bold text-warning">
                                         {movedCount}
                                     </p>
                                 </div>
                             </div>
 
                             {/* WARNING */}
-                            <div className="flex items-start gap-3 rounded-2xl bg-[#E9F0FC] p-4">
+                            <div className="flex items-start gap-3 rounded-2xl bg-pastel-sky p-4">
                                 <ShieldCheck
                                     size={20}
-                                    className="mt-0.5 shrink-0 text-[#3565A5]"
+                                    className="mt-0.5 shrink-0 text-info"
                                 />
 
-                                <p className="text-xs leading-6 text-[#3565A5]">
+                                <p className="text-xs leading-6 text-info">
                                     <strong>Admin approval:</strong> Changes
                                     affecting approved tasks must be reviewed
                                     before they update the official timeline.
@@ -385,7 +385,7 @@ export default function ProposeTimelineOrder({
                             <div className="space-y-2">
                                 <label
                                     htmlFor="timeline-order-reason"
-                                    className="block text-xs font-bold uppercase tracking-wide text-[#716658]"
+                                    className="block text-xs font-bold uppercase tracking-wide text-muted"
                                 >
                                     Reason for Reordering *
                                 </label>
@@ -400,10 +400,10 @@ export default function ProposeTimelineOrder({
                                     }}
                                     maxLength={2000}
                                     placeholder="Explain why the work sequence needs to change, such as site conditions, material availability, or construction dependencies..."
-                                    className="w-full resize-y rounded-2xl border border-[#E4DCCD] bg-[#FFFDFA] px-4 py-3 text-sm leading-6 text-[#211E1A] outline-none transition-all focus:border-[#B7A58E] focus:ring-4 focus:ring-[#E8DDD0]/50"
+                                    className="w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 text-sm leading-6 text-ink outline-none transition-all focus:border-border-strong focus:ring-4 focus:ring-pastel-lavender/50"
                                 />
 
-                                <p className="text-xs text-[#716658]">
+                                <p className="text-xs text-muted">
                                     This reason will be provided to Admin
                                     for review.
                                 </p>
@@ -441,8 +441,8 @@ export default function ProposeTimelineOrder({
                         </div>
 
                         {/* FOOTER */}
-                        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#EEE6DC] bg-[#FFFDFA] px-5 py-4 sm:px-7">
-                            <p className="flex items-center gap-2 text-xs text-[#716658]">
+                        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-surface px-5 py-4 sm:px-7">
+                            <p className="flex items-center gap-2 text-xs text-muted">
                                 <Info size={15} />
                                 {movedCount} positions changed
                             </p>
@@ -452,7 +452,7 @@ export default function ProposeTimelineOrder({
                                     type="button"
                                     disabled={saving}
                                     onClick={() => onClose?.()}
-                                    className="rounded-xl border border-[#E4DCCD] px-4 py-3 text-sm font-semibold text-[#211E1A] hover:bg-[#F1EADF] disabled:opacity-50"
+                                    className="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-ink hover:bg-app disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
@@ -465,7 +465,7 @@ export default function ProposeTimelineOrder({
                                         !validSet ||
                                         !reason.trim()
                                     }
-                                    className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#39332B] disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <Send size={17} />
                                     Submit Request

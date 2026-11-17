@@ -27,7 +27,7 @@ const emptyTask = {
 };
 
 const inputClass =
-    "w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-4 py-3 text-sm text-[#211E1A] outline-none transition-all focus:border-[#B7A58E] focus:ring-4 focus:ring-[#E8DDD0]/50";
+    "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-ink outline-none transition-all focus:border-border-strong focus:ring-4 focus:ring-pastel-lavender/50";
 
 const LABELS = {
     LOW: "Low",
@@ -127,7 +127,7 @@ export default function TaskForm({
             <div className="space-y-2">
                 <label
                     htmlFor={`task-${name}`}
-                    className="block text-xs font-bold uppercase tracking-wide text-[#716658]"
+                    className="block text-xs font-bold uppercase tracking-wide text-muted"
                 >
                     {label}
                 </label>
@@ -333,7 +333,7 @@ export default function TaskForm({
                     event.stopPropagation();
                     if (!savingRef.current) onClose();
                 }}
-                className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-[#211E1A]/55 p-0 text-[#211E1A] backdrop-blur-sm backdrop:bg-transparent sm:p-6"
+                className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-ink/55 p-0 text-ink backdrop-blur-sm backdrop:bg-transparent sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -342,16 +342,16 @@ export default function TaskForm({
                 }}
             >
                 <section
-                    className="rare-mobile-sheet flex max-h-[92dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-2xl"
+                    className="rare-mobile-sheet flex max-h-[92dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-[26px] border border-border bg-surface shadow-2xl"
                 >
-                    <header className="rare-page-header flex items-start justify-between gap-3 border-b border-[#EEE6DC] px-5 py-5 sm:px-7">
+                    <header className="rare-page-header flex items-start justify-between gap-3 border-b border-border px-5 py-5 sm:px-7">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
+                            <p className="text-xs font-bold uppercase tracking-[0.17em] text-muted">
                                 Supervisor / Project Tasks
                             </p>
                             <h2
                                 id="task-form-title"
-                                className="mt-2 text-xl font-bold text-[#211E1A]"
+                                className="mt-2 text-xl font-bold text-ink"
                             >
                                 {!isEdit
                                     ? "Create New Task"
@@ -361,7 +361,7 @@ export default function TaskForm({
                                             ? "Request Task Changes"
                                             : "Edit Task"}
                             </h2>
-                            <p className="mt-2 text-xs leading-5 text-[#716658]">
+                            <p className="mt-2 text-xs leading-5 text-muted">
                                 {isApproved
                                     ? "Changes will be reviewed by Admin before applying."
                                     : isRejected
@@ -374,7 +374,7 @@ export default function TaskForm({
                             disabled={saving}
                             onClick={onClose}
                             aria-label="Close task form"
-                            className="rounded-full bg-[#F1EADF] p-2.5 text-[#211E1A]"
+                            className="rounded-full bg-app p-2.5 text-ink"
                         >
                             <X size={19} />
                         </button>
@@ -427,7 +427,7 @@ export default function TaskForm({
                             </div>
 
                             <div className="grid gap-4 sm:grid-cols-2">
-                                {(project?.start_date || project?.end_date) && <p className="sm:col-span-2 rounded-xl bg-[#F1EADF] p-3 text-sm text-[#665E53]">Project schedule: {projectScheduleText(project)}. Adjust task dates to this schedule or ask Admin to review the project deadline.</p>}
+                                {(project?.start_date || project?.end_date) && <p className="sm:col-span-2 rounded-xl bg-app p-3 text-sm text-muted">Project schedule: {projectScheduleText(project)}. Adjust task dates to this schedule or ask Admin to review the project deadline.</p>}
                                 {field("start_date", "Start Date", (
                                     <input
                                         id="task-start_date"
@@ -467,11 +467,11 @@ export default function TaskForm({
                                 />
                             ))}
 
-                            <div className="rounded-2xl bg-[#F8F4EE] p-4">
-                                <h3 className="text-sm font-bold text-[#211E1A]">
+                            <div className="rounded-2xl bg-surface-soft p-4">
+                                <h3 className="text-sm font-bold text-ink">
                                     Progress Measurement
                                 </h3>
-                                <p className="mt-1 text-xs text-[#716658]">
+                                <p className="mt-1 text-xs text-muted">
                                     This defines how progress is verified through
                                     daily work entries; it is not a manual percentage.
                                 </p>
@@ -590,14 +590,14 @@ export default function TaskForm({
                                 type="button"
                                 onClick={onClose}
                                 disabled={saving}
-                                className="rounded-xl border border-[#E4DCCD] px-5 py-3 text-sm font-semibold text-[#211E1A]"
+                                className="rounded-xl border border-border px-5 py-3 text-sm font-semibold text-ink"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={saving || Object.keys(scheduleErrors).length > 0}
-                                className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#39332B] disabled:opacity-50"
+                                className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:opacity-50"
                             >
                                 {isEdit ? <Save size={17} /> : <ClipboardPlus size={17} />}
                                 {isApproved

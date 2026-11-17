@@ -38,11 +38,11 @@ const fields = [
 ];
 
 const strengthLevels = [
-    { label: "Too short", bar: "bg-[#E4DCCD]", text: "text-[#716658]" },
+    { label: "Too short", bar: "bg-border", text: "text-muted" },
     { label: "Weak", bar: "bg-[#D9534F]", text: "text-[#B3342F]" },
     { label: "Fair", bar: "bg-[#E8A23A]", text: "text-[#9A6410]" },
-    { label: "Good", bar: "bg-[#7855A0]", text: "text-[#7855A0]" },
-    { label: "Strong", bar: "bg-[#2E8B57]", text: "text-[#296F40]" },
+    { label: "Good", bar: "bg-violet", text: "text-violet" },
+    { label: "Strong", bar: "bg-success", text: "text-success" },
 ];
 
 function passwordError(value) {
@@ -185,7 +185,7 @@ export default function ChangePasswordForm() {
     };
 
     return (
-        <section className="settings-password-card overflow-hidden rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_24px_60px_-30px_rgba(33,30,26,0.25)]">
+        <section className="settings-password-card overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_24px_60px_-30px_rgba(33,30,26,0.25)]">
             {busy && (
                 <LoadingScreen message="Updating your password..." />
             )}
@@ -194,16 +194,16 @@ export default function ChangePasswordForm() {
                 {/* Form side */}
                 <div className="p-6 sm:p-10">
                     <div className="flex items-center gap-4">
-                        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#7855A0] text-white shadow-lg shadow-[#7855A0]/30">
+                        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet text-white shadow-lg shadow-violet/30">
                             <KeyRound size={26} strokeWidth={1.8} />
                         </span>
 
                         <div>
-                            <h2 className="text-2xl font-bold tracking-tight text-[#211E1A]">
+                            <h2 className="text-2xl font-bold tracking-tight text-ink">
                                 Change password
                             </h2>
 
-                            <p className="mt-1 text-sm leading-6 text-[#716658]">
+                            <p className="mt-1 text-sm leading-6 text-muted">
                                 Choose a strong password to keep your account safe.
                             </p>
                         </div>
@@ -222,7 +222,7 @@ export default function ChangePasswordForm() {
                                 <div key={field.key} className="space-y-2">
                                     <label
                                         htmlFor={field.key}
-                                        className="text-sm font-semibold text-[#4A443B]"
+                                        className="text-sm font-semibold text-ink"
                                     >
                                         {field.label}
                                     </label>
@@ -232,7 +232,7 @@ export default function ChangePasswordForm() {
                                             size={18}
                                             className={`pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${hasError
                                                     ? "text-red-500"
-                                                    : "text-[#A19383]"
+                                                    : "text-muted"
                                                 }`}
                                         />
 
@@ -251,10 +251,10 @@ export default function ChangePasswordForm() {
                                             disabled={busy}
                                             placeholder={field.placeholder}
                                             aria-invalid={hasError}
-                                            className={`h-13 w-full rounded-xl border bg-white py-4 pl-12 text-sm text-[#211E1A] outline-none transition-all placeholder:text-[#B7AC9C] disabled:bg-[#F7F3EC] ${isConfirm && passwordsMatch ? "pr-20" : "pr-12"
+                                            className={`h-13 w-full rounded-xl border bg-white py-4 pl-12 text-sm text-ink outline-none transition-all placeholder:text-border-strong disabled:bg-surface-soft ${isConfirm && passwordsMatch ? "pr-20" : "pr-12"
                                                 } ${hasError
                                                     ? "border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-100"
-                                                    : "border-[#E4DCCD] hover:border-[#CFC3B1] focus:border-[#7855A0] focus:ring-4 focus:ring-[#7855A0]/15"
+                                                    : "border-border hover:border-border-strong focus:border-violet focus:ring-4 focus:ring-violet/15"
                                                 }`}
                                         />
 
@@ -263,7 +263,7 @@ export default function ChangePasswordForm() {
                                                 size={18}
                                                 strokeWidth={2.5}
                                                 aria-label="Passwords match"
-                                                className="absolute right-12 top-1/2 -translate-y-1/2 text-[#2E8B57]"
+                                                className="absolute right-12 top-1/2 -translate-y-1/2 text-success"
                                             />
                                         )}
 
@@ -281,7 +281,7 @@ export default function ChangePasswordForm() {
                                                     [field.key]: !previous[field.key],
                                                 }))
                                             }
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#716658] transition-colors hover:bg-[#F1EADF] hover:text-[#211E1A] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7855A0]"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted transition-colors hover:bg-app hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-violet"
                                         >
                                             {visible[field.key]
                                                 ? <EyeOff size={18} />
@@ -299,7 +299,7 @@ export default function ChangePasswordForm() {
                                                         className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${segment <= score &&
                                                                 values.new_password.length >= 8
                                                                 ? level.bar
-                                                                : "bg-[#EEE6DC]"
+                                                                : "bg-border"
                                                             }`}
                                                     />
                                                 ))}
@@ -337,7 +337,7 @@ export default function ChangePasswordForm() {
                         {success && (
                             <p
                                 role="status"
-                                className="flex items-start gap-2 rounded-xl border border-[#CFE6D3] bg-[#E7F2E8] p-3.5 text-sm font-medium text-[#296F40]"
+                                className="flex items-start gap-2 rounded-xl border border-[#CFE6D3] bg-pastel-mint p-3.5 text-sm font-medium text-success"
                             >
                                 <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
                                 {success}
@@ -347,7 +347,7 @@ export default function ChangePasswordForm() {
                         <button
                             type="submit"
                             disabled={busy}
-                            className="h-12 w-full rounded-xl bg-[#211E1A] px-6 text-sm font-semibold text-white shadow-lg shadow-[#211E1A]/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#7855A0] hover:shadow-[#7855A0]/30 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#7855A0]/30 disabled:translate-y-0 disabled:opacity-50 sm:w-auto sm:min-w-52"
+                            className="h-12 w-full rounded-xl bg-ink px-6 text-sm font-semibold text-white shadow-lg shadow-ink/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-violet hover:shadow-violet/30 focus:outline-none focus-visible:ring-4 focus-visible:ring-violet/30 disabled:translate-y-0 disabled:opacity-50 sm:w-auto sm:min-w-52"
                         >
                             Update password
                         </button>
@@ -355,9 +355,9 @@ export default function ChangePasswordForm() {
                 </div>
 
                 {/* Guidance side */}
-                <aside className="border-t border-[#EEE6DC] bg-[#F5EFE7] p-6 sm:p-10 lg:border-l lg:border-t-0">
-                    <div className="flex items-center gap-2.5 text-[#211E1A]">
-                        <ShieldCheck size={20} className="text-[#7855A0]" />
+                <aside className="border-t border-border bg-surface-soft p-6 sm:p-10 lg:border-l lg:border-t-0">
+                    <div className="flex items-center gap-2.5 text-ink">
+                        <ShieldCheck size={20} className="text-violet" />
                         <h3 className="text-sm font-bold">
                             Your password should have
                         </h3>
@@ -368,14 +368,14 @@ export default function ChangePasswordForm() {
                             <li
                                 key={check.label}
                                 className={`flex items-center gap-3 text-sm transition-colors ${check.met
-                                        ? "font-medium text-[#211E1A]"
-                                        : "text-[#716658]"
+                                        ? "font-medium text-ink"
+                                        : "text-muted"
                                     }`}
                             >
                                 <span
                                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${check.met
-                                            ? "scale-110 border-[#2E8B57] bg-[#2E8B57] text-white"
-                                            : "border-[#CFC3B1] bg-transparent text-transparent"
+                                            ? "scale-110 border-success bg-success text-white"
+                                            : "border-border-strong bg-transparent text-transparent"
                                         }`}
                                 >
                                     <Check size={12} strokeWidth={3} />
@@ -386,7 +386,7 @@ export default function ChangePasswordForm() {
                         ))}
                     </ul>
 
-                    <p className="mt-8 border-t border-[#E4DCCD] pt-5 text-xs leading-6 text-[#716658]">
+                    <p className="mt-8 border-t border-border pt-5 text-xs leading-6 text-muted">
                         Avoid names, birthdays and passwords you use on other sites.
                         A longer phrase is harder to guess than a short, complex one.
                     </p>

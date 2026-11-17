@@ -1,5 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
+from .notepad import PersonalNotepadView
 from .views import (
     SupervisorListCreateView,
     PhoneLoginView,
@@ -13,6 +14,7 @@ from .views import (
 app_name = "users"
 
 urlpatterns = [
+    path("users/me/notepad/", PersonalNotepadView.as_view(), name="personal-notepad"),
     path("auth/login/", PhoneLoginView.as_view(), name="login"),
     path(
         "auth/refresh/",

@@ -105,6 +105,7 @@ class ProjectDailyReportListCreateView(generics.ListCreateAPIView):
     ]
 
     pagination_class = ProjectPagination
+    report_search_fields = ("work_summary", "site_notes", "issues", "site_condition", "next_day_plan")
 
     def get_project(self):
         return get_object_or_404(
@@ -112,20 +113,25 @@ class ProjectDailyReportListCreateView(generics.ListCreateAPIView):
             pk=self.kwargs["project_id"],
         )
 
+    def get_base_reports(self):
+        return accessible_daily_reports(self.request.user).filter(project=self.get_project())
+
     def get_queryset(self):
-        project = self.get_project()
         validator = DailyReportQuerySerializer(data=self.request.query_params)
         validator.is_valid(raise_exception=True)
         filters = validator.validated_data
-        queryset = accessible_daily_reports(self.request.user).filter(project=project)
-        for key in ("status", "reported_by"):
+        queryset = self.get_base_reports()
+        for key in ("status", "reported_by", "project"):
             if key in filters:
                 queryset = queryset.filter(**{key: filters[key]})
         for key, lookup in [("date_from", "report_date__gte"), ("date_to", "report_date__lte")]:
             if key in filters:
                 queryset = queryset.filter(**{lookup: filters[key]})
         for term in filters.get("search", "").split():
-            queryset = queryset.filter(Q(work_summary__icontains=term) | Q(site_notes__icontains=term) | Q(issues__icontains=term) | Q(site_condition__icontains=term) | Q(next_day_plan__icontains=term))
+            match = Q()
+            for field in self.report_search_fields:
+                match |= Q(**{f"{field}__icontains": term})
+            queryset = queryset.filter(match)
         ordering = ["report_date", "created_at", "id"] if filters["sort"] == "oldest" else ["-report_date", "-created_at", "-id"]
         return queryset.annotate(
             entry_count=Count("work_entries"),
@@ -137,7 +143,7 @@ class ProjectDailyReportListCreateView(generics.ListCreateAPIView):
 
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
-        reports = accessible_daily_reports(request.user).filter(project=self.get_project())
+        reports = self.get_base_reports()
         summary = reports.aggregate(
             total=Count("id"), drafts=Count("id", filter=Q(status="DRAFT")), submitted=Count("id", filter=Q(status="SUBMITTED")),
         )
@@ -173,6 +179,39 @@ class ProjectDailyReportListCreateView(generics.ListCreateAPIView):
             ).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class AdminDailyReportListView(ProjectDailyReportListCreateView):
+    """Paginated cross-project register; existing draft visibility stays intact."""
+    permission_classes = [IsAuthenticated, MustChangePasswordPermission, IsAdminRole]
+    http_method_names = ["get", "head", "options"]
+    report_search_fields = (*ProjectDailyReportListCreateView.report_search_fields, "project__name", "reported_by__username")
+
+    def get_base_reports(self):
+        return accessible_daily_reports(self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        reports = self.get_base_reports()
+        response.data["summary_scope"] = "all_visible_reports"
+        response.data["projects"] = [
+            {"project_id": project["id"], "project__name": project["name"]}
+            for project in accessible_projects(request.user).order_by("name", "id").values("id", "name")
+        ]
+        return response
+
+
+class SupervisorDailyReportListView(AdminDailyReportListView):
+    """Personal drafts and submitted reports, only in currently assigned projects."""
+    permission_classes = [IsAuthenticated, MustChangePasswordPermission, IsSupervisorRole]
+
+    def get_base_reports(self):
+        return accessible_daily_reports(self.request.user).filter(reported_by=self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        response.data["summary_scope"] = "my_reports_in_assigned_projects"
+        return response
 
 
 # =====================================================

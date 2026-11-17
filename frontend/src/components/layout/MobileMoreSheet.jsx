@@ -54,13 +54,13 @@ const sheetCss = `
 
 // Icon tile tones, cycled per item (literal class strings for Tailwind)
 const itemTones = [
-    "bg-[#F1EADF] text-[#716658]",
-    "bg-[#E7F2E8] text-[#296F40]",
-    "bg-[#FFF2D8] text-[#94651D]",
-    "bg-[#EDF3FC] text-[#3565A5]",
+    "bg-app text-muted",
+    "bg-pastel-mint text-success",
+    "bg-pastel-butter text-warning",
+    "bg-pastel-sky text-info",
 ];
 
-const slateTone = "bg-[#ece8e2] text-[#72675b]";
+const slateTone = "bg-pastel-lavender text-muted";
 
 // Shared row styling so every row aligns identically
 const rowClass = (isActive) => `
@@ -70,11 +70,11 @@ const rowClass = (isActive) => `
   transition-all duration-200 ease-out
   active:scale-[0.98]
   focus-visible:outline-none focus-visible:ring-2
-  focus-visible:ring-[#211e1a]/30
+  focus-visible:ring-ink/30
   motion-reduce:transition-none
   ${isActive
-        ? "bg-[#211e1a] text-white shadow-[0_8px_20px_rgba(33,30,26,0.18)]"
-        : "text-[#4f483f] hover:bg-[#f1eadf]"
+        ? "bg-ink text-white shadow-[0_8px_20px_rgba(33,30,26,0.18)]"
+        : "text-muted hover:bg-app"
     }
 `;
 
@@ -92,7 +92,7 @@ const chevronClass = (isActive) => `
   group-hover:translate-x-0.5
   motion-reduce:transition-none
   motion-reduce:group-hover:translate-x-0
-  ${isActive ? "text-white/70" : "text-[#b3a899] group-hover:text-[#211e1a]"}
+  ${isActive ? "text-white/70" : "text-subtle group-hover:text-ink"}
 `;
 
 // =====================================================
@@ -175,11 +175,11 @@ export default function MobileMoreSheet({
                 aria-modal="true"
                 aria-label="More navigation options"
                 className="
-                    rare-sheet fixed inset-x-2 bottom-2 top-auto m-0 w-[calc(100%-1rem)] max-w-none p-0 backdrop:bg-[#211E1A]/45
+                    rare-sheet fixed inset-x-2 bottom-2 top-auto m-0 w-[calc(100%-1rem)] max-w-none p-0 backdrop:bg-ink/45
                     flex max-h-[85dvh] flex-col
                     overflow-hidden rounded-2xl
                     md:inset-x-5 md:bottom-5 md:w-[calc(100%-2.5rem)] md:rounded-2xl
-                    border border-[#ece4d8] bg-[#fffdfa]
+                    border border-border bg-surface
                     shadow-[0_24px_70px_rgba(33,30,26,0.28)]
                 "
                 style={{
@@ -188,17 +188,17 @@ export default function MobileMoreSheet({
             >
                 {/* Handle */}
                 <div className="flex shrink-0 justify-center pt-3">
-                    <span className="h-1 w-12 rounded-full bg-[#d9cfc0]" />
+                    <span className="h-1 w-12 rounded-full bg-border-strong" />
                 </div>
 
                 {/* Header */}
                 <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-4 md:px-8 md:pt-5">
                     <div className="min-w-0">
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#716658]">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
                             RARE Management
                         </p>
 
-                        <h2 className="mt-1 text-xl font-bold tracking-tight text-[#211e1a]">
+                        <h2 className="mt-1 text-xl font-bold tracking-tight text-ink">
                             More
                         </h2>
                     </div>
@@ -209,13 +209,13 @@ export default function MobileMoreSheet({
                         onClick={onClose}
                         aria-label="Close menu"
                         className="
-                            group shrink-0 rounded-full bg-[#f1eadf]
-                            p-2.5 text-[#211e1a]
+                            group shrink-0 rounded-full bg-app
+                            p-2.5 text-ink
                             transition-all duration-200 ease-out
-                            hover:bg-[#e7ddce]
+                            hover:bg-border
                             active:scale-95
                             focus-visible:outline-none focus-visible:ring-2
-                            focus-visible:ring-[#211e1a]/30
+                            focus-visible:ring-ink/30
                         "
                     >
                         <X
@@ -235,19 +235,19 @@ export default function MobileMoreSheet({
 
                     {/* Profile card */}
                     <div
-                        className="rare-sheet-row flex items-center gap-3.5 rounded-2xl bg-[#f8f4ee] p-3.5"
+                        className="rare-sheet-row flex items-center gap-3.5 rounded-2xl bg-surface-soft p-3.5"
                         style={{ "--d": "60ms" }}
                     >
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#211e1a] text-lg font-bold text-white">
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-lg font-bold text-white">
                             {displayName.charAt(0).toUpperCase()}
                         </span>
 
                         <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-[#211e1a]">
+                            <p className="truncate text-sm font-bold text-ink">
                                 {displayName}
                             </p>
 
-                            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[#E6F4EA] px-2.5 py-0.5 text-xs font-bold text-[#246b3b]">
+                            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-pastel-mint px-2.5 py-0.5 text-xs font-bold text-success">
                                 <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
                                 {roleLabel}
                             </span>
@@ -257,7 +257,7 @@ export default function MobileMoreSheet({
                     {/* Navigation links */}
                     {secondaryItems.length > 0 && (
                         <div>
-                            <p className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
+                            <p className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.16em] text-muted">
                                 Navigation
                             </p>
 
@@ -290,7 +290,7 @@ export default function MobileMoreSheet({
                                                     {item.label}
                                                 </span>
 
-                                                {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-[#B42318] px-1.5 text-xs font-bold text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+                                                {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-danger px-1.5 text-xs font-bold text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
                                                 <ChevronRight
                                                     size={18}
                                                     className={chevronClass(isActive)}
@@ -305,7 +305,7 @@ export default function MobileMoreSheet({
 
                     {/* Account */}
                     <div>
-                        <p className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
+                        <p className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.16em] text-muted">
                             Account
                         </p>
 
@@ -346,21 +346,21 @@ export default function MobileMoreSheet({
                 </div>
 
                 {/* Pinned footer */}
-                <div className="shrink-0 border-t border-[#e6ddcf] bg-[#fffdfa] p-4 md:px-6 md:py-5">
+                <div className="shrink-0 border-t border-border bg-surface p-4 md:px-6 md:py-5">
                     <button
                         type="button"
                         onClick={onLogout}
                         disabled={loading}
                         className="
                             group flex w-full items-center justify-center gap-2
-                            rounded-2xl bg-[#211e1a] px-4 py-3.5
+                            rounded-2xl bg-ink px-4 py-3.5
                             text-sm font-semibold text-white
                             transition-all duration-200 ease-out
-                            hover:bg-[#38332c]
+                            hover:bg-primary-hover
                             hover:shadow-[0_10px_24px_rgba(33,30,26,0.24)]
                             active:scale-[0.98]
                             focus-visible:outline-none focus-visible:ring-2
-                            focus-visible:ring-[#211e1a]/40 focus-visible:ring-offset-2
+                            focus-visible:ring-ink/40 focus-visible:ring-offset-2
                             disabled:pointer-events-none disabled:opacity-50
                             motion-reduce:transition-none
                         "

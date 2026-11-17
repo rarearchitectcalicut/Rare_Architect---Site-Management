@@ -103,7 +103,7 @@ test("cancelled and completed projects have no active cancellation control", asy
         assert(!page.find((node) => node.type === "button" && node.props.children === "Cancel Project"));
         if (status === "CANCELLED") {
             assert.match(page.text(), /Existing records remain available for reference/);
-            const edit = page.find((node) => node.type === "button" && node.props.onClick && String(node.props.children).includes("Edit Project"));
+            const edit = page.find((node) => node.type === "button" && node.props["aria-label"] === "Edit Project");
             assert.equal(edit.props.disabled, true);
             const assign = page.find((node) => node.type === "button" && String(node.props.children).includes("Add Supervisor"));
             assert.equal(assign.props.disabled, true);
@@ -643,23 +643,22 @@ test("project categories paginate independently and a category failure leaves pr
 });
 
 test("project card renders accessible list and gallery links with fallback dates and images", async () => {
-    const { exports } = await loadSource("components/projects/HorizontalProjectCard.jsx");
+    const { exports } = await loadSource("components/projects/HorizontalProjectCard.jsx", { overrides: {
+        "utils/mediaUrl.js": { getMediaUrl: (value) => value },
+    } });
     for (const layout of ["list", "grid"]) {
         const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.default, { project: { ...directoryProject, cover_image: null, start_date: null }, layout, to: "/supervisor/projects/project-1" })));
         for (const text of ["Cedar residence", "Cedar client", "Kochi", 'aria-label="Open project: Cedar residence"', 'href="/supervisor/projects/project-1"']) assert(html.includes(text));
-        if (layout === "grid") for (const text of ["Active", "Residential", "Not scheduled", "Expected completion"]) assert(html.includes(text));
-        else assert(!html.includes("Start date"));
+        for (const text of ["Active", "Residential", "Not scheduled", "Start date", "Expected completion"]) assert(html.includes(text));
+        assert.equal((html.match(/<a\b/g) || []).length, 1);
         assert(!html.includes("<button"));
     }
-    const mobileGallery = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.default, { project: { ...directoryProject, status: "COMPLETED", cover_image: "cover.jpg" }, layout: "grid", to: "/projects/project-1" })));
-    assert(mobileGallery.includes("aspect-video"));
-    assert(mobileGallery.includes("max-h-[120px]"));
-    assert(mobileGallery.includes("Due 01 Dec 2026"));
-    const mobileStart = mobileGallery.indexOf("hidden max-[480px]:flex");
-    const desktopStart = mobileGallery.indexOf("min-[481px]:block", mobileStart);
-    assert(mobileStart >= 0 && desktopStart > mobileStart);
-    assert(!mobileGallery.slice(mobileStart, desktopStart).includes("Start date"));
-    assert(!mobileGallery.slice(mobileStart, desktopStart).includes("Project workspace"));
+    const mobileGallery = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.default, { project: { ...directoryProject, status: "COMPLETED", cover_image: "/media/cover.jpg" }, layout: "grid", to: "/projects/project-1" })));
+    assert(mobileGallery.includes('data-layout="grid"'));
+    assert(mobileGallery.includes('loading="lazy"'));
+    assert(mobileGallery.includes("01 Dec 2026"));
+    assert.equal((mobileGallery.match(/Expected completion/g) || []).length, 1);
+    assert(mobileGallery.includes("Project workspace"));
     assert(mobileGallery.includes("Completed"));
 });
 
@@ -689,7 +688,7 @@ test("mobile task card is one compact accessible link and only shows available p
     assert.ok(html.includes("Laya"));
     assert.ok(html.includes("Due 20 Nov 2026"));
     assert.ok(html.includes('role="progressbar"'));
-    assert.ok(!html.includes("Priority:"));
+    assert.ok(html.includes("Priority: High"));
     assert.ok(!html.includes("View Task"));
     assert.ok(!html.includes("Not specified"));
 
@@ -793,7 +792,7 @@ test("cancelled project status changes send only the selected status and wait fo
     resolve({ status: "MAINTENANCE" }); await pending; page.render();
     assert.match(page.text(), /Project status changed to maintenance/);
     assert(!page.find((node) => node.type === "select" && node.props["aria-label"] === "New project status"));
-    const edit = page.find((node) => node.type === "button" && String(node.props.children).includes("Edit Project"));
+    const edit = page.find((node) => node.type === "button" && node.props["aria-label"] === "Edit Project");
     assert.equal(edit.props.disabled, false);
 });
 

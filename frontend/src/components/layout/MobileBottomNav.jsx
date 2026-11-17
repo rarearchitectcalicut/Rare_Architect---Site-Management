@@ -38,8 +38,8 @@ export default function MobileBottomNav({
                 className="
           grid grid-cols-5 gap-1
           rounded-2xl
-          border border-[#e4dccd]
-          bg-[#fffdfa]/95
+          border border-border
+          bg-surface/95
           p-1.5
           shadow-[0_12px_35px_rgba(33,30,26,0.14)]
           backdrop-blur-xl
@@ -57,15 +57,15 @@ export default function MobileBottomNav({
                 min-w-0 px-0.5 py-2
                 transition-colors
                 ${isActive
-                                ? "bg-[#211e1a] text-white"
-                                : "text-[#776d61] hover:bg-[#f1eadf]"
+                                ? "bg-ink text-white"
+                                : "text-muted hover:bg-app"
                             }
               `
                         }
                     >
                         <span className="relative">
                             <NavIcon name={item.icon} size={20} />
-                            {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#B42318] px-1 text-[10px] font-bold leading-none text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+                            {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
                         </span>
 
                         <span className="text-xs font-medium">
@@ -86,8 +86,8 @@ export default function MobileBottomNav({
             min-w-0 px-0.5 py-2
             transition-colors
             ${isMoreActive
-                            ? "bg-[#211e1a] text-white"
-                            : "text-[#776d61] hover:bg-[#f1eadf]"
+                            ? "bg-ink text-white"
+                            : "text-muted hover:bg-app"
                         }
           `}
                 >

@@ -72,7 +72,7 @@ function PasswordInput({
         <div className="space-y-2">
             <label
                 htmlFor={field}
-                className="block text-sm font-medium text-[#665e53]"
+                className="block text-sm font-medium text-muted"
             >
                 {label}
             </label>
@@ -91,15 +91,15 @@ function PasswordInput({
                     {...register(field)}
                     className="
             h-12 w-full rounded-xl
-            border border-[#e4dccd]
-            bg-[#fffdfa]
+            border border-border
+            bg-surface
             px-4 pr-12
-            text-[15px] text-[#29251f]
+            text-[15px] text-ink
             outline-none
             transition-colors
-            placeholder:text-[#b0a99f]
-            focus:border-[#292620]
-            focus:ring-2 focus:ring-[#292620]/15
+            placeholder:text-subtle
+            focus:border-ink
+            focus:ring-2 focus:ring-ink/15
             aria-invalid:border-red-600
             disabled:cursor-not-allowed
             disabled:opacity-60
@@ -118,12 +118,12 @@ function PasswordInput({
             absolute right-3 top-1/2
             -translate-y-1/2
             rounded-md p-1
-            text-[#716658]
+            text-muted
             transition-colors
-            hover:text-[#292620]
+            hover:text-ink
             focus-visible:outline-2
             focus-visible:outline-offset-2
-            focus-visible:outline-[#292620]
+            focus-visible:outline-ink
             disabled:opacity-50
           "
                 >
@@ -382,9 +382,9 @@ export default function ChangePassword() {
 
             <main
                 className="
-          flex min-h-dvh
+            rare-auth-canvas flex min-h-dvh
           items-center justify-center
-          bg-[#f1eadf]
+          bg-app
           px-5 py-12
           sm:px-8
         "
@@ -416,8 +416,8 @@ export default function ChangePassword() {
                 mb-4 flex h-14 w-14
                 items-center justify-center
                 rounded-2xl
-                bg-[#e4dccd]
-                text-[#211e1a]
+                bg-border
+                text-ink
               "
                         >
                             <LockKeyhole
@@ -432,7 +432,7 @@ export default function ChangePassword() {
                             className="
                 text-[28px] font-bold
                 tracking-tight
-                text-[#211e1a]
+                text-ink
                 sm:text-[30px]
               "
                         >
@@ -445,7 +445,7 @@ export default function ChangePassword() {
                             className="
                 mt-2 max-w-sm
                 text-sm leading-6
-                text-[#716658]
+                text-muted
               "
                         >
                             {user?.must_change_password
@@ -501,7 +501,7 @@ export default function ChangePassword() {
                         <p
                             className="
                 text-xs leading-5
-                text-[#716658]
+                text-muted
               "
                         >
                             Choose a strong password. Your new password
@@ -539,15 +539,15 @@ export default function ChangePassword() {
                 mt-2 flex h-12
                 items-center justify-center
                 rounded-xl
-                bg-[#211e1a]
+                bg-ink
                 px-4
                 text-[15px] font-semibold
                 text-white
                 transition-colors
-                hover:bg-[#38332c]
+                hover:bg-primary-hover
                 focus-visible:outline-2
                 focus-visible:outline-offset-2
-                focus-visible:outline-[#211e1a]
+                focus-visible:outline-ink
                 disabled:cursor-not-allowed
                 disabled:opacity-60
               "
@@ -570,9 +570,9 @@ export default function ChangePassword() {
               mt-6 w-full
               text-center text-sm
               font-medium
-              text-[#665e53]
+              text-muted
               transition-colors
-              hover:text-[#211e1a]
+              hover:text-ink
               disabled:cursor-not-allowed
               disabled:opacity-50
             "
@@ -589,7 +589,7 @@ export default function ChangePassword() {
                     <p
                         className="
               mt-10 text-center
-              text-xs text-[#9b9287]
+              text-xs text-subtle
             "
                     >
                         RARE Project &amp; Site Management

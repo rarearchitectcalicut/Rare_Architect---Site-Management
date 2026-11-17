@@ -20,7 +20,7 @@ function projectPage(data, page) {
 
 // Reused by listing toolbars. Suggestions use only records already loaded by the
 // authorized listing; searching never starts a separate, unbounded name fetch.
-export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false, suggestions, suggestionsFiltered = false, delay = 300, compact = false, label = "Search projects", labelClassName = "mb-2 block text-sm font-semibold text-[#817669]", placeholder = "Project name", className = "" }) {
+export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false, suggestions, suggestionsFiltered = false, delay = 300, compact = false, label = "Search projects", labelClassName = "mb-2 block text-sm font-semibold text-muted", placeholder = "Project name", className = "" }) {
     const [search, setSearch] = useState(query);
     const [open, setOpen] = useState(false);
     const [active, setActive] = useState(-1);
@@ -66,7 +66,7 @@ export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false
         <div className="relative min-w-0 flex-1 basis-52" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) { setOpen(false); setActive(-1); } }}>
             <label htmlFor={id} className={labelClassName}>{label}</label>
             <div className="relative">
-                <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]" />
+                <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
                 <input id={id} type="search" maxLength={200} value={search} placeholder={placeholder} autoComplete="off"
                     role={suggestions !== undefined ? "combobox" : undefined} aria-autocomplete={suggestions !== undefined ? "list" : undefined}
                     aria-expanded={suggestions !== undefined ? expanded : undefined} aria-controls={expanded ? `${id}-list` : undefined}
@@ -80,12 +80,12 @@ export function ProjectSearch({ query = "", onSearch, onRefresh, loading = false
                         }
                         if (event.key === "Enter") { event.preventDefault(); if (expanded && matches[active]) select(matches[active]); else commit(search.trim()); }
                     }}
-                    className={`${compact ? "h-11 min-h-11 py-2" : "min-h-12 py-3"} w-full min-w-0 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] pl-11 pr-14 text-sm text-[#211E1A] outline-none placeholder:text-[#716658] focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0]`} />
-                {search && <button type="button" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => { change(""); setOpen(false); }} className={`absolute right-0 top-0 flex ${compact ? "h-11 w-11" : "h-12 w-12"} items-center justify-center rounded-xl text-lg text-[#817669] focus-visible:outline-2 focus-visible:outline-[#A58A67]`}>×</button>}
+                    className={`${compact ? "h-11 min-h-11 py-2" : "min-h-12 py-3"} w-full min-w-0 rounded-xl border border-border bg-surface pl-11 pr-14 text-sm text-ink outline-none placeholder:text-muted focus:border-subtle focus:ring-2 focus:ring-pastel-lavender`} />
+                {search && <button type="button" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => { change(""); setOpen(false); }} className={`absolute right-0 top-0 flex ${compact ? "h-11 w-11" : "h-12 w-12"} items-center justify-center rounded-xl text-lg text-muted focus-visible:outline-2 focus-visible:outline-subtle`}>×</button>}
             </div>
-            {expanded && <ul id={`${id}-list`} role="listbox" aria-label={`${label} suggestions`} className="absolute left-0 right-0 z-40 mt-1 max-h-64 overflow-y-auto rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-1 shadow-lg">
-                {matches.map((item, index) => <li id={`${id}-${index}`} key={item.id ?? item.name} role="option" aria-selected={active === index} onPointerDown={(event) => event.preventDefault()} onClick={() => select(item)} onMouseEnter={() => setActive(index)} className={`min-h-12 cursor-pointer rounded-lg px-3 py-3 text-sm text-[#211E1A] ${active === index ? "bg-[#F1EADF]" : "hover:bg-[#F1EADF]"}`}><strong className="block break-words">{item.name}</strong>{item.context && <span className="block break-words text-xs text-[#817669]">{item.context}</span>}</li>)}
-                {!matches.length && <li role="presentation" className="px-3 py-3 text-sm text-[#817669]"><span role="status">{loading || pending ? "Finding matches…" : "No matching names in these results"}</span></li>}
+            {expanded && <ul id={`${id}-list`} role="listbox" aria-label={`${label} suggestions`} className="absolute left-0 right-0 z-40 mt-1 max-h-64 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-lg">
+                {matches.map((item, index) => <li id={`${id}-${index}`} key={item.id ?? item.name} role="option" aria-selected={active === index} onPointerDown={(event) => event.preventDefault()} onClick={() => select(item)} onMouseEnter={() => setActive(index)} className={`min-h-12 cursor-pointer rounded-lg px-3 py-3 text-sm text-ink ${active === index ? "bg-app" : "hover:bg-app"}`}><strong className="block break-words">{item.name}</strong>{item.context && <span className="block break-words text-xs text-muted">{item.context}</span>}</li>)}
+                {!matches.length && <li role="presentation" className="px-3 py-3 text-sm text-muted"><span role="status">{loading || pending ? "Finding matches…" : "No matching names in these results"}</span></li>}
             </ul>}
         </div>
         {onRefresh && <button type="button" aria-label="Refresh projects" className={button} disabled={loading} onClick={onRefresh}><RefreshCw size={18} aria-hidden="true" />Refresh</button>}
@@ -129,34 +129,34 @@ export default function ReportProjectPicker({ role = "ADMIN" }) {
         setParams(next);
     }
 
-    return <div className="daily-report-project-picker mx-auto min-w-0 max-w-[1500px] space-y-6 pb-8 text-[#211E1A]">
-        <header className="rare-page-header space-y-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:p-5">
-            <div className="border-l-2 border-[#E7DED2] pl-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#716658]">Site records / {admin ? "Administration" : "Your assigned projects"}</p>
+    return <div className="daily-report-project-picker mx-auto min-w-0 max-w-[1500px] space-y-6 pb-8 text-ink">
+        <header className="rare-page-header space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-5">
+            <div className="border-l-2 border-border pl-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Site records / {admin ? "Administration" : "Your assigned projects"}</p>
                 <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Daily Reports</h1>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-[#716658]">
+                <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
                     {admin ? "Choose a project to review its site diary, work records and evidence." : "Choose an assigned project to create a daily report, continue a draft or review submitted site records."}
                 </p>
             </div>
             {admin && <Link className={button} to="/admin/approvals?tab=work">Open Daily Work Verification</Link>}
         </header>
 
-        <ProjectSearch suggestionsFiltered query={query} onSearch={applySearch} onRefresh={() => setRevision((value) => value + 1)} loading={!current} suggestions={(data?.results || []).map((project) => ({ id: project.id, name: project.name, to: `${prefix}/projects/${project.id}/daily-reports` }))} className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4" />
+        <ProjectSearch suggestionsFiltered query={query} onSearch={applySearch} onRefresh={() => setRevision((value) => value + 1)} loading={!current} suggestions={(data?.results || []).map((project) => ({ id: project.id, name: project.name, to: `${prefix}/projects/${project.id}/daily-reports` }))} className="rounded-2xl border border-border bg-surface p-4" />
 
         <section aria-label="Daily report projects" aria-busy={!current} className="space-y-4">
-            {!current && <p role="status" className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-6 text-sm text-[#716658]">Loading projects...</p>}
+            {!current && <p role="status" className="rounded-2xl border border-border bg-surface p-6 text-sm text-muted">Loading projects...</p>}
             {current?.error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
                 <p>{current.error}</p>
                 <button type="button" className={`${button} mt-3`} onClick={() => setRevision((value) => value + 1)}>Retry</button>
             </div>}
             {data && <>
-                <p role="status" className="text-sm text-[#716658]">{data.count} matching {data.count === 1 ? "project" : "projects"}{admin ? "" : " assigned to you"}</p>
+                <p role="status" className="text-sm text-muted">{data.count} matching {data.count === 1 ? "project" : "projects"}{admin ? "" : " assigned to you"}</p>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {data.results.map((project) => <DesktopProjectCard key={project.id} project={project} to={`${prefix}/projects/${project.id}/daily-reports`} />)}
                 </div>
-                {!data.results.length && <div className="rounded-2xl border border-dashed border-[#CCB99F] bg-[#FFFDFA] p-6 text-center">
-                    <h2 className="text-base font-semibold text-[#211E1A]">{query ? "No projects match this search" : admin ? "No projects available" : "No projects assigned yet"}</h2>
-                    <p className="mt-2 text-sm text-[#716658]">{query ? "Try a different project name or clear the search." : admin ? "Projects will appear here once created." : "Your projects will appear here when an administrator assigns them to you."}</p>
+                {!data.results.length && <div className="rounded-2xl border border-dashed border-border-strong bg-surface p-6 text-center">
+                    <h2 className="text-base font-semibold text-ink">{query ? "No projects match this search" : admin ? "No projects available" : "No projects assigned yet"}</h2>
+                    <p className="mt-2 text-sm text-muted">{query ? "Try a different project name or clear the search." : admin ? "Projects will appear here once created." : "Your projects will appear here when an administrator assigns them to you."}</p>
                     {(query || page > 1) && <button type="button" className={`${button} mt-4`} onClick={() => applySearch("")}>Reset search and page</button>}
                 </div>}
                 <nav aria-label="Project pages" className="rare-pagination text-sm">

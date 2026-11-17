@@ -530,11 +530,11 @@ export default function SupervisorProjectTimeline() {
             {/* BREADCRUMB */}
             <nav
                 aria-label="Breadcrumb"
-                className="flex flex-wrap items-center gap-2 text-xs text-[#716658]"
+                className="flex flex-wrap items-center gap-2 text-xs text-muted"
             >
                 <Link
                     to="/supervisor/projects"
-                    className="hover:text-[#211E1A]"
+                    className="hover:text-ink"
                 >
                     My Projects
                 </Link>
@@ -543,14 +543,14 @@ export default function SupervisorProjectTimeline() {
 
                 <Link
                     to={`/supervisor/projects/${projectId}`}
-                    className="hover:text-[#211E1A]"
+                    className="hover:text-ink"
                 >
                     {project?.name || "Project"}
                 </Link>
 
                 <span>/</span>
 
-                <span className="font-bold text-[#211E1A]">
+                <span className="font-bold text-ink">
                     Timeline
                 </span>
             </nav>
@@ -558,15 +558,15 @@ export default function SupervisorProjectTimeline() {
             {/* PAGE HEADER */}
             <header className="rare-page-header flex flex-wrap items-end justify-between gap-4">
                 <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
+                    <p className="text-xs font-bold uppercase tracking-[0.17em] text-muted">
                         Supervisor / Project Workspace
                     </p>
 
-                    <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">
+                    <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink sm:text-3xl">
                         Project Timeline
                     </h1>
 
-                    <p className="mt-2 text-sm leading-6 text-[#716658]">
+                    <p className="mt-2 text-sm leading-6 text-muted">
                         {project?.name || "Assigned Project"}
                         {" · "}
                         Track task sequence, planned dates and
@@ -579,7 +579,7 @@ export default function SupervisorProjectTimeline() {
                         type="button"
                         onClick={refreshTimeline}
                         disabled={loading || reorderMode}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-4 py-3 text-sm font-semibold text-[#665E53] hover:bg-[#F1EADF] disabled:opacity-50"
+                        className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-muted hover:bg-app disabled:opacity-50"
                     >
                         <RefreshCw size={17} />
                         Refresh
@@ -599,7 +599,7 @@ export default function SupervisorProjectTimeline() {
                                 pendingOrderRequest ||
                                 tasks.length < 2
                             }
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#39332B] disabled:cursor-not-allowed disabled:opacity-40"
+                            className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <GripVertical size={18} />
                             Reorder Tasks
@@ -612,16 +612,16 @@ export default function SupervisorProjectTimeline() {
             {notice && (
                 <div
                     role="status"
-                    className="flex items-start gap-3 rounded-2xl border border-[#C9E2CE] bg-[#E7F2E8] p-4"
+                    className="flex items-start gap-3 rounded-2xl border border-pastel-mint bg-pastel-mint p-4"
                 >
-                    <span className="min-w-0 flex-1 text-sm leading-6 text-[#296F40]">
+                    <span className="min-w-0 flex-1 text-sm leading-6 text-success">
                         {notice}
                     </span>
 
                     <button
                         type="button"
                         onClick={() => setNotice("")}
-                        className="text-[#296F40]"
+                        className="text-success"
                         aria-label="Dismiss notice"
                     >
                         ×
@@ -631,7 +631,7 @@ export default function SupervisorProjectTimeline() {
 
             {/* TIMELINE ERROR */}
             {!loading && error && (
-                <div className="rounded-2xl border border-red-200 bg-[#FFFDFA] p-6">
+                <div className="rounded-2xl border border-red-200 bg-surface p-6">
                     <div className="flex items-start gap-3">
                         <AlertCircle
                             size={20}
@@ -649,7 +649,7 @@ export default function SupervisorProjectTimeline() {
                             <button
                                 type="button"
                                 onClick={refreshTimeline}
-                                className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#211E1A] underline"
+                                className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-ink underline"
                             >
                                 <RefreshCw size={16} />
                                 Try Again
@@ -666,18 +666,18 @@ export default function SupervisorProjectTimeline() {
 
                     {/* ORDER CHANGE STATUS */}
                     {pendingOrderRequest && (
-                        <div className="flex items-start gap-3 rounded-2xl border border-[#F0D99A] bg-[#FFF7E4] p-4">
+                        <div className="flex items-start gap-3 rounded-2xl border border-pastel-butter bg-[#FFF7E4] p-4">
                             <Clock3
                                 size={20}
-                                className="mt-0.5 shrink-0 text-[#94651D]"
+                                className="mt-0.5 shrink-0 text-warning"
                             />
 
                             <div>
-                                <p className="text-sm font-bold text-[#94651D]">
+                                <p className="text-sm font-bold text-warning">
                                     Timeline approval pending
                                 </p>
 
-                                <p className="mt-1 text-xs leading-6 text-[#94651D]">
+                                <p className="mt-1 text-xs leading-6 text-warning">
                                     An order-change request for this project
                                     is awaiting Admin review. The approved
                                     timeline has not changed.
@@ -689,7 +689,7 @@ export default function SupervisorProjectTimeline() {
                     {!pendingOrderRequest &&
                         !historyLoading &&
                         (historyError || unmatchedHistory) && (
-                            <div className="rounded-2xl border border-[#E4DCCD] bg-[#F8F4EE] p-4 text-xs leading-6 text-[#716658]">
+                            <div className="rounded-2xl border border-border bg-surface-soft p-4 text-xs leading-6 text-muted">
                                 Reordering is temporarily disabled because
                                 the existing change-request state could
                                 not be verified. Refresh request history
@@ -720,9 +720,9 @@ export default function SupervisorProjectTimeline() {
                             <div className="supervisor-timeline-main space-y-3">
                             {/* RESULTS COUNTER */}
                             <div className="flex flex-wrap items-center justify-between gap-3">
-                                <p className="text-xs text-[#716658]">
+                                <p className="text-xs text-muted">
                                     Showing{" "}
-                                    <strong className="text-[#211E1A]">
+                                    <strong className="text-ink">
                                         {filteredTasks.length}
                                     </strong>{" "}
                                     of {tasks.length} tasks
@@ -732,7 +732,7 @@ export default function SupervisorProjectTimeline() {
                                     <button
                                         type="button"
                                         onClick={clearFilters}
-                                        className="text-xs font-bold text-[#74614D] underline"
+                                        className="text-xs font-bold text-muted underline"
                                     >
                                         Show All Tasks
                                     </button>
@@ -740,8 +740,8 @@ export default function SupervisorProjectTimeline() {
                             </div>
 
                             <div className="timeline-desktop-view-heading hidden items-center justify-between gap-4 lg:flex">
-                                <div><h2 className="text-lg font-bold text-[#211E1A]">{view === "sequence" ? "Task Sequence" : "Schedule View"}</h2>{view === "sequence" && <p className="mt-2 text-xs leading-5 text-[#716658]">Tasks arranged in their current timeline order.</p>}</div>
-                                <div className="inline-flex shrink-0 rounded-xl bg-[#F1EADF] p-1">{[["sequence", "Sequence", ClipboardList], ["schedule", "Schedule", CalendarRange]].map(([value, label, Icon]) => <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)} className={"inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold " + (view === value ? "bg-[#211E1A] text-white shadow-sm" : "text-[#716658]")}><Icon size={16} />{label}</button>)}</div>
+                                <div><h2 className="text-lg font-bold text-ink">{view === "sequence" ? "Task Sequence" : "Schedule View"}</h2>{view === "sequence" && <p className="mt-2 text-xs leading-5 text-muted">Tasks arranged in their current timeline order.</p>}</div>
+                                <div className="inline-flex shrink-0 rounded-xl bg-app p-1">{[["sequence", "Sequence", ClipboardList], ["schedule", "Schedule", CalendarRange]].map(([value, label, Icon]) => <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)} className={"inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold " + (view === value ? "bg-ink text-white shadow-sm" : "text-muted")}><Icon size={16} />{label}</button>)}</div>
                             </div>
                             {/* VIEW SWITCH */}
                             {view === "sequence" ? (
@@ -766,7 +766,7 @@ export default function SupervisorProjectTimeline() {
                     )}
 
                     {/* REQUEST HISTORY */}
-                    <div className="supervisor-timeline-history border-t border-[#E4DCCD] pt-7">
+                    <div className="supervisor-timeline-history border-t border-border pt-7">
                         <TimelineRequestHistory
                             requests={timelineRequests}
                             tasks={tasks}

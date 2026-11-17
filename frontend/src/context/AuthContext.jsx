@@ -169,8 +169,8 @@ export function AuthProvider({ children }) {
       {initializing ? (
         <LoadingScreen message="Restoring your session..." standalone />
       ) : restoreError ? (
-        <main className="flex min-h-dvh items-center justify-center bg-[#F1EADF] p-6">
-          <div className="w-full max-w-md space-y-4 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-6 text-[#211E1A]">
+        <main className="flex min-h-dvh items-center justify-center bg-app p-6">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-surface p-6 text-ink">
             <p role="alert" className="text-sm">{restoreError}</p>
             <div className="flex flex-wrap gap-3">
               <button type="button" className="rare-button rare-button-primary" disabled={loading} onClick={() => {

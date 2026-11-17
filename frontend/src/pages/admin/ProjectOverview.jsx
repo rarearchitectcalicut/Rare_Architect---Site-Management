@@ -1,26 +1,15 @@
+import { ProjectHero, ProjectMobileActions, ProjectWorkspaceNavigation, ProjectDescription } from "../../components/projects/ProjectDetailUI";
+import ProjectInformationCard from "../../components/projects/ProjectInformationCard";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  ArrowLeft,
-  ArrowUpRight,
   Ban,
-  CalendarDays,
-  CalendarRange,
   Check,
-  Clock3,
-  FileText,
-  Files,
-  FolderKanban,
-  ImageOff,
-  ListTodo,
   Mail,
-  MapPin,
   Phone,
   Plus,
-  RefreshCw,
   Search,
   Trash2,
-  UserRound,
   UsersRound,
   X,
 } from "lucide-react";
@@ -39,86 +28,16 @@ import { validationMessage } from "../../hooks/useApprovalReview";
 // Everything respects prefers-reduced-motion.
 // =====================================================
 
-const overviewCss = `
-  @keyframes rare-rise {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes rare-fade {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-
-  @keyframes rare-pop {
-    from { opacity: 0; transform: translateY(10px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  /* "backwards" (not "both") so hover transforms still work after the intro */
-  .rare-rise {
-    animation: rare-rise 640ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-    animation-delay: var(--d, 0ms);
-  }
-
-  .rare-fade {
-    animation: rare-fade 250ms ease-out backwards;
-    animation-delay: var(--d, 0ms);
-  }
-
-  .rare-pop {
-    animation: rare-pop 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .rare-rise,
-    .rare-fade,
-    .rare-pop {
-      animation: none !important;
-    }
-  }
-`;
-
-function OverviewStyles() {
-  return <style>{overviewCss}</style>;
-}
-
 // Staggered delay helper (capped so late items never feel slow)
 const stagger = (index, step = 70, max = 700) => Math.min(index * step, max);
 
 // Icon tile tones. Literal class strings so Tailwind can detect them.
-const iconTones = {
-  neutral:
-    "bg-[#F1EADF] text-[#665E53] group-hover:bg-[#211E1A] group-hover:text-white",
-  blue: "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB] group-hover:text-white",
-  green:
-    "bg-[#E6F4EA] text-[#16A34A] group-hover:bg-[#16A34A] group-hover:text-white",
-  orange:
-    "bg-[#FFF3E0] text-[#EA8A12] group-hover:bg-[#EA8A12] group-hover:text-white",
-  red: "bg-[#fde8e6] text-[#9e3535] group-hover:bg-[#9e3535] group-hover:text-white",
-  violet:
-    "bg-[#F1ECFE] text-[#7C3AED] group-hover:bg-[#7C3AED] group-hover:text-white",
-  slate:
-    "bg-[#ece8e2] text-[#72675b] group-hover:bg-[#72675b] group-hover:text-white",
-};
+
 
 // =====================================================
 // HELPERS
 // =====================================================
 
-function formatDate(value) {
-  if (!value) return "Not specified";
-
-  const date = new Date(`${value}T00:00:00`);
-
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-}
 
 function getName(person) {
   return (
@@ -139,43 +58,6 @@ function getListItems(response) {
   throw new Error("Unexpected Supervisor API response.");
 }
 
-function InfoItem({ icon: Icon, label, value, tone = "neutral" }) {
-  return (
-    <div
-      className="
-                group flex min-w-0 items-center gap-3 rounded-2xl p-2
-                transition-colors duration-200
-                hover:bg-[#F6F0E8]/70
-            "
-    >
-      <span
-        className={`
-                    shrink-0 rounded-xl p-2.5 sm:p-3
-                    transition-all duration-300 ease-out
-                    group-hover:scale-105 group-hover:-rotate-3
-                    motion-reduce:transition-none
-                    motion-reduce:group-hover:transform-none
-                    ${iconTones[tone] || iconTones.neutral}
-                `}
-      >
-        <Icon size={19} strokeWidth={1.8} />
-      </span>
-
-      <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-widest text-[#716658]">
-          {label}
-        </p>
-        <p className="mt-1 wrap-anywhere text-sm font-semibold text-[#211E1A]">
-          {value || "Not specified"}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// =====================================================
-// ADD SUPERVISOR DIALOG
-// =====================================================
 
 function AddSupervisorDialog({
   open,
@@ -295,24 +177,24 @@ function AddSupervisorDialog({
 
   return (
     <div
-      className="rare-fade fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/45 p-3 backdrop-blur-sm sm:p-4"
+      className="rare-fade fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-3 backdrop-blur-sm sm:p-4"
       role="presentation"
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-supervisor-title"
-        className="rare-pop flex max-h-[85dvh] w-full max-w-xl flex-col overflow-hidden rounded-[22px] bg-[#FFFDFA] shadow-2xl sm:rounded-[26px]"
+        className="rare-pop flex max-h-[85dvh] w-full max-w-xl flex-col overflow-hidden rounded-[22px] bg-surface shadow-2xl sm:rounded-[26px]"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-[#EEE6DC] p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-3 border-b border-border p-4 sm:p-6">
           <div className="min-w-0">
             <h2
               id="add-supervisor-title"
-              className="text-lg font-bold text-[#211E1A] sm:text-xl"
+              className="text-lg font-bold text-ink sm:text-xl"
             >
               Assign Supervisors
             </h2>
-            <p className="mt-1 text-sm text-[#716658]">
+            <p className="mt-1 text-sm text-muted">
               Select existing RARE Supervisor accounts.
             </p>
           </div>
@@ -322,12 +204,12 @@ function AddSupervisorDialog({
             onClick={onClose}
             aria-label="Close"
             className="
-                            group shrink-0 rounded-full bg-[#F1EADF] p-2 text-[#211E1A]
+                            group shrink-0 rounded-full bg-app p-2 text-ink
                             transition-all duration-200 ease-out
-                            hover:bg-[#E7DED2]
+                            hover:bg-border
                             active:scale-95
                             focus-visible:outline-none focus-visible:ring-2
-                            focus-visible:ring-[#211E1A]/30
+                            focus-visible:ring-ink/30
                         "
           >
             <X
@@ -346,7 +228,7 @@ function AddSupervisorDialog({
           <div className="relative mb-4">
             <Search
               size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#716658]"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
             />
             <input
               autoFocus
@@ -355,11 +237,11 @@ function AddSupervisorDialog({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search supervisor..."
               className="
-                                h-12 w-full rounded-xl border border-[#E4DCCD] bg-white
+                                h-12 w-full rounded-xl border border-border bg-white
                                 pl-10 pr-4 text-sm outline-none
                                 transition-all duration-200
-                                hover:border-[#CFC4B5]
-                                focus:border-[#211E1A]
+                                hover:border-border-strong
+                                focus:border-ink
                                 focus:shadow-[0_0_0_3px_rgba(33,30,26,0.08)]
                             "
             />
@@ -386,24 +268,24 @@ function AddSupervisorDialog({
                                         transition-all duration-200 ease-out
                                         active:scale-[0.99]
                                         focus-visible:outline-none focus-visible:ring-2
-                                        focus-visible:ring-[#211E1A]/30
+                                        focus-visible:ring-ink/30
                                         motion-reduce:transition-none
                                         ${
                                           checked
-                                            ? "border-[#211E1A] bg-[#F1EADF]"
-                                            : "border-[#E9E1D7] bg-white hover:border-[#CFC4B5] hover:bg-[#F6F0E8]/60"
+                                            ? "border-ink bg-app"
+                                            : "border-border bg-white hover:border-border-strong hover:bg-surface-soft/60"
                                         }
                                     `}
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E7DED2] text-sm font-bold text-[#211E1A] transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-border text-sm font-bold text-ink transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none">
                     {getName(person).charAt(0).toUpperCase()}
                   </span>
 
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-[#211E1A]">
+                    <span className="block truncate text-sm font-semibold text-ink">
                       {getName(person)}
                     </span>
-                    <span className="block truncate text-xs text-[#716658]">
+                    <span className="block truncate text-xs text-muted">
                       {person.phone || person.email || ""}
                     </span>
                   </span>
@@ -414,8 +296,8 @@ function AddSupervisorDialog({
                                             transition-all duration-200
                                             ${
                                               checked
-                                                ? "scale-110 border-[#211E1A] bg-[#211E1A] text-white"
-                                                : "border-[#CFC4B5] group-hover:border-[#211E1A]"
+                                                ? "scale-110 border-ink bg-ink text-white"
+                                                : "border-border-strong group-hover:border-ink"
                                             }
                                         `}
                   >
@@ -426,25 +308,25 @@ function AddSupervisorDialog({
             })}
 
             {!filtered.length && (
-              <p className="py-8 text-center text-sm text-[#716658]">
+              <p className="py-8 text-center text-sm text-muted">
                 No available supervisors found.
               </p>
             )}
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-[#EEE6DC] p-4 sm:gap-3 sm:p-5">
+        <div className="flex items-center justify-end gap-2 border-t border-border p-4 sm:gap-3 sm:p-5">
           <button
             type="button"
             onClick={onClose}
             className="
-                            flex-1 rounded-xl border border-[#E4DCCD] px-5 py-3
-                            text-sm font-medium text-[#211E1A]
+                            flex-1 rounded-xl border border-border px-5 py-3
+                            text-sm font-medium text-ink
                             transition-all duration-200 ease-out
-                            hover:border-[#CFC4B5] hover:bg-[#F6F0E8]
+                            hover:border-border-strong hover:bg-surface-soft
                             active:scale-[0.98]
                             focus-visible:outline-none focus-visible:ring-2
-                            focus-visible:ring-[#211E1A]/30
+                            focus-visible:ring-ink/30
                             sm:flex-none
                         "
           >
@@ -456,14 +338,14 @@ function AddSupervisorDialog({
             onClick={handleAssign}
             disabled={!selected.length}
             className="
-                            flex-1 rounded-xl bg-[#211E1A] px-5 py-3
+                            flex-1 rounded-xl bg-ink px-5 py-3
                             text-sm font-semibold text-white
                             transition-all duration-200 ease-out
-                            hover:-translate-y-0.5 hover:bg-[#39342D]
+                            hover:-translate-y-0.5 hover:bg-primary-hover
                             hover:shadow-[0_10px_24px_rgba(33,30,26,0.22)]
                             active:translate-y-0 active:scale-[0.98]
                             focus-visible:outline-none focus-visible:ring-2
-                            focus-visible:ring-[#211E1A]/40 focus-visible:ring-offset-2
+                            focus-visible:ring-ink/40 focus-visible:ring-offset-2
                             disabled:pointer-events-none disabled:opacity-40
                             motion-reduce:hover:translate-y-0
                             sm:flex-none
@@ -677,20 +559,19 @@ export default function ProjectOverview() {
   const coverUrl = getMediaUrl(project?.cover_image);
 
   return (
-    <div className="admin-project-overview flex min-w-0 flex-col gap-6 pb-6 sm:gap-7">
-      <OverviewStyles />
+    <div className="rare-project-detail">
 
       {loadingMessage && <LoadingScreen message={loadingMessage} />}
-      {notice && <p role="status" className="rounded-xl border border-[#B8D5C1] bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
-      {project?.status === "CANCELLED" && <section className="space-y-2 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5 text-sm text-[#716658]">
-        <p className="font-semibold text-[#211E1A]">This project has been cancelled. Existing records remain available for reference.</p>
+      {notice && <p role="status" className="rounded-xl border border-[#B8D5C1] bg-pastel-mint p-4 text-sm text-success">{notice}</p>}
+      {project?.status === "CANCELLED" && <section className="space-y-2 rounded-2xl border border-border bg-surface p-5 text-sm text-muted">
+        <p className="font-semibold text-ink">This project has been cancelled. Existing records remain available for reference.</p>
         <form onSubmit={changeCancelledStatus} className="flex flex-wrap items-end gap-3 pt-2">
           <label className="min-w-0 flex-1 basis-48 font-semibold">Change project status
-            <select aria-label="New project status" value={nextStatus} disabled={changingStatus} onChange={(event) => { setNextStatus(event.target.value); setStatusError(""); }} className="mt-2 min-h-12 w-full rounded-xl border border-[#E7DED2] bg-[#FFFDFA] px-3 text-sm text-[#211E1A] outline-none focus:border-[#A58A67] focus:ring-2 focus:ring-[#E8DDD0] disabled:opacity-50">
+            <select aria-label="New project status" value={nextStatus} disabled={changingStatus} onChange={(event) => { setNextStatus(event.target.value); setStatusError(""); }} className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 text-sm text-ink outline-none focus:border-subtle focus:ring-2 focus:ring-pastel-lavender disabled:opacity-50">
               <option value="ACTIVE">Active</option><option value="MAINTENANCE">Maintenance</option><option value="ON_HOLD">On hold</option><option value="COMPLETED">Completed</option>
             </select>
           </label>
-          <button type="submit" disabled={changingStatus} className="min-h-12 rounded-xl bg-[#211E1A] px-5 py-3 font-semibold text-[#FFFDFA] disabled:opacity-50">{changingStatus ? "Updating status..." : "Update status"}</button>
+          <button type="submit" disabled={changingStatus} className="min-h-12 rounded-xl bg-ink px-5 py-3 font-semibold text-surface disabled:opacity-50">{changingStatus ? "Updating status..." : "Update status"}</button>
         </form>
         {statusError && <p role="alert" className="text-sm text-red-700">{statusError}</p>}
         <p>Pending approvals remain available for separate Admin review; cancellation does not decide them.</p>
@@ -722,284 +603,48 @@ export default function ProjectOverview() {
       {!project ? null : (
         <>
           {/* BREADCRUMB */}
-          <nav className="rare-fade flex flex-wrap items-center gap-x-2 gap-y-1 text-xs wrap-anywhere text-[#716658]">
+          <nav className="rare-project-detail-breadcrumb" aria-label="Project breadcrumb">
             <Link
               to="/admin/projects"
-              className="rounded transition-colors duration-200 hover:text-[#211E1A] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A]/30"
+              className="rounded transition-colors duration-200 hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
             >
               All Projects
             </Link>
             <span>/</span>
             <Link
               to={`/admin/categories/${project.category}`}
-              className="rounded transition-colors duration-200 hover:text-[#211E1A] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A]/30"
+              className="rounded transition-colors duration-200 hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
             >
               {project.category_name}
             </Link>
             <span>/</span>
-            <span className="font-semibold text-[#211E1A]">{project.name}</span>
+            <span className="font-semibold text-ink">{project.name}</span>
           </nav>
 
-          {/* COVER */}
-          <section
-            className="admin-project-cover rare-rise group/cover overflow-hidden rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] transition-shadow duration-300 hover:shadow-[0_14px_36px_rgba(33,30,26,0.08)] sm:rounded-[26px]"
-            style={{ "--d": `${stagger(1)}ms` }}
-          >
-            <div
-              className={`relative overflow-hidden bg-[#E9E0D4] ${
-                coverUrl ? "h-28 sm:h-44 lg:h-52" : "h-24 sm:h-32"
-              }`}
-            >
-              {coverUrl ? (
-                <img
-                  src={coverUrl}
-                  alt={project.name}
-                  className="
-                                        h-full w-full object-cover
-                                        transition-transform duration-700 ease-out
-                                        group-hover/cover:scale-[1.03]
-                                        motion-reduce:transition-none
-                                        motion-reduce:group-hover/cover:scale-100
-                                    "
-                />
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-[#716658]">
-                  <ImageOff size={36} />
-                  No project cover image
-                </div>
-              )}
+          <ProjectHero key={project.id} project={project} coverUrl={coverUrl}>
+            <button type="button" aria-label="Edit Project" title="Edit project" disabled={project.status === "CANCELLED"} onClick={() => setShowEditProject(true)} className="rare-project-icon-action"><Pencil size={18} aria-hidden="true" /><span className="sr-only">Edit Project</span></button>
+            {["ACTIVE", "MAINTENANCE", "ON_HOLD"].includes(project.status) && <>
+              <button type="button" aria-label="Cancel Project" title="Cancel project" onClick={() => { setCancellationReason(""); setCancellationError(""); setShowCancelProject(true); }} className="rare-project-icon-action rare-project-cancel-action"><Ban size={18} aria-hidden="true" /><span className="sr-only">Cancel Project</span></button>
+              <ProjectMobileActions><button type="button" aria-label="Cancel Project" onClick={() => { setCancellationReason(""); setCancellationError(""); setShowCancelProject(true); }}><Ban size={17} aria-hidden="true" />Cancel Project</button></ProjectMobileActions>
+            </>}
+          </ProjectHero>
+          <div className="rare-project-detail-grid">
+            <div className="rare-project-detail-primary">
+              <ProjectWorkspaceNavigation projectId={projectId} role="ADMIN" />
+              <ProjectDescription description={project.description} />
             </div>
-
-            <div className="p-4 sm:p-8">
-              <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#716658]">
-                    {project.category_name}
-                  </p>
-                  <h1 className="mt-2 wrap-anywhere text-2xl font-bold text-[#211E1A] sm:text-3xl">
-                    {project.name}
-                  </h1>
-                  <p className="mt-3 flex items-start gap-2 text-sm text-[#716658]">
-                    <MapPin size={17} className="mt-0.5 shrink-0" />
-                    <span className="min-w-0 wrap-anywhere">
-                      {project.location || "Location not specified"}
-                    </span>
-                  </p>
-                </div>
-
-                <div className="flex w-full flex-col items-start gap-3 lg:w-auto lg:shrink-0 lg:items-end">
-                  {/* PROJECT STATUS */}
-                  <span className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-bold ${project.status === "CANCELLED" ? "bg-[#FCE9E6] text-[#B5473E]" : "bg-[#E7F2E8] text-[#296F40]"}`}>
-                    {(project.status || "").replaceAll("_", " ")}
-                  </span>
-
-                  <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2 sm:gap-3">
-                  {/* EDIT PROJECT - YELLOW */}
-                  <button
-                    type="button"
-                    disabled={project.status === "CANCELLED"}
-                    onClick={() => setShowEditProject(true)}
-                    className="
-      group inline-flex w-full items-center justify-center gap-2 sm:w-auto
-      rounded-xl border border-[#F0D99A]
-      bg-[#FFF5D6] px-5 py-3
-      text-sm font-semibold text-[#8A620D]
-      transition-all duration-200
-      hover:-translate-y-0.5
-      hover:border-[#E4BF62]
-      hover:bg-[#FFE9A8]
-      hover:shadow-[0_8px_20px_rgba(178,126,24,0.13)]
-      active:translate-y-0
-      motion-reduce:transform-none
-    "
-                  >
-                    <Pencil
-                      size={17}
-                      className="transition-transform duration-200 group-hover:rotate-[-8deg]"
-                    />
-                    Edit Project
-                  </button>
-
-                  {/* Cancellation retains the complete project history. */}
-                  {["ACTIVE", "MAINTENANCE", "ON_HOLD"].includes(project.status) && <button
-                    type="button"
-                    onClick={() => { setCancellationReason(""); setCancellationError(""); setShowCancelProject(true); }}
-                    className="
-      group inline-flex w-full items-center justify-center gap-2 sm:w-auto
-      rounded-xl border border-[#B42318]
-      bg-[#B42318] px-5 py-3
-      text-sm font-semibold text-white
-      transition-all duration-200
-      hover:-translate-y-0.5
-      hover:border-[#E99B92]
-      hover:bg-[#921C13]
-      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B42318]
-      hover:shadow-[0_8px_20px_rgba(181,71,62,0.13)]
-      active:translate-y-0
-      motion-reduce:transform-none
-    "
-                  >
-                    <Ban
-                      size={17}
-                      className="transition-transform duration-200 group-hover:scale-110"
-                    />
-                    Cancel Project
-                  </button>}
-                  </div>
-                </div>
-              </div>
-
-              {project.description && (
-                <p className="mt-5 border-t border-[#EFE8DE] pt-5 text-sm leading-7 text-[#665E53] sm:mt-6">
-                  {project.description}
-                </p>
-              )}
-            </div>
-          </section>
-
-          {/* INFORMATION */}
-          <div className="admin-project-columns contents"><div className="admin-project-left contents"><section className="admin-project-workspace">
-            <h2 className="mb-4 text-lg font-bold text-[#211E1A] sm:text-xl">
-              Project Workspace
-            </h2>
-
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-              {[
-                { name: "Tasks", icon: ListTodo, path: "tasks", tone: "blue" },
-                { name: "Timeline", icon: CalendarRange, path: "timeline", tone: "orange", desktopOnly: true },
-                {
-                  name: "Daily Reports",
-                  icon: FileText,
-                  path: "reports",
-                  tone: "green",
-                },
-                {
-                  name: "Documents",
-                  icon: Files,
-                  path: "documents",
-                  tone: "violet",
-                },
-                {
-                  name: "Delays",
-                  icon: Clock3,
-                  path: "delays",
-                  tone: "orange",
-                },
-              ].map((section, index) => {
-                const Icon = section.icon;
-
-                return (
-                  <div
-                    key={section.path}
-                    className={`rare-rise h-full min-w-0 ${section.desktopOnly ? "hidden lg:block" : ""}`}
-                    style={{ "--d": `${stagger(3 + index)}ms` }}
-                  >
-                    <Link
-                      to={section.path === "timeline" ? `/admin/projects/${projectId}/timeline` : section.path === "tasks" ? `/admin/projects/${projectId}/tasks` : section.path === "reports" ? `/admin/projects/${projectId}/daily-reports` : section.path === "delays" ? `/admin/projects/${projectId}/delays` : section.path === "documents" ? `/admin/projects/${projectId}/documents` : `/admin/${section.path}?project=${projectId}`}
-                      className="
-                                                group block h-full rounded-[18px] border border-[#E7DED2]
-                                                bg-[#FFFDFA] p-4
-                                                transition-all duration-300 ease-out
-                                                hover:-translate-y-1 hover:border-[#D9CCBA]
-                                                hover:shadow-[0_14px_34px_rgba(33,30,26,0.08)]
-                                                active:translate-y-0 active:scale-[0.99]
-                                                focus-visible:outline-none focus-visible:ring-2
-                                                focus-visible:ring-[#211E1A]/30
-                                                motion-reduce:transition-none
-                                                motion-reduce:hover:translate-y-0
-                                                sm:rounded-[20px] sm:p-5
-                                            "
-                    >
-                      <span
-                        className={`
-                                                    inline-flex rounded-xl p-2.5
-                                                    transition-all duration-300 ease-out
-                                                    group-hover:scale-110 group-hover:-rotate-6
-                                                    motion-reduce:transition-none
-                                                    motion-reduce:group-hover:transform-none
-                                                    ${iconTones[section.tone]}
-                                                `}
-                      >
-                        <Icon size={22} strokeWidth={1.8} />
-                      </span>
-
-                      <div className="mt-4 flex items-center justify-between gap-2 sm:mt-5">
-                        <span className="min-w-0 text-sm font-bold text-[#211E1A]">
-                          {section.path === "tasks" ? <><span className="lg:hidden">Tasks</span><span className="hidden lg:inline">Project Tasks</span></> : section.name}
-                        </span>
-                        <ArrowUpRight
-                          size={17}
-                          className="
-                                                        shrink-0 text-[#665E53]
-                                                        transition-all duration-300 ease-out
-                                                        group-hover:-translate-y-0.5 group-hover:translate-x-0.5
-                                                        group-hover:text-[#211E1A]
-                                                        motion-reduce:transition-none
-                                                        motion-reduce:group-hover:transform-none
-                                                    "
-                        />
-                      </div>
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
-          </section><section className="admin-project-description hidden rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] p-4 lg:block"><h2 className="text-sm font-bold text-[#211E1A]">Project Description</h2><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[#665E53]">{project.description || "No project description has been added."}</p></section></div><div className="admin-project-right contents"><section
-            className="admin-project-information rare-rise rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] p-4 transition-shadow duration-300 hover:shadow-[0_10px_30px_rgba(33,30,26,0.05)] sm:rounded-3xl sm:p-7"
-            style={{ "--d": `${stagger(2)}ms` }}
-          >
-            <h2 className="mb-5 text-lg font-bold text-[#211E1A] sm:mb-6">
-              Project Information
-            </h2>
-
-            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
-              <InfoItem
-                icon={UserRound}
-                tone="blue"
-                label="Client"
-                value={project.client_name}
-              />
-              <InfoItem
-                icon={FolderKanban}
-                tone="violet"
-                label="Category"
-                value={`${project.category_name || "Not specified"}${project.category_is_active === false ? " (inactive)" : ""}`}
-              />
-              <InfoItem
-                icon={CalendarDays}
-                tone="green"
-                label="Start Date"
-                value={formatDate(project.start_date)}
-              />
-              <InfoItem
-                icon={CalendarDays}
-                tone="orange"
-                label="Expected Completion"
-                value={formatDate(project.end_date)}
-              />
-              <InfoItem
-                icon={UsersRound}
-                tone="blue"
-                label="Supervisors"
-                value={String(supervisors.length)}
-              />
-              <InfoItem
-                icon={Clock3}
-                tone="slate"
-                label="Status"
-                value={(project.status || "").replaceAll("_", " ")}
-              />
-            </div>
-          </section><section
-            className="admin-project-team rare-rise rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] p-4 sm:rounded-3xl sm:p-7"
+            <aside className="rare-project-detail-secondary" aria-label="Project facts and team">
+              <ProjectInformationCard project={project} supervisorCount={supervisors.length} />
+              <section
+            className="admin-project-team rare-rise rounded-[22px] border border-border bg-surface p-4 sm:rounded-3xl sm:p-7"
             style={{ "--d": `${stagger(7)}ms` }}
           >
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-[#211E1A] sm:text-xl">
+                <h2 className="text-lg font-bold text-ink sm:text-xl">
                   Assigned Supervisors
                 </h2>
-                <p className="mt-1 text-sm text-[#716658]">
+                <p className="mt-1 text-sm text-muted">
                   {supervisors.length} assigned to this project
                 </p>
               </div>
@@ -1009,14 +654,14 @@ export default function ProjectOverview() {
                 disabled={project.status === "CANCELLED"}
                 onClick={() => setShowAssign(true)}
                 className="
-                                    group flex items-center gap-2 rounded-xl bg-[#211E1A]
+                                    group flex items-center gap-2 rounded-xl bg-ink
                                     px-4 py-3 text-sm font-semibold text-white
                                     transition-all duration-200 ease-out
-                                    hover:-translate-y-0.5 hover:bg-[#39342D]
+                                    hover:-translate-y-0.5 hover:bg-primary-hover
                                     hover:shadow-[0_10px_24px_rgba(33,30,26,0.22)]
                                     active:translate-y-0 active:scale-[0.98]
                                     focus-visible:outline-none focus-visible:ring-2
-                                    focus-visible:ring-[#211E1A]/40 focus-visible:ring-offset-2
+                                    focus-visible:ring-ink/40 focus-visible:ring-offset-2
                                     motion-reduce:transition-none
                                     motion-reduce:hover:translate-y-0
                                 "
@@ -1035,16 +680,16 @@ export default function ProjectOverview() {
             </div>
 
             {!supervisors.length ? (
-              <div className="rare-fade rounded-xl bg-[#F6F0E8] px-5 py-10 text-center sm:py-12">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#E8F0FE] text-[#2563EB]">
+              <div className="rare-fade rounded-xl bg-surface-soft px-5 py-10 text-center sm:py-12">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-pastel-sky text-info">
                   <UsersRound size={28} strokeWidth={1.7} />
                 </div>
-                <p className="mt-3 text-sm text-[#716658]">
+                <p className="mt-3 text-sm text-muted">
                   No supervisors assigned yet.
                 </p>
               </div>
             ) : (
-              <div className="grid gap-3 xl:grid-cols-2">
+              <div className="rare-project-team-list grid gap-3">
                 {supervisors.map((item, index) => {
                   const name = getName(item);
 
@@ -1053,9 +698,9 @@ export default function ProjectOverview() {
                       key={item.id}
                       className="
                                                 rare-rise group flex min-w-0 flex-col rounded-[18px]
-                                                border border-[#EAE1D7] bg-[#FFFDFA] p-4
+                                                border border-border bg-surface p-4
                                                 transition-all duration-300 ease-out
-                                                hover:-translate-y-0.5 hover:border-[#D9CCBA]
+                                                hover:-translate-y-0.5 hover:border-border-strong
                                                 hover:shadow-[0_12px_30px_rgba(33,30,26,0.07)]
                                                 motion-reduce:transition-none
                                                 motion-reduce:hover:translate-y-0
@@ -1067,7 +712,7 @@ export default function ProjectOverview() {
                         <div
                           className="
                                                         flex h-12 w-12 shrink-0 items-center justify-center
-                                                        rounded-full bg-[#E9DFD1] text-lg font-bold text-[#211E1A]
+                                                        rounded-full bg-pastel-lavender text-lg font-bold text-ink
                                                         transition-transform duration-300 ease-out
                                                         group-hover:scale-105
                                                         motion-reduce:transition-none
@@ -1078,19 +723,19 @@ export default function ProjectOverview() {
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <p className="wrap-anywhere font-bold text-[#211E1A]">
+                          <p className="wrap-anywhere font-bold text-ink">
                             {name}
                           </p>
-                          <p className="mt-1 text-xs text-[#716658]">
+                          <p className="mt-1 text-xs text-muted">
                             Site Supervisor
                           </p>
-                          <p className="mt-2 text-sm text-[#665E53]">
+                          <p className="mt-2 text-sm text-muted">
                             {item.supervisor_phone || "No phone number"}
                           </p>
                           {item.supervisor_email && (
                             <a
                               href={`mailto:${item.supervisor_email}`}
-                              className="mt-1 block break-all text-xs text-[#716658] transition-colors duration-200 hover:text-[#2563EB] hover:underline"
+                              className="mt-1 block break-all text-xs text-muted transition-colors duration-200 hover:text-info hover:underline"
                             >
                               <Mail size={13} className="mr-1 inline" />
                               {item.supervisor_email}
@@ -1099,20 +744,20 @@ export default function ProjectOverview() {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-center gap-2 border-t border-[#F0E9DF] pt-4">
+                      <div className="mt-4 flex items-center gap-2 border-t border-surface-soft pt-4">
                         {item.supervisor_phone ? (
                           <a
                             href={`tel:${item.supervisor_phone}`}
                             className="
                                                             group/call flex flex-1 items-center justify-center gap-2
-                                                            rounded-xl bg-[#E7F2E8] px-3 py-3
-                                                            text-sm font-semibold text-[#296F40]
+                                                            rounded-xl bg-pastel-mint px-3 py-3
+                                                            text-sm font-semibold text-success
                                                             transition-all duration-200 ease-out
-                                                            hover:bg-[#D6EAD9]
+                                                            hover:bg-pastel-mint
                                                             hover:shadow-[0_6px_16px_rgba(41,111,64,0.15)]
                                                             active:scale-[0.98]
                                                             focus-visible:outline-none focus-visible:ring-2
-                                                            focus-visible:ring-[#296F40]/40
+                                                            focus-visible:ring-success/40
                                                         "
                           >
                             <Phone
@@ -1127,9 +772,7 @@ export default function ProjectOverview() {
                             Call
                           </a>
                         ) : (
-                          <span className="flex-1 text-center text-xs text-[#716658]">
-                            No number
-                          </span>
+                          null
                         )}
 
                         <button
@@ -1163,7 +806,9 @@ export default function ProjectOverview() {
                 })}
               </div>
             )}
-          </section></div></div>
+          </section>
+            </aside>
+          </div>
 
           {/* PROJECT WORKSPACE */}
           
@@ -1187,27 +832,27 @@ export default function ProjectOverview() {
 
       {/* REMOVE CONFIRMATION */}
       {removeTarget && project?.status !== "CANCELLED" && (
-        <div className="rare-fade fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/45 p-3 backdrop-blur-sm sm:p-4">
+        <div className="rare-fade fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-3 backdrop-blur-sm sm:p-4">
           <div
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="remove-supervisor-title"
-            className="rare-pop w-full max-w-md rounded-[22px] bg-[#FFFDFA] p-5 shadow-2xl sm:rounded-3xl sm:p-6"
+            className="rare-pop w-full max-w-md rounded-[22px] bg-surface p-5 shadow-2xl sm:rounded-3xl sm:p-6"
           >
             <div className="flex items-start gap-3">
-              <span className="shrink-0 rounded-xl bg-[#fde8e6] p-2.5 text-[#9e3535]">
+              <span className="shrink-0 rounded-xl bg-pastel-blush p-2.5 text-danger">
                 <Trash2 size={20} strokeWidth={1.8} />
               </span>
 
               <div className="min-w-0">
                 <h2
                   id="remove-supervisor-title"
-                  className="text-lg font-bold text-[#211E1A] sm:text-xl"
+                  className="text-lg font-bold text-ink sm:text-xl"
                 >
                   Remove Supervisor?
                 </h2>
 
-                <p className="mt-2 text-sm leading-6 text-[#716658]">
+                <p className="mt-2 text-sm leading-6 text-muted">
                   Remove {getName(removeTarget)} from this project? They will
                   lose access to this project's records.
                 </p>
@@ -1219,13 +864,13 @@ export default function ProjectOverview() {
                 type="button"
                 onClick={() => setRemoveTarget(null)}
                 className="
-                                    flex-1 rounded-xl border border-[#E4DCCD] px-4 py-3
+                                    flex-1 rounded-xl border border-border px-4 py-3
                                     text-sm font-semibold
                                     transition-all duration-200 ease-out
-                                    hover:border-[#CFC4B5] hover:bg-[#F6F0E8]
+                                    hover:border-border-strong hover:bg-surface-soft
                                     active:scale-[0.98]
                                     focus-visible:outline-none focus-visible:ring-2
-                                    focus-visible:ring-[#211E1A]/30
+                                    focus-visible:ring-ink/30
                                     sm:flex-none
                                 "
               >
@@ -1262,18 +907,18 @@ export default function ProjectOverview() {
       />
       {showCancelProject && <dialog ref={cancelDialog} aria-labelledby={cancelTitleId} aria-describedby={cancelMessageId}
         onCancel={(event) => { event.preventDefault(); if (!cancellationInFlight.current) setShowCancelProject(false); }}
-        className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-5 text-[#211E1A] shadow-2xl backdrop:bg-[#211E1A]/55 sm:p-7">
+        className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-border bg-surface p-5 text-ink shadow-2xl backdrop:bg-ink/55 sm:p-7">
         <form onSubmit={cancelProject} className="space-y-5">
           <h2 id={cancelTitleId} className="text-xl font-bold">Cancel Project?</h2>
           <p className="break-words font-semibold">{project?.name}</p>
-          <p id={cancelMessageId} className="text-sm leading-6 text-[#716658]">Are you sure you want to cancel this project? The project will be marked as Cancelled. All existing tasks, reports, documents, approvals and history will be preserved.</p>
+          <p id={cancelMessageId} className="text-sm leading-6 text-muted">Are you sure you want to cancel this project? The project will be marked as Cancelled. All existing tasks, reports, documents, approvals and history will be preserved.</p>
           <label className="block text-sm font-semibold">Cancellation reason (required)
-            <textarea autoFocus required maxLength={1000} rows={4} value={cancellationReason} disabled={cancelling} onChange={(event) => setCancellationReason(event.target.value)} className="mt-2 w-full rounded-xl border border-[#CDBFAE] p-3 text-sm outline-none focus:border-[#244F87] focus:ring-2 focus:ring-[#BACDE4]" />
+            <textarea autoFocus required maxLength={1000} rows={4} value={cancellationReason} disabled={cancelling} onChange={(event) => setCancellationReason(event.target.value)} className="mt-2 w-full rounded-xl border border-border-strong p-3 text-sm outline-none focus:border-info focus:ring-2 focus:ring-[#BACDE4]" />
           </label>
-          {cancellationError && <p role="alert" className="text-sm text-[#B42318]">{cancellationError}</p>}
+          {cancellationError && <p role="alert" className="text-sm text-danger">{cancellationError}</p>}
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <button type="button" disabled={cancelling} onClick={() => setShowCancelProject(false)} className="min-h-12 rounded-xl border border-[#CDBFAE] bg-[#FFFDFA] px-5 py-3 text-sm font-semibold hover:bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87] disabled:opacity-60">Keep Project</button>
-            <button type="submit" disabled={cancelling || !cancellationReason.trim()} className="min-h-12 rounded-xl bg-[#B42318] px-5 py-3 text-sm font-semibold text-white hover:bg-[#921C13] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B42318] disabled:cursor-not-allowed disabled:opacity-60">{cancelling ? "Cancelling..." : "Cancel Project"}</button>
+            <button type="button" disabled={cancelling} onClick={() => setShowCancelProject(false)} className="min-h-12 rounded-xl border border-border-strong bg-surface px-5 py-3 text-sm font-semibold hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info disabled:opacity-60">Keep Project</button>
+            <button type="submit" disabled={cancelling || !cancellationReason.trim()} className="min-h-12 rounded-xl bg-danger px-5 py-3 text-sm font-semibold text-white hover:bg-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:cursor-not-allowed disabled:opacity-60">{cancelling ? "Cancelling..." : "Cancel Project"}</button>
           </div>
         </form>
       </dialog>}

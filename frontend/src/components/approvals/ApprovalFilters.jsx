@@ -5,7 +5,7 @@ import SearchFilterToolbar from "../common/SearchFilterToolbar";
 import { formatText, referenceId } from "./approvalUtils";
 import { requestLabels, delayTypes } from "./queueData";
 
-const input = "mt-2 h-11 w-full min-w-0 rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-3 text-xs font-medium text-[#665E53] outline-none focus:border-[#3565A5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]";
+const input = "mt-2 h-11 w-full min-w-0 rounded-xl border border-border bg-surface px-3 text-xs font-medium text-muted outline-none focus:border-info focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 const delayFilterKeys = ["project", "projectSearch", "status", "delayType", "extension", "date_from", "date_to"];
 const sortOptions = [["newest", "Newest first"], ["oldest", "Oldest first"]];
 
@@ -18,13 +18,13 @@ function GenericApprovalFilters({ filters, onChange, onClear, projects, mode = "
     const [searchReset, setSearchReset] = useState(0);
     const categories = [...new Map(projects.map((project) => [referenceId(project.category), project.category_name || project.category?.name || "Category"])).entries()].filter(([id]) => id);
     function select(key, label, options) {
-        return <label className="min-w-0 text-xs font-semibold text-[#716658]">{label}<select aria-label={label} value={filters[key]} onChange={(event) => onChange(key, event.target.value)} className={input} disabled={projectsUnavailable && ["project", "category"].includes(key)}>
+        return <label className="min-w-0 text-xs font-semibold text-muted">{label}<select aria-label={label} value={filters[key]} onChange={(event) => onChange(key, event.target.value)} className={input} disabled={projectsUnavailable && ["project", "category"].includes(key)}>
             <option value="">All {label.toLowerCase()}</option>{options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
         </select></label>;
     }
     const activeKeys = ["project", "category", "priority", "status", "type", "task_search", "reviewer_search", "date_from", "date_to", "date", "sort"];
     const activeCount = activeKeys.reduce((total, key) => total + Number(Boolean(filters[key]) && !(key === "sort" && filters.sort === "oldest")), 0);
-    return <div className="border-b border-[#EEE6DC] p-4 sm:p-5">
+    return <div className="border-b border-border p-4 sm:p-5">
         <SearchFilterToolbar
             label="Approval search and filters"
             search={<ProjectSearch compact key={searchReset} query={filters.search} onSearch={(value) => onChange("search", value)} delay={mode === "history" ? 300 : 0} label="Search requests" labelClassName="sr-only" placeholder="Task, project or supervisor" suggestions={suggestions} loading={loading} />}
@@ -32,7 +32,7 @@ function GenericApprovalFilters({ filters, onChange, onClear, projects, mode = "
             onClear={() => { setSearchReset((value) => value + 1); onClear(); }}
         >
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <label className="min-w-0 text-xs font-semibold text-[#716658]">Sort approvals<select aria-label="Sort approvals" value={filters.sort} onChange={(event) => onChange("sort", event.target.value)} className={input}>
+                <label className="min-w-0 text-xs font-semibold text-muted">Sort approvals<select aria-label="Sort approvals" value={filters.sort} onChange={(event) => onChange("sort", event.target.value)} className={input}>
                     <option value="oldest">Oldest first</option>
                     <option value="newest">Newest first</option>
                     {!["history"].includes(mode) && <><option value="priority">Highest priority</option><option value="project">Project A–Z</option><option value="title">Task A–Z</option></>}
@@ -44,11 +44,11 @@ function GenericApprovalFilters({ filters, onChange, onClear, projects, mode = "
                 {mode === "history" && select("type", "Request types", Object.entries({ ...requestLabels, work: "Daily Work" }))}
                 {mode === "history" && <>
                     {[["task_search", "Task name"], ["reviewer_search", "Reviewer name"]].map(([key, label]) => <ProjectSearch key={`${key}-${searchReset}`} query={filters[key]} onSearch={(value) => onChange(key, value)} label={label} />)}
-                    {[["date_from", "Decisions from"], ["date_to", "Decisions through"]].map(([key, label]) => <label key={key} className="text-xs text-[#716658]">{label}<input type="date" value={filters[key]} onChange={(event) => onChange(key, event.target.value)} className={input} /></label>)}
+                    {[["date_from", "Decisions from"], ["date_to", "Decisions through"]].map(([key, label]) => <label key={key} className="text-xs text-muted">{label}<input type="date" value={filters[key]} onChange={(event) => onChange(key, event.target.value)} className={input} /></label>)}
                 </>}
-                {mode === "work" && <label className="text-xs text-[#716658]">Report date<input type="date" value={filters.date} onChange={(event) => onChange("date", event.target.value)} className={input} /></label>}
+                {mode === "work" && <label className="text-xs text-muted">Report date<input type="date" value={filters.date} onChange={(event) => onChange("date", event.target.value)} className={input} /></label>}
             </div>
-            {projectsUnavailable && <p role="status" className="mt-4 text-xs text-[#94651D]">Project and category filters are unavailable. Refresh to retry.</p>}
+            {projectsUnavailable && <p role="status" className="mt-4 text-xs text-warning">Project and category filters are unavailable. Refresh to retry.</p>}
         </SearchFilterToolbar>
     </div>;
 }
@@ -137,12 +137,12 @@ function DelayReportFilters({ filters, onChange, onClear, projects, suggestions 
     }
 
     function select(key, label, options, allLabel) {
-        return <label className="block min-w-0 text-xs font-semibold text-[#716658]">{label}<select aria-label={label} value={draft[key] || ""} onChange={(event) => updateDraft(key, event.target.value)} className={input}>
+        return <label className="block min-w-0 text-xs font-semibold text-muted">{label}<select aria-label={label} value={draft[key] || ""} onChange={(event) => updateDraft(key, event.target.value)} className={input}>
             <option value="">{allLabel || `All ${label.toLowerCase()}`}</option>{options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
         </select></label>;
     }
 
-    return <div className="space-y-4 border-b border-[#EEE6DC] p-4 sm:p-5">
+    return <div className="space-y-4 border-b border-border p-4 sm:p-5">
         <div className="flex w-full min-w-0 items-center gap-3">
             <ProjectSearch
                 key={searchReset}
@@ -165,24 +165,24 @@ function DelayReportFilters({ filters, onChange, onClear, projects, suggestions 
                 aria-haspopup="dialog"
                 aria-expanded={filtersOpen}
                 aria-controls="delay-report-filters-dialog"
-                className="relative flex h-11 min-h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] text-[#211E1A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] min-[481px]:w-auto min-[481px]:px-3"
+                className="relative flex h-11 min-h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-border bg-surface text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink min-[481px]:w-auto min-[481px]:px-3"
             >
                 <Filter size={18} aria-hidden="true" />
                 <span className="hidden min-[481px]:inline">Filters</span>
-                {activeFilterCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#211E1A] px-1 text-xs font-semibold text-[#FFFDFA]">{activeFilterCount}</span>}
+                {activeFilterCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-xs font-semibold text-surface">{activeFilterCount}</span>}
             </button>
-            <label className="hidden w-36 shrink-0 text-xs font-semibold text-[#716658] min-[481px]:block">
+            <label className="hidden w-36 shrink-0 text-xs font-semibold text-muted min-[481px]:block">
                 <span className="sr-only">Sort delay reports</span>
-                <select aria-label="Sort delay reports" value={filters.sort || "newest"} onChange={(event) => onChange("sort", event.target.value)} className="h-11 w-full min-w-0 rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-3 text-xs font-medium text-[#665E53] outline-none focus:border-[#3565A5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]">
+                <select aria-label="Sort delay reports" value={filters.sort || "newest"} onChange={(event) => onChange("sort", event.target.value)} className="h-11 w-full min-w-0 rounded-xl border border-border bg-surface px-3 text-xs font-medium text-muted outline-none focus:border-info focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
                     {sortOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
             </label>
         </div>
         <div className="flex min-w-0 items-center justify-between gap-3">
-            <p role="status" aria-live="polite" aria-atomic="true" className="min-w-0 truncate text-sm font-medium text-[#716658]">{loading ? "Updating delay reports..." : `${Number(count).toLocaleString("en-IN")} delay ${count === 1 ? "report" : "reports"}`}</p>
-            {hasActiveFilters && <button type="button" onClick={clearAll} className="min-h-11 shrink-0 rounded-lg px-3 text-xs font-semibold text-[#3565A5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]">Clear filters</button>}
+            <p role="status" aria-live="polite" aria-atomic="true" className="min-w-0 truncate text-sm font-medium text-muted">{loading ? "Updating delay reports..." : `${Number(count).toLocaleString("en-IN")} delay ${count === 1 ? "report" : "reports"}`}</p>
+            {hasActiveFilters && <button type="button" onClick={clearAll} className="min-h-11 shrink-0 rounded-lg px-3 text-xs font-semibold text-info focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">Clear filters</button>}
         </div>
-        <div hidden={!filtersOpen} className="fixed inset-0 z-[100] bg-[#211E1A]/45 min-[481px]:bg-transparent" onClick={(event) => { if (event.target === event.currentTarget) closeFilters(); }}>
+        <div hidden={!filtersOpen} className="fixed inset-0 z-[100] bg-ink/45 min-[481px]:bg-transparent" onClick={(event) => { if (event.target === event.currentTarget) closeFilters(); }}>
         <div
             id="delay-report-filters-dialog"
             role="dialog"
@@ -190,27 +190,27 @@ function DelayReportFilters({ filters, onChange, onClear, projects, suggestions 
             aria-labelledby="delay-report-filters-title"
             onKeyDown={trapFocus}
             style={{ "--filter-popover-top": `${popoverPosition.top}px`, "--filter-popover-right": `${popoverPosition.right}px` }}
-            className="fixed inset-x-0 bottom-0 top-auto m-0 flex max-h-[85dvh] w-full max-w-none flex-col overflow-hidden rounded-t-2xl border border-[#E7DED2] bg-[#FFFDFA] p-0 text-[#211E1A] shadow-[0_-12px_36px_rgba(33,30,26,0.18)] min-[481px]:inset-x-auto min-[481px]:top-[var(--filter-popover-top)] min-[481px]:right-[var(--filter-popover-right)] min-[481px]:bottom-auto min-[481px]:max-h-[min(75dvh,42rem)] min-[481px]:w-[min(28rem,calc(100vw-1.5rem))] min-[481px]:rounded-2xl min-[481px]:shadow-[0_12px_36px_rgba(33,30,26,0.18)]"
+            className="fixed inset-x-0 bottom-0 top-auto m-0 flex max-h-[85dvh] w-full max-w-none flex-col overflow-hidden rounded-t-2xl border border-border bg-surface p-0 text-ink shadow-[0_-12px_36px_rgba(33,30,26,0.18)] min-[481px]:inset-x-auto min-[481px]:top-[var(--filter-popover-top)] min-[481px]:right-[var(--filter-popover-right)] min-[481px]:bottom-auto min-[481px]:max-h-[min(75dvh,42rem)] min-[481px]:w-[min(28rem,calc(100vw-1.5rem))] min-[481px]:rounded-2xl min-[481px]:shadow-[0_12px_36px_rgba(33,30,26,0.18)]"
         >
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#EEE6DC] px-4 py-3">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
                 <h2 id="delay-report-filters-title" className="text-base font-semibold">Filters and sorting</h2>
-                <button ref={closeRef} type="button" onClick={closeFilters} aria-label="Close filters" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"><X size={20} aria-hidden="true" /></button>
+                <button ref={closeRef} type="button" onClick={closeFilters} aria-label="Close filters" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"><X size={20} aria-hidden="true" /></button>
             </div>
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
                 <div className="grid min-w-0 gap-4 min-[481px]:grid-cols-2">
                     {!projects.length
-                        ? <div className="min-w-0"><ProjectSearch compact query={draft.projectSearch || ""} onSearch={(value) => updateDraft("projectSearch", value)} delay={0} label="Project name" labelClassName="mb-2 block text-xs font-semibold text-[#716658]" className="w-full" /></div>
+                        ? <div className="min-w-0"><ProjectSearch compact query={draft.projectSearch || ""} onSearch={(value) => updateDraft("projectSearch", value)} delay={0} label="Project name" labelClassName="mb-2 block text-xs font-semibold text-muted" className="w-full" /></div>
                         : select("project", "Projects", projects.map((project) => [String(project.id), project.name]), "All projects")}
                     {select("status", "Statuses", ["PENDING", "APPROVED", "REJECTED"].map((value) => [value, formatText(value)]))}
                     {select("delayType", "Delay types", delayTypes.map((value) => [value, formatText(value)]))}
                     {select("extension", "Extensions", [["REQUESTED", "Extension requested"], ["NONE", "Not requested"], ["PENDING", "Pending extension"], ["APPROVED", "Approved extension"], ["REJECTED", "Rejected extension"]])}
-                    {[["date_from", "Reported from"], ["date_to", "Reported through"]].map(([key, label]) => <label key={key} className="block min-w-0 text-xs font-semibold text-[#716658]">{label}<input type="date" aria-label={label} value={draft[key] || ""} onChange={(event) => updateDraft(key, event.target.value)} className={input} /></label>)}
-                    <label className="block min-w-0 text-xs font-semibold text-[#716658] min-[481px]:hidden">Sort by<select aria-label="Sort delay reports" value={draft.sort || "newest"} onChange={(event) => updateDraft("sort", event.target.value)} className={input}>
+                    {[["date_from", "Reported from"], ["date_to", "Reported through"]].map(([key, label]) => <label key={key} className="block min-w-0 text-xs font-semibold text-muted">{label}<input type="date" aria-label={label} value={draft[key] || ""} onChange={(event) => updateDraft(key, event.target.value)} className={input} /></label>)}
+                    <label className="block min-w-0 text-xs font-semibold text-muted min-[481px]:hidden">Sort by<select aria-label="Sort delay reports" value={draft.sort || "newest"} onChange={(event) => updateDraft("sort", event.target.value)} className={input}>
                         {sortOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select></label>
                 </div>
             </div>
-            <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-[#EEE6DC] bg-[#FFFDFA] p-4">
+            <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-surface p-4">
                 <button type="button" onClick={clearAll} className="rare-button rare-button-secondary min-h-11 px-4 py-2 text-xs font-semibold">Clear all</button>
                 <button type="button" onClick={apply} className="rare-button rare-button-primary min-h-11 px-4 py-2 text-xs font-semibold">Apply</button>
             </footer>

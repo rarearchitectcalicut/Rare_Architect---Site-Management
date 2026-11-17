@@ -1,6 +1,9 @@
+import { withoutRecordIds } from "../utils/recordPresentation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ContentCard, PageHeader, SectionHeader } from "../components/common/WorkspaceUI";
 import ProjectCategories from "../components/dashboard/ProjectCategories";
+import WorkSummary from "../components/dashboard/WorkSummary";
 
 import {
   Activity,
@@ -16,16 +19,13 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
-  X,
 } from "lucide-react";
 
 import { useAuth } from "../hooks/useAuth";
 import { dashboardApi } from "../api/dashboardApi";
 import LoadingScreen from "../components/LoadingScreen";
 import AdminQuickActions from "../components/dashboard/AdminQuickActions";
-import ApprovalModal from "../components/approvals/ApprovalModal";
-import { ProjectSearch } from "../components/daily-reports/ReportProjectPicker";
-import { projectApi } from "../api/projectApi";
+import SupervisorProjectSelector from "../components/daily-reports/SupervisorProjectSelector";
 import { isTaskId, taskApi } from "../api/taskApi";
 import { validationMessage } from "../hooks/useApprovalReview";
 import DelayReportForm from "../modal/supervisor/DelayReportForm";
@@ -106,25 +106,7 @@ function AnimatedNumber({ value }) {
 // SHARED UI COMPONENTS
 // =====================================================
 
-function SectionHeading({ title, subtitle, action }) {
-  return (
-    <div className="mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-2 sm:mb-5">
-      <div className="min-w-0">
-        <h2 className="text-base font-bold tracking-tight text-[#211e1a] sm:text-lg">
-          {title}
-        </h2>
-
-        {subtitle && (
-          <p className="mt-1 text-[13px] text-[#716658] sm:text-sm">
-            {subtitle}
-          </p>
-        )}
-      </div>
-
-      {action}
-    </div>
-  );
-}
+const SectionHeading = SectionHeader;
 
 function ActionLink({ to, children }) {
   return (
@@ -132,11 +114,11 @@ function ActionLink({ to, children }) {
       to={to}
       className="
         group inline-flex items-center gap-1 rounded-lg
-        px-1 py-0.5 text-sm font-semibold text-[#211e1a]
+        px-1 py-0.5 text-sm font-semibold text-ink
         transition-colors duration-200
         hover:underline
         focus-visible:outline-none focus-visible:ring-2
-        focus-visible:ring-[#211e1a]/30
+        focus-visible:ring-ink/30
       "
     >
       {children}
@@ -156,19 +138,19 @@ function ActionLink({ to, children }) {
 // Icon tile tones. Literal class strings so Tailwind can detect them.
 const iconTones = {
   neutral:
-    "bg-[#f1eadf] text-[#211e1a] group-hover:bg-[#211e1a] group-hover:text-white",
+    "bg-app text-ink group-hover:bg-ink group-hover:text-white",
   blue:
-    "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB] group-hover:text-white",
+    "bg-pastel-sky text-info group-hover:bg-info group-hover:text-white",
   green:
-    "bg-[#E6F4EA] text-[#16A34A] group-hover:bg-[#16A34A] group-hover:text-white",
+    "bg-pastel-mint text-success group-hover:bg-success group-hover:text-white",
   orange:
-    "bg-[#FFF3E0] text-[#EA8A12] group-hover:bg-[#EA8A12] group-hover:text-white",
+    "bg-pastel-blush text-warning group-hover:bg-warning group-hover:text-white",
   red:
-    "bg-[#fde8e6] text-[#9e3535] group-hover:bg-[#9e3535] group-hover:text-white",
+    "bg-pastel-blush text-danger group-hover:bg-danger group-hover:text-white",
   violet:
-    "bg-[#F1ECFE] text-[#7C3AED] group-hover:bg-[#7C3AED] group-hover:text-white",
+    "bg-pastel-lavender text-violet group-hover:bg-violet group-hover:text-white",
   slate:
-    "bg-[#ece8e2] text-[#72675b] group-hover:bg-[#72675b] group-hover:text-white",
+    "bg-pastel-lavender text-muted group-hover:bg-muted group-hover:text-white",
 };
 
 function StatCard({
@@ -184,25 +166,26 @@ function StatCard({
   return (
     <Link
       to={to}
-      className="rare-rise block h-full min-w-0 rounded-[18px] focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[#244F87] sm:rounded-[22px]"
+      className="rare-rise block h-full min-w-0 rounded-[18px] focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-info sm:rounded-[22px]"
       style={{ "--d": `${delay}ms` }}
     >
       <div
+        data-tone={tone}
         className="
-          group h-full cursor-pointer
-          rounded-[20px] border border-[#e8dfd3]
-          bg-[#fffdfa] p-4
+          rare-dashboard-stat group h-full cursor-pointer
+          rounded-[20px] border border-pastel-lavender
+          bg-surface p-4
           shadow-[0_3px_14px_rgba(33,30,26,0.025)]
           transition-all duration-300 ease-out
-          hover:border-[#d9ccba]
+          hover:border-border-strong
           hover:shadow-[0_14px_34px_rgba(33,30,26,0.08)]
-          focus-within:border-[#d9ccba]
+          focus-within:border-border-strong
           motion-reduce:transition-none
           sm:rounded-[22px] sm:p-6
         "
       >
         <div className="flex items-start justify-between gap-3">
-          <p className="min-w-0 text-[13px] font-medium text-[#776f63]">
+          <p className="min-w-0 text-[13px] font-medium text-muted">
             {label}
           </p>
 
@@ -222,12 +205,12 @@ function StatCard({
           </div>
         </div>
 
-        <p className="mt-3 text-[32px] font-bold leading-none tracking-tight tabular-nums text-[#211e1a] sm:mt-4 sm:text-[36px]">
+        <p className="mt-3 text-[32px] font-bold leading-none tracking-tight tabular-nums text-ink sm:mt-4 sm:text-[36px]">
           <AnimatedNumber value={value} />
         </p>
 
         {hint && (
-          <p className="mt-2.5 text-xs font-medium text-[#716658] sm:mt-3">
+          <p className="mt-2.5 text-xs font-medium text-muted sm:mt-3">
             {hint}
           </p>
         )}
@@ -240,13 +223,13 @@ function StatusPill({ status }) {
   const value = String(status || "PENDING").toUpperCase();
 
   const styles = {
-    APPROVED: "bg-[#e6f3e8] text-[#246b3b]",
-    VERIFIED: "bg-[#e6f3e8] text-[#246b3b]",
-    COMPLETED: "bg-[#e6f3e8] text-[#246b3b]",
-    REJECTED: "bg-[#fde8e6] text-[#9e3535]",
+    APPROVED: "bg-pastel-mint text-success",
+    VERIFIED: "bg-pastel-mint text-success",
+    COMPLETED: "bg-pastel-mint text-success",
+    REJECTED: "bg-pastel-blush text-danger",
     PENDING: "bg-[#fff1cc] text-[#8d640f]",
-    DELAYED: "bg-[#fde8e6] text-[#9e3535]",
-    DRAFT: "bg-[#ece8e2] text-[#72675b]",
+    DELAYED: "bg-pastel-blush text-danger",
+    DRAFT: "bg-pastel-lavender text-muted",
     SUBMITTED: "bg-[#e6ebfa] text-[#415eaa]",
   };
 
@@ -259,7 +242,7 @@ function StatusPill({ status }) {
         tracking-wide
         transition-transform duration-200
         group-hover/row:scale-105
-        ${styles[value] || "bg-[#ece8e2] text-[#72675b]"}
+        ${styles[value] || "bg-pastel-lavender text-muted"}
       `}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
@@ -270,8 +253,8 @@ function StatusPill({ status }) {
 
 function EmptyState({ message }) {
   return (
-    <div className="rare-fade flex items-center gap-3 rounded-xl bg-[#E9F6EF] px-3 py-3 text-left text-[#176647]">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6F4EA] text-[#16A34A]">
+    <div className="rare-fade flex items-center gap-3 rounded-xl bg-pastel-mint px-3 py-3 text-left text-success">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-pastel-mint text-success">
         <CheckCircle2 size={20} strokeWidth={1.6} />
       </div>
       <p className="text-sm">{message}</p>
@@ -281,7 +264,7 @@ function EmptyState({ message }) {
 
 function AllClearRow() {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-[#B5DCCB] bg-[#E9F6EF] px-4 py-3 text-sm text-[#176647]">
+    <div className="flex items-center gap-3 rounded-xl border border-pastel-mint bg-pastel-mint px-4 py-3 text-sm text-success">
       <CheckCircle2 size={20} strokeWidth={1.8} className="shrink-0" aria-hidden="true" />
       <p>All clear: no rejected tasks, corrections, change requests, delays or extensions.</p>
     </div>
@@ -401,7 +384,7 @@ function PendingChangeTaskLink({ taskId, children }) {
     setLoading(true);
     setError("");
     try {
-      if (typeof taskId !== "string" || !isTaskId(taskId)) throw new Error("This change request has no valid task ID. Refresh the dashboard and try again.");
+      if (typeof taskId !== "string" || !isTaskId(taskId)) throw new Error("This change request could not be linked to its task. Refresh the dashboard and try again.");
       const task = await taskApi.get(taskId, controller.signal);
       if (controller.signal.aborted) return;
       if (typeof task?.project !== "string" || !isTaskId(task.project) || String(task.id).toLowerCase() !== taskId.toLowerCase()) {
@@ -417,8 +400,8 @@ function PendingChangeTaskLink({ taskId, children }) {
   }
 
   return <div className="min-w-0">
-    <button type="button" onClick={openTask} disabled={loading} aria-busy={loading} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-xl border border-[#E7DED2] px-3 py-2.5 text-left transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">{children}</button>
-    {loading && <p role="status" className="mt-2 text-xs text-[#716658]">Opening task...</p>}
+    <button type="button" onClick={openTask} disabled={loading} aria-busy={loading} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-xl border border-border px-3 py-2.5 text-left transition-colors hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info">{children}</button>
+    {loading && <p role="status" className="mt-2 text-xs text-muted">Opening task...</p>}
     {error && <div role="alert" className="mt-2 rounded-xl bg-red-50 p-3 text-xs text-red-700">{error} <button type="button" onClick={openTask} className="min-h-11 px-2 font-semibold underline">Try Again</button></div>}
   </div>;
 }
@@ -426,22 +409,22 @@ function PendingChangeTaskLink({ taskId, children }) {
 function AttentionRow({ item, onReportDelay }) {
   const contents = <>
     <span className="min-w-0 flex-1">
-      <span className="block truncate text-sm font-semibold text-[#211E1A]">{item.title}</span>
-      <span className="mt-0.5 block truncate text-xs font-medium text-[#716658]">{item.description}</span>
+      <span className="block truncate text-sm font-semibold text-ink">{item.title}</span>
+      <span className="mt-0.5 block truncate text-xs font-medium text-muted">{item.description}</span>
     </span>
-    <span className="flex shrink-0 items-center gap-2"><StatusPill status={item.status} /><ArrowRight size={16} aria-hidden="true" className="text-[#716658] transition-transform group-hover:translate-x-0.5" /></span>
+    <span className="flex shrink-0 items-center gap-2"><StatusPill status={item.status} /><ArrowRight size={16} aria-hidden="true" className="text-muted transition-transform group-hover:translate-x-0.5" /></span>
   </>;
   if (item.pendingChange) return <PendingChangeTaskLink key={item.resolveTaskId} taskId={item.resolveTaskId}>{contents}</PendingChangeTaskLink>;
-  if (!item.reportDelay) return <Link to={item.to} className="group flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[#E7DED2] px-3 py-2.5 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">{contents}</Link>;
-  return <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-[#E7DED2] p-2.5">
-    <Link to={item.to} className="group flex min-h-11 min-w-0 flex-1 items-center justify-between gap-4 rounded-lg px-1 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">{contents}</Link>
+  if (!item.reportDelay) return <Link to={item.to} className="group flex min-h-14 items-center justify-between gap-4 rounded-xl border border-border px-3 py-2.5 transition-colors hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info">{contents}</Link>;
+  return <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-border p-2.5">
+    <Link to={item.to} className="group flex min-h-11 min-w-0 flex-1 items-center justify-between gap-4 rounded-lg px-1 transition-colors hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info">{contents}</Link>
     <button type="button" onClick={() => onReportDelay(item.reportDelay)} aria-label={`Report delay for ${item.title || "task"}`} className="rare-button rare-button-secondary min-h-11 px-3 py-2 text-xs">Report delay</button>
   </div>;
 }
 
 function NeedsAttention({ items, noItemsMessage, onReportDelay }) {
   return <Panel title="Needs your attention">
-    {items.length ? <div className="grid gap-2 sm:grid-cols-2">{items.map((item) => <AttentionRow key={item.key} item={item} onReportDelay={onReportDelay} />)}</div> : noItemsMessage ? <p className="rounded-xl border border-[#E7DED2] px-4 py-3 text-sm text-[#716658]">{noItemsMessage}</p> : <AllClearRow />}
+    {items.length ? <div className="grid gap-2 sm:grid-cols-2">{items.map((item) => <AttentionRow key={item.key} item={item} onReportDelay={onReportDelay} />)}</div> : noItemsMessage ? <p className="rounded-xl border border-border px-4 py-3 text-sm text-muted">{noItemsMessage}</p> : <AllClearRow />}
   </Panel>;
 }
 
@@ -474,8 +457,8 @@ function mergePendingDelayItems(actionItems) {
 function SupervisorGreeting({ name, count, now }) {
   const { salutation, date } = dashboardGreeting(now);
   return <header className="space-y-1">
-    <p className="text-xl font-semibold tracking-tight text-[#211E1A]">{salutation}, {name}. {count} things need attention.</p>
-    <p className="text-xs font-medium text-[#716658]">{date}</p>
+    <p className="text-xl font-semibold tracking-tight text-ink">{salutation}, {name}. {count} things need attention.</p>
+    <p className="text-xs font-medium text-muted">{date}</p>
   </header>;
 }
 
@@ -485,14 +468,14 @@ function Panel({ title, subtitle, children, action, delay = 0 }) {
       className="rare-rise h-full min-w-0"
       style={{ "--d": `${delay}ms` }}
     >
-      <section
+      <ContentCard
         className="
           h-full min-w-0 rounded-[20px]
-          border border-[#e8dfd3]
-          bg-[#fffdfa] p-4
+          border border-pastel-lavender
+          bg-surface p-4
           shadow-[0_3px_14px_rgba(33,30,26,0.025)]
           transition-all duration-300 ease-out
-          hover:border-[#C9B9A4]
+          hover:border-border-strong
           hover:shadow-[0_10px_30px_rgba(33,30,26,0.05)]
           motion-reduce:transition-none
           sm:rounded-[22px] sm:p-6
@@ -505,7 +488,7 @@ function Panel({ title, subtitle, children, action, delay = 0 }) {
         />
 
         {children}
-      </section>
+      </ContentCard>
     </div>
   );
 }
@@ -519,10 +502,10 @@ function CountRow({ label, value, icon: Icon, tone = "neutral" }) {
       data-count-tone={tone}
       className="
         group -mx-2 flex items-center justify-between
-        gap-3 rounded-xl border-b border-[#f0e9df]
+        gap-3 rounded-xl border-b border-surface-soft
         px-2 py-3 last:border-b-0
         transition-colors duration-200
-        hover:bg-[#f5efe7]/60
+        hover:bg-surface-soft/60
         sm:py-3.5
       "
     >
@@ -540,68 +523,16 @@ function CountRow({ label, value, icon: Icon, tone = "neutral" }) {
           <RowIcon size={17} strokeWidth={1.8} />
         </div>
 
-        <span className="min-w-0 wrap-break-word text-sm text-[#665e53] transition-colors duration-200 group-hover:text-[#211e1a]">
+        <span className="min-w-0 wrap-break-word text-sm text-muted transition-colors duration-200 group-hover:text-ink">
           {label}
         </span>
       </div>
 
-      <span className="shrink-0 font-semibold tabular-nums text-[#211e1a]">
+      <span className="shrink-0 font-semibold tabular-nums text-ink">
         {value ?? 0}
       </span>
     </div>
   );
-}
-
-function WorkSummary({ tasks, reports, work }) {
-  const taskItems = [
-    { label: "Pending approval", count: tasks.pending_approval, to: "/supervisor/tasks?approval_status=PENDING", noun: "tasks", icon: Clock3, tone: "orange" },
-    { label: "Approved", count: tasks.approved, to: "/supervisor/tasks?approval_status=APPROVED", noun: "tasks", icon: CheckCircle2, tone: "green" },
-    { label: "Completed", count: tasks.completed, to: "/supervisor/tasks?work_status=COMPLETED", noun: "tasks", icon: ClipboardCheck, tone: "violet" },
-    ...(Number(tasks.rejected) > 0 ? [{ label: "Rejected", count: tasks.rejected, to: "/supervisor/tasks?approval_status=REJECTED", noun: "tasks", icon: AlertTriangle, tone: "red" }] : []),
-  ];
-  const reportItems = [
-    { label: "Submitted", count: reports.submitted, noun: "daily reports", icon: FileText, tone: "blue" },
-    { label: "Drafts", count: reports.draft, noun: "daily reports", icon: FileText, tone: "slate" },
-    { label: "Awaiting verification", count: work.pending_verification, noun: "work", icon: Clock3, tone: "orange" },
-    { label: "Verified", count: work.verified, noun: "work", icon: CheckCircle2, tone: "green" },
-  ];
-  const SummaryLink = ({ item }) => {
-    const count = Number(item.count) || 0;
-    const Icon = item.icon;
-    const tone = count === 0 && item.tone === "orange" ? "green" : item.tone;
-    return <Link
-      to={item.to || "/supervisor/reports"}
-      aria-label={`${item.label} ${item.noun}, ${count}`}
-      data-summary-tone={item.tone}
-      data-summary-empty={count === 0}
-      className="flex min-h-14 min-w-0 items-center gap-2 rounded-lg border border-[#E7DED2] px-2 py-2 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#211E1A] focus-visible:ring-offset-1 lg:min-h-11 lg:p-1.5"
-    >
-      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg lg:h-6 lg:w-6 ${iconTones[tone] || iconTones.neutral}`}>
-        <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-2xl font-bold leading-none tabular-nums text-[#211E1A] lg:text-lg">{count}</span>
-        <span className="mt-1 block break-words text-[12px] font-medium leading-4 text-[#716658]">{item.label}</span>
-      </span>
-    </Link>;
-  };
-  return <section aria-labelledby="work-summary-heading" className="rounded-[20px] border border-[#e8dfd3] bg-[#fffdfa] p-4 shadow-[0_3px_14px_rgba(33,30,26,0.025)]">
-    <h2 id="work-summary-heading" className="mb-3 text-base font-bold tracking-tight text-[#211e1a]">Work summary</h2>
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <section aria-labelledby="work-summary-tasks-heading" className="min-w-0 lg:rounded-2xl lg:border lg:border-[#E7DED2] lg:bg-[#F8F4EE] lg:p-4">
-        <h3 id="work-summary-tasks-heading" className="mb-2 text-sm font-semibold text-[#211e1a]">Tasks</h3>
-        <div className="grid grid-cols-2 gap-2 lg:auto-rows-fr lg:[&>a]:bg-[#FFFDFA]">
-          {taskItems.map((item) => <SummaryLink key={item.label} item={item} />)}
-        </div>
-      </section>
-      <section aria-labelledby="work-summary-reports-heading" className="min-w-0 lg:rounded-2xl lg:border lg:border-[#E7DED2] lg:bg-[#F8F4EE] lg:p-4">
-        <h3 id="work-summary-reports-heading" className="mb-2 text-sm font-semibold text-[#211e1a]">Daily reports &amp; work</h3>
-        <div className="grid grid-cols-2 gap-2 lg:auto-rows-fr lg:[&>a]:bg-[#FFFDFA]">
-          {reportItems.map((item) => <SummaryLink key={item.label} item={item} />)}
-        </div>
-      </section>
-    </div>
-  </section>;
 }
 
 function ItemList({ items, getTitle, getSubtitle, getStatus }) {
@@ -612,7 +543,7 @@ function ItemList({ items, getTitle, getSubtitle, getStatus }) {
   }
 
   return (
-    <div className="divide-y divide-[#f0e9df]">
+    <div className="divide-y divide-surface-soft">
       {items.map((item, index) => (
         <div
           key={item.id || index}
@@ -621,16 +552,16 @@ function ItemList({ items, getTitle, getSubtitle, getStatus }) {
             justify-between gap-3 rounded-xl
             px-2 py-3.5
             transition-all duration-200 ease-out
-            hover:bg-[#f5efe7]/60
+            hover:bg-surface-soft/60
             sm:py-4
           "
         >
           <div className="min-w-0">
-            <p className="wrap-break-word text-sm font-semibold text-[#211e1a]">
+            <p className="wrap-break-word text-sm font-semibold text-ink">
               {getTitle(item)}
             </p>
 
-            <p className="mt-1 wrap-break-word text-xs text-[#716658]">
+            <p className="mt-1 wrap-break-word text-xs text-muted">
               {getSubtitle(item)}
             </p>
           </div>
@@ -729,70 +660,14 @@ function AdminDashboard({ summary, reviewQueue }) {
 
       {/* Additional components */}
       <div className="admin-dashboard-actions"><AdminQuickActions /></div>
-      <div className="admin-dashboard-categories"><ProjectCategories /></div>
 
       {/* PROJECT AND TASK STATUS */}
-      <div className="admin-dashboard-work grid gap-3 sm:gap-4 lg:grid-cols-2">
-        <h2 className="hidden text-base font-bold lg:col-span-full lg:block">Work summary</h2>
-        <Panel
-          delay={stagger(4)}
-          title="Projects"
-          subtitle="Current project statuses"
-        >
-          <CountRow
-            label="Total projects"
-            tone="blue"
-            value={projects.total}
-            icon={FolderKanban}
-          />
-          <CountRow
-            label="Active projects"
-            tone="green"
-            value={projects.active}
-            icon={CheckCircle2}
-          />
-          <CountRow
-            label="Maintenance"
-            tone="orange"
-            value={projects.maintenance}
-            icon={Clock3}
-          />
-        </Panel>
+      <WorkSummary isAdmin projects={projects} tasks={tasks} reports={reports} work={work} />
 
-        <Panel
-          delay={stagger(5)}
-          title="Tasks"
-          subtitle="Approval and execution status"
-        >
-          <CountRow
-            label="Total tasks"
-            tone="blue"
-            value={tasks.total}
-            icon={ListTodo}
-          />
-          <CountRow
-            label="Approved"
-            tone="green"
-            value={tasks.approved}
-            icon={CheckCircle2}
-          />
-          <CountRow
-            label="Rejected"
-            tone="red"
-            value={tasks.rejected}
-            icon={AlertTriangle}
-          />
-          <CountRow
-            label="Completed work"
-            tone="violet"
-            value={tasks.completed}
-            icon={ClipboardCheck}
-          />
-        </Panel>
-      </div>
+      <div className="admin-dashboard-categories"><ProjectCategories /></div>
 
       {/* REVIEW QUEUES */}
-      <section className="admin-dashboard-approvals">
+      <section className="admin-dashboard-approvals hidden lg:block">
         <SectionHeading
           title="Approval Center"
           subtitle="Recent items waiting for an Admin decision."
@@ -809,7 +684,7 @@ function AdminDashboard({ summary, reviewQueue }) {
               items={pendingTasks}
               getTitle={(item) => item.title || "Untitled Task"}
               getSubtitle={(item) =>
-                `Task ID: ${item.id}`
+                item.project_name || "Awaiting task approval"
               }
               getStatus={(item) => item.approval_status}
             />
@@ -837,7 +712,7 @@ function AdminDashboard({ summary, reviewQueue }) {
                 item.task_title || "Daily Work Entry"
               }
               getSubtitle={(item) =>
-                `Report ID: ${item.daily_report_id}`
+                item.project_name || "Submitted task work"
               }
               getStatus={(item) => item.verification_status}
             />
@@ -914,15 +789,15 @@ function AdminDashboard({ summary, reviewQueue }) {
         {recentActivity.length === 0 ? (
           <EmptyState message="No activity recorded yet." />
         ) : (
-          <div className="divide-y divide-[#f0e9df]">
-            {recentActivity.map((entry) => (
+          <div className="divide-y divide-surface-soft">
+            {recentActivity.slice(0, 5).map((entry) => (
               <div
                 key={entry.id}
                 className="
                   group -mx-2 flex items-start gap-3
                   rounded-xl px-2 py-3.5
                   transition-colors duration-200
-                  hover:bg-[#f5efe7]/60
+                  hover:bg-surface-soft/60
                   sm:py-4
                 "
               >
@@ -940,36 +815,36 @@ function AdminDashboard({ summary, reviewQueue }) {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="break-words text-sm font-medium text-[#211e1a]">
-                    <span className="lg:hidden">{entry.summary || entry.description || entry.action}</span><span className="hidden lg:inline">{entry.summary || entry.description || String(entry.action || "Activity recorded").replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase())}</span>
+                  <p className="break-words text-sm font-medium text-ink">
+                    <span className="lg:hidden">{withoutRecordIds(entry.summary || entry.description || entry.action)}</span><span className="hidden lg:inline">{withoutRecordIds(entry.summary || entry.description || String(entry.action || "Activity recorded").replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase()))}</span>
                   </p>
 
-                  <p className="mt-1 text-xs font-medium wrap-anywhere text-[#665e53]">
+                  <p className="mt-1 text-xs font-medium wrap-anywhere text-muted">
                     By {entry.actor_name || "System / unavailable user"}
                     {entry.actor_role && ` (${entry.actor_role === "ADMIN" ? "Admin" : "Supervisor"})`}
                   </p>
 
                   {entry.project_name && (
-                    <p className="mt-1 text-xs wrap-anywhere text-[#665e53]">
+                    <p className="mt-1 text-xs wrap-anywhere text-muted">
                       Project: {entry.project_name}
                     </p>
                   )}
 
                   {Array.isArray(entry.metadata?.changed_fields) && entry.metadata.changed_fields.length > 0 && (
-                    <p className="mt-1 text-xs wrap-anywhere text-[#665e53]">
+                    <p className="mt-1 text-xs wrap-anywhere text-muted">
                       Updated: {entry.metadata.changed_fields.map((field) => String(field).replaceAll("_", " ")).join(", ")}
                     </p>
                   )}
 
                   {entry.metadata?.new_status && (
-                    <p className="mt-1 text-xs text-[#665e53]">
+                    <p className="mt-1 text-xs text-muted">
                       Status: {entry.metadata.old_status && `${entry.metadata.old_status.replaceAll("_", " ")} → `}
                       {entry.metadata.new_status.replaceAll("_", " ")}
                     </p>
                   )}
 
-                  {!entry.metadata?.new_status && <p className="admin-activity-caption hidden text-xs text-[#716658] lg:block">Latest recorded system event</p>}
-                  <p className="admin-activity-record mt-1 break-words text-xs text-[#716658]">
+                  {!entry.metadata?.new_status && <p className="admin-activity-caption hidden text-xs text-muted lg:block">Latest recorded system event</p>}
+                  <p className="admin-activity-record mt-1 break-words text-xs text-muted">
                     {entry.entity_type || "System"}
                     {entry.created_at
                       ? ` · ${new Date(
@@ -991,72 +866,21 @@ function AdminDashboard({ summary, reviewQueue }) {
 // SUPERVISOR DASHBOARD
 // =====================================================
 
-function SupervisorProjectSelector({ action, onClose }) {
-  const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [revision, setRevision] = useState(0);
-  const [result, setResult] = useState(null);
-  const [selected, setSelected] = useState(null);
-  const navigating = useRef(false);
-  const key = JSON.stringify([query, page, revision]);
-  const current = result?.key === key ? result : null;
-  const title = action === "report" ? "Create Daily Report" : "Create Task";
-  useEffect(() => {
-    const controller = new AbortController();
-    projectApi.getProjects({ search: query, page, page_size: 20 }, controller.signal).then((data) => {
-      if (Array.isArray(data)) data = { results: data.slice((page - 1) * 20, page * 20), next: page * 20 < data.length, previous: page > 1 };
-      if (!Array.isArray(data?.results)) throw new Error("Unexpected project response.");
-      if (!controller.signal.aborted) setResult({ key, data: { ...data, results: data.results.filter((project) => ["ACTIVE", "MAINTENANCE"].includes(project.status)) } });
-    }).catch((error) => {
-      if (!controller.signal.aborted) setResult({ key, error: validationMessage(error, "Unable to load assigned projects.") });
-    });
-    return () => controller.abort();
-  }, [key, query, page]);
-  function proceed(event) {
-    event.preventDefault();
-    if (!selected || !current?.data || navigating.current || !["ACTIVE", "MAINTENANCE"].includes(selected.status)) return;
-    navigating.current = true;
-    const section = action === "report" ? "daily-reports" : "tasks";
-    navigate(`/supervisor/projects/${encodeURIComponent(selected.id)}/${section}?create=true`);
-    onClose();
-  }
-  return <ApprovalModal label={`${title}: choose project`} onClose={onClose}>
-    <form onSubmit={proceed} className="space-y-5 p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{title}</h2><p className="mt-2 text-sm text-[#817669]">Choose an assigned Active or Maintenance project.</p></div><button type="button" onClick={onClose} aria-label="Close project selector" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-[#211E1A]"><X size={20} /></button></div>
-      <ProjectSearch query={query} onSearch={(value) => { setQuery(value); setPage(1); }} label="Search assigned projects" />
-      {!current && <p role="status" className="text-sm text-[#817669]">Loading assigned projects...</p>}
-      {current?.error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{current.error} <button type="button" onClick={() => setRevision((value) => value + 1)} className="min-h-11 px-3 font-semibold underline">Retry</button></div>}
-      {current?.data && <>
-        <fieldset className="max-h-[35dvh] space-y-2 overflow-y-auto"><legend className="mb-2 text-sm font-semibold">Project</legend>
-          {current.data.results.map((project) => <label key={project.id} className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border p-3 ${selected?.id === project.id ? "border-[#211E1A] bg-[#F1EADF]" : "border-[#E7DED2] bg-[#FFFDFA]"}`}>
-            <input type="radio" name="quick-action-project" value={project.id} checked={selected?.id === project.id} onChange={() => setSelected(project)} className="mt-1 accent-[#211E1A]" /><span className="min-w-0"><strong className="block break-words text-sm">{project.name}</strong><span className="mt-1 block text-xs text-[#817669]">{project.status === "ACTIVE" ? "Active" : "Maintenance"}</span></span>
-          </label>)}
-          {!current.data.results.length && <p role="status" className="py-4 text-sm text-[#817669]">No eligible projects on this page. {current.data.next || current.data.previous ? "Try another page or search by project name." : "Try another search, or contact Admin about your project assignments."}</p>}
-        </fieldset>
-        {(current.data.next || current.data.previous) && <nav aria-label="Assigned project pages" className="rare-pagination"><button type="button" className="rare-button rare-button-secondary" disabled={!current.data.previous} onClick={() => setPage((value) => value - 1)}>Previous</button><span aria-live="polite" aria-atomic="true" className="text-xs text-[#817669]">Page {page}</span><button type="button" className="rare-button rare-button-secondary" disabled={!current.data.next} onClick={() => setPage((value) => value + 1)}>Next</button></nav>}
-      </>}
-      {selected && <p role="status" className="break-words rounded-xl bg-[#E6F4EA] p-3 text-sm text-[#166534]">Selected: <strong>{selected.name}</strong> / {selected.status === "ACTIVE" ? "Active" : "Maintenance"}</p>}
-      <div className="rare-action-footer flex flex-wrap justify-end gap-3"><button type="button" onClick={onClose} className="rare-button rare-button-secondary">Cancel</button><button type="submit" disabled={!selected || !current || Boolean(current.error)} className="rare-button rare-button-primary">Continue<ArrowRight size={18} aria-hidden="true" /></button></div>
-    </form>
-  </ApprovalModal>;
-}
-
 function SupervisorQuickActions({ draftGroup } = {}) {
   const [action, setAction] = useState(null);
   const reportAction = {
     label: "Submit today's report",
     action: "report",
     icon: FileText,
-    tile: "bg-[#E6F4EA] text-[#16A34A] group-hover:bg-[#16A34A]",
+    tile: "bg-pastel-mint text-success group-hover:bg-success",
   };
   const secondaryActions = [
-    { label: "My Projects", path: "/supervisor/projects", icon: FolderKanban, tile: "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB]" },
-    { label: "My Tasks", path: "/supervisor/tasks", icon: ListTodo, tile: "bg-[#EDE9FE] text-[#7C3AED] group-hover:bg-[#7C3AED]" },
-    { label: "Create Task", action: "task", icon: Plus, tile: "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB]" },
+    { label: "My Projects", path: "/supervisor/projects", icon: FolderKanban, tile: "bg-pastel-sky text-info group-hover:bg-info" },
+    { label: "My Tasks", path: "/supervisor/tasks", icon: ListTodo, tile: "bg-[#EDE9FE] text-violet group-hover:bg-violet" },
+    { label: "Create Task", action: "task", icon: Plus, tile: "bg-pastel-sky text-info group-hover:bg-info" },
   ];
-  const primaryClass = "group flex min-h-24 w-full items-center gap-4 rounded-2xl border border-[#B5DCCB] bg-[#F8FCF9] px-5 py-5 text-left transition-colors hover:bg-[#E9F6EF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176647]";
-  const secondaryClass = "group flex min-h-14 items-center justify-center gap-2 rounded-xl border border-[#E7DED2] bg-transparent px-3 py-3 text-center text-sm font-medium text-[#665E53] transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]";
+  const primaryClass = "group flex min-h-24 w-full items-center gap-4 rounded-2xl border border-pastel-mint bg-[#F8FCF9] px-5 py-5 text-left transition-colors hover:bg-pastel-mint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success";
+  const secondaryClass = "group flex min-h-14 min-w-0 flex-col items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-2 py-3 text-center text-xs font-medium text-muted transition-colors hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:flex-row sm:px-3 sm:text-sm";
   const draftItems = draftGroup?.items || [];
   const draft = draftItems.find((item) => item?.id && item?.project_id);
   const primaryLabel = draft ? "Continue today's draft" : reportAction.label;
@@ -1065,17 +889,17 @@ function SupervisorQuickActions({ draftGroup } = {}) {
     ? `/supervisor/projects/${encodeURIComponent(draft.project_id)}/daily-reports?report=${encodeURIComponent(draft.id)}`
     : null;
   return <>
-    <section aria-label="Supervisor Quick Actions" className="rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] px-4 py-5 sm:px-6">
-      <h2 className="mb-4 text-base font-bold text-[#211E1A] sm:mb-5">Quick Actions</h2>
-      <div className="space-y-3">
+    <section aria-label="Supervisor Quick Actions" className="supervisor-quick-actions rounded-[22px] border border-border bg-surface px-4 py-5 sm:px-6">
+      <h2 className="mb-4 text-base font-bold text-ink sm:mb-5">Quick Actions</h2>
+      <div className="supervisor-quick-actions-content space-y-3">
         {draftPath ? <Link to={draftPath} className={primaryClass}>
           <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${reportAction.tile}`}><PrimaryIcon size={25} strokeWidth={1.8} aria-hidden="true" /></span>
-          <span className="min-w-0"><span className="block text-base font-bold text-[#211E1A] sm:text-lg">{primaryLabel}</span><span className="mt-1 block text-sm text-[#665E53]">Open your saved daily report draft</span></span>
+          <span className="min-w-0"><span className="block text-base font-bold text-ink sm:text-lg">{primaryLabel}</span><span className="mt-1 block text-sm text-muted">Open your saved daily report draft</span></span>
         </Link> : <button type="button" onClick={() => setAction("report")} className={primaryClass}>
           <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${reportAction.tile}`}><PrimaryIcon size={25} strokeWidth={1.8} aria-hidden="true" /></span>
-          <span className="min-w-0"><span className="block text-base font-bold text-[#211E1A] sm:text-lg">{primaryLabel}</span><span className="mt-1 block text-sm text-[#665E53]">Record today's site progress</span></span>
+          <span className="min-w-0"><span className="block text-base font-bold text-ink sm:text-lg">{primaryLabel}</span><span className="mt-1 block text-sm text-muted">Record today's site progress</span></span>
         </button>}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">{secondaryActions.map((item) => {
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">{secondaryActions.map((item) => {
         const Icon = item.icon;
         const content = <><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white ${item.tile}`}><Icon size={17} strokeWidth={1.8} aria-hidden="true" /></span><span>{item.label}</span></>;
         return item.path ? <Link key={item.label} to={item.path} className={secondaryClass}>{content}</Link> : <button key={item.label} type="button" onClick={() => setAction(item.action)} className={secondaryClass}>{content}</button>;
@@ -1112,15 +936,15 @@ function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
     <div className="space-y-5 sm:space-y-6">
       <DashboardStyles />
       <SupervisorGreeting name={displayName} count={attentionCount} now={now} />
-      {notice && <p role="status" aria-live="polite" className="rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
+      {notice && <p role="status" aria-live="polite" className="rounded-xl bg-pastel-mint p-4 text-sm text-success">{notice}</p>}
       <NeedsAttention
         items={attentionItems}
         noItemsMessage={hasOtherAttention ? "No immediate task items need attention." : ""}
         onReportDelay={setDelayReport}
       />
-      <div className="space-y-5 sm:space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+      <div className="supervisor-dashboard-summary grid gap-3 sm:gap-4">
       <section className="min-w-0">
-        <div className="supervisor-summary-cards grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-2 lg:gap-3">
+        <div className="supervisor-summary-cards grid grid-cols-3 gap-2 sm:gap-3">
           <StatCard
             delay={stagger(0)}
             label="Assigned Projects"
@@ -1157,7 +981,7 @@ function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
       </div>
       <WorkSummary tasks={tasks} reports={reports} work={summary.project_daily_task_work || {}} />
       {!!pendingDelayItems.length && <section aria-labelledby="my-action-center-heading" className="space-y-3">
-        <div><h2 id="my-action-center-heading" className="text-lg font-semibold text-[#211E1A]">My Action Center</h2><p className="text-xs font-medium text-[#716658]">Delay reports awaiting Admin review.</p></div>
+        <div><h2 id="my-action-center-heading" className="text-lg font-semibold text-ink">My Action Center</h2><p className="text-xs font-medium text-muted">Delay reports awaiting Admin review.</p></div>
         <Panel title="Pending Delay Reports">
           <div className="space-y-2">{pendingDelayItems.map((item) => <AttentionRow key={item.key} item={item} />)}</div>
         </Panel>
@@ -1259,22 +1083,22 @@ export default function Dashboard() {
     return (
       <div
         className="
-          rare-rise rounded-3xl border border-[#e8dfd3]
-          bg-[#fffdfa] px-5 py-10 text-center
+          rare-rise rounded-3xl border border-pastel-lavender
+          bg-surface px-5 py-10 text-center
           sm:px-6 sm:py-12
         "
       >
         <DashboardStyles />
 
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#fde8e6] text-[#9e3535]">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-pastel-blush text-danger">
           <AlertTriangle size={28} strokeWidth={1.6} />
         </div>
 
-        <h2 className="mt-4 text-xl font-bold text-[#211e1a]">
+        <h2 className="mt-4 text-xl font-bold text-ink">
           Dashboard unavailable
         </h2>
 
-        <p className="mx-auto mt-2 max-w-md text-sm text-[#716658]">
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted">
           {error || "Dashboard data is currently unavailable."}
         </p>
 
@@ -1283,15 +1107,15 @@ export default function Dashboard() {
           onClick={fetchDashboard}
           className="
             group mx-auto mt-6 inline-flex items-center gap-2
-            rounded-xl bg-[#211e1a] px-5 py-3
+            rounded-xl bg-ink px-5 py-3
             text-sm font-semibold text-white
             shadow-[0_6px_18px_rgba(33,30,26,0.18)]
             transition-all duration-200 ease-out
-            hover:-translate-y-0.5 hover:bg-[#38332c]
+            hover:-translate-y-0.5 hover:bg-primary-hover
             hover:shadow-[0_10px_24px_rgba(33,30,26,0.24)]
             active:translate-y-0 active:scale-[0.98]
             focus-visible:outline-none focus-visible:ring-2
-            focus-visible:ring-[#211e1a]/40 focus-visible:ring-offset-2
+            focus-visible:ring-ink/40 focus-visible:ring-offset-2
             motion-reduce:transition-none
           "
         >
@@ -1315,7 +1139,7 @@ export default function Dashboard() {
   // ---------------------------------------------
 
   return <div className="space-y-5">{isAdmin ? <>
-    <header className="rare-page-header border border-[#E7DED2] bg-[#FFFDFA]"><h1>Dashboard</h1><p className="text-sm text-[#716658]">Project priorities and decisions at a glance.</p></header>
+    <PageHeader eyebrow="Your workspace, connected" title="Dashboard" description="Project priorities and decisions at a glance." />
     <AdminDashboard summary={summary} reviewQueue={details} />
   </> : <SupervisorDashboard summary={summary} actionItems={details} user={user} now={currentTime} />}</div>;
 }

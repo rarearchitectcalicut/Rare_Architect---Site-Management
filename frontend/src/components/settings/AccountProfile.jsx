@@ -59,13 +59,13 @@ const fields = [
 
 const inputClass = `
   h-12 w-full rounded-xl
-  border border-[#E4DCCD]
-  bg-[#FFFDFA] px-4
-  text-sm text-[#211E1A]
+  border border-border
+  bg-surface px-4
+  text-sm text-ink
   outline-none
   transition-all duration-200
-  focus:border-[#B7A58E]
-  focus:ring-4 focus:ring-[#E8DDD0]/60
+  focus:border-border-strong
+  focus:ring-4 focus:ring-pastel-lavender/60
   disabled:opacity-50
 `;
 
@@ -170,10 +170,10 @@ function ProfileInfo({ icon: Icon, label, value, tone }) {
             </span>
 
             <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#716658]">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">
                     {label}
                 </p>
-                <p className="mt-1 wrap-break-word text-sm font-semibold text-[#211E1A]">
+                <p className="mt-1 wrap-break-word text-sm font-semibold text-ink">
                     {value || "Not provided"}
                 </p>
             </div>
@@ -362,7 +362,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
             {notice && (
                 <div
                     role="status"
-                    className="flex items-center gap-2 rounded-xl bg-[#E7F2E8] p-4 text-sm font-medium text-[#296F40]"
+                    className="flex items-center gap-2 rounded-xl bg-pastel-mint p-4 text-sm font-medium text-success"
                 >
                     <CheckCircle2 size={18} />
                     {notice}
@@ -372,25 +372,25 @@ export default function AccountProfile({ role = "ADMIN" }) {
             {profile && (
                 <>
                     {/* PROFILE HEADER */}
-                    <section className="settings-profile-sidebar overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
-                        <div className="h-2 bg-linear-to-r from-[#CFBA9D] via-[#EEE5D8] to-[#DCE8EE]" />
+                    <section className="settings-profile-sidebar overflow-hidden rounded-[26px] border border-border bg-surface">
+                        <div className="h-2 bg-linear-to-r from-border-strong via-border to-[#DCE8EE]" />
 
                         <div className="p-5 sm:p-7">
                             <div className="flex flex-wrap items-start gap-4">
-                                <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-[23px] bg-linear-to-br from-[#D4C0A7] to-[#F1EADF] text-3xl font-bold text-[#514232] shadow-[0_8px_22px_rgba(33,30,26,0.08)]">
+                                <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-[23px] bg-linear-to-br from-border-strong to-app text-3xl font-bold text-ink shadow-[0_8px_22px_rgba(33,30,26,0.08)]">
                                     {name.charAt(0).toUpperCase()}
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#716658]">
+                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
                                         RARE / {roleLabel}
                                     </p>
 
-                                    <h2 className="mt-2 wrap-break-word text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">
+                                    <h2 className="mt-2 wrap-break-word text-2xl font-bold tracking-tight text-ink sm:text-3xl">
                                         {name}
                                     </h2>
 
-                                    <p className="mt-1 break-all text-sm text-[#716658]">
+                                    <p className="mt-1 break-all text-sm text-muted">
                                         @{profile.username || "Not specified"}
                                     </p>
 
@@ -400,8 +400,8 @@ export default function AccountProfile({ role = "ADMIN" }) {
                       rounded-full px-3 py-1.5
                       text-xs font-semibold
                       ${profile.is_active === false
-                                                ? "bg-[#F0E9E1] text-[#76695C]"
-                                                : "bg-[#E7F2E8] text-[#296F40]"
+                                                ? "bg-surface-soft text-muted"
+                                                : "bg-pastel-mint text-success"
                                             }
                     `}
                                     >
@@ -414,25 +414,25 @@ export default function AccountProfile({ role = "ADMIN" }) {
                             </div>
 
                             {/* QUICK INFORMATION */}
-                            <div className="mt-6 grid gap-5 border-t border-[#EEE6DC] pt-6 sm:grid-cols-2 xl:grid-cols-3">
+                            <div className="mt-6 grid gap-5 border-t border-border pt-6 sm:grid-cols-2 xl:grid-cols-3">
                                 <ProfileInfo
                                     icon={CalendarDays}
                                     label="Last Login"
                                     value={formatLastLogin(profile.last_login)}
-                                    tone="bg-[#F0EAF8] text-[#7C5BA4]"
+                                    tone="bg-pastel-lavender text-violet"
                                 />
                                 <ProfileInfo
                                     icon={Phone}
                                     label="Phone"
                                     value={profile.phone}
-                                    tone="bg-[#E7F2E8] text-[#368250]"
+                                    tone="bg-pastel-mint text-success"
                                 />
 
                                 <ProfileInfo
                                     icon={Mail}
                                     label="Email"
                                     value={profile.email}
-                                    tone="bg-[#E9F0FC] text-[#3565A5]"
+                                    tone="bg-pastel-sky text-info"
                                 />
 
                                 <ProfileInfo
@@ -441,26 +441,26 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                     value={formatDate(
                                         profile.date_joined || profile.created_at
                                     )}
-                                    tone="bg-[#F0EAF8] text-[#7C5BA4]"
+                                    tone="bg-pastel-lavender text-violet"
                                 />
                             </div>
                         </div>
                     </section>
 
                     {/* EDIT ACCOUNT INFORMATION */}
-                    <section className="settings-personal-information rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
+                    <section className="settings-personal-information rounded-3xl border border-border bg-surface p-5 sm:p-7">
                         <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
                             <div className="flex items-start gap-3">
-                                <span className="rounded-2xl bg-[#E9F0FC] p-3 text-[#3565A5]">
+                                <span className="rounded-2xl bg-pastel-sky p-3 text-info">
                                     <UserRound size={22} />
                                 </span>
 
                                 <div>
-                                    <h2 className="text-lg font-bold text-[#211E1A]">
+                                    <h2 className="text-lg font-bold text-ink">
                                         Personal Information
                                     </h2>
 
-                                    <p className="mt-1 text-xs leading-5 text-[#716658]">
+                                    <p className="mt-1 text-xs leading-5 text-muted">
                                         Manage your contact and account details.
                                     </p>
                                 </div>
@@ -473,7 +473,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                         setErrors({});
                                         setEditing(true);
                                     }}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#39332B] hover:shadow-[0_8px_20px_rgba(33,30,26,0.12)]"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-[0_8px_20px_rgba(33,30,26,0.12)]"
                                 >
                                     <Pencil size={17} />
                                     Edit Profile
@@ -490,7 +490,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                         <div key={field.key} className="min-w-0">
                                             <label
                                                 htmlFor={`profile-${field.key}`}
-                                                className="text-xs font-bold uppercase tracking-widest text-[#716658]"
+                                                className="text-xs font-bold uppercase tracking-widest text-muted"
                                             >
                                                 {field.label}
                                             </label>
@@ -500,7 +500,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                                     <div className="relative mt-2">
                                                         <Icon
                                                             size={17}
-                                                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
+                                                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"
                                                         />
 
                                                         <input
@@ -530,7 +530,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                                     )}
                                                 </>
                                             ) : (
-                                                <p className="mt-2 wrap-break-word text-sm font-semibold text-[#211E1A]">
+                                                <p className="mt-2 wrap-break-word text-sm font-semibold text-ink">
                                                     {profile[field.key] || "Not provided"}
                                                 </p>
                                             )}
@@ -540,7 +540,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                             </div>
 
                             {editing && (
-                                <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-[#EEE6DC] pt-5">
+                                <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-border pt-5">
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -548,7 +548,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                             setErrors({});
                                             setEditing(false);
                                         }}
-                                        className="inline-flex items-center gap-2 rounded-xl border border-[#E4DCCD] px-4 py-3 text-sm font-semibold text-[#211E1A] transition-colors hover:bg-[#F1EADF]"
+                                        className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-app"
                                     >
                                         <X size={16} />
                                         Cancel
@@ -557,7 +557,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                     <button
                                         type="submit"
                                         disabled={Boolean(busyMessage)}
-                                        className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-[#39332B] hover:shadow-md disabled:opacity-50"
+                                        className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-hover hover:shadow-md disabled:opacity-50"
                                     >
                                         <Save size={17} />
                                         Save Changes

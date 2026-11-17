@@ -5,6 +5,7 @@ import { timelineApi } from "../api/timelineApi";
 import { delayApi } from "../api/delayApi";
 import { dailyReportApi } from "../api/dailyReportApi";
 import { getAllPages } from "../components/approvals/approvalUtils";
+import { withoutRecordIds } from "../utils/recordPresentation";
 
 export function validationMessage(error, fallback = "Unable to complete this operation.") {
     const data = error?.response?.data;
@@ -14,7 +15,7 @@ export function validationMessage(error, fallback = "Unable to complete this ope
         if (value && typeof value === "object") return Object.entries(value).map(([key, text]) => `${key === "detail" ? "" : `${key}: `}${messages(text)}`).join(" ");
         return "";
     }
-    return messages(data) || fallback;
+    return withoutRecordIds(messages(data) || fallback);
 }
 
 export async function loadReview(item) {

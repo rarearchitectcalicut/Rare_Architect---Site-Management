@@ -4,13 +4,13 @@ import { Link } from "react-router-dom";
 import {
     ArrowUpRight,
     FolderKanban,
-    Images,
+    Building2,
     RefreshCw,
 } from "lucide-react";
 
 import { projectApi } from "../../api/projectApi";
 import { getMediaUrl } from "../../utils/mediaUrl";
-import LoadingScreen from "../LoadingScreen";
+
 
 // =====================================================
 // CATEGORY IMAGE CARD
@@ -22,89 +22,12 @@ function CategoryCard({ category }) {
     const imageUrl = getMediaUrl(category.image);
     const showImage = Boolean(imageUrl) && !imageFailed;
 
-    return (
-        <Link
-            to={`/admin/categories/${category.id}`}
-            className="
-        group block overflow-hidden
-        rounded-3xl
-        border border-[#e8dfd3]
-        bg-[#fffdfa]
-        transition-all duration-300
-        hover:-translate-y-1
-        hover:shadow-[0_15px_35px_rgba(33,30,26,0.10)]
-        focus-visible:outline-2
-        focus-visible:outline-offset-4
-        focus-visible:outline-[#211e1a]
-      "
-        >
-            {/* CATEGORY COVER IMAGE */}
-            <div className="relative aspect-4/3 overflow-hidden bg-[#e8dfd3] sm:aspect-5/3">
-                {showImage ? (
-                    <img
-                        src={imageUrl}
-                        alt={category.name}
-                        loading="lazy"
-                        onError={() => setImageFailed(true)}
-                        className="
-              h-full w-full object-cover
-              transition-transform duration-500
-              group-hover:scale-105
-            "
-                    />
-                ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#e8dfd3]">
-                        <Images
-                            size={36}
-                            strokeWidth={1.4}
-                            className="text-[#716658]"
-                        />
-
-                        <span className="text-xs text-[#716658]">
-                            No cover image
-                        </span>
-                    </div>
-                )}
-
-                {/* FLOATING ARROW */}
-                <div
-                    className="
-            absolute right-4 bottom-4
-            flex h-11 w-11
-            items-center justify-center
-            rounded-full
-            bg-[#fffdfa]
-            text-[#211e1a]
-            shadow-md
-            transition-colors
-            group-hover:bg-[#211e1a]
-            group-hover:text-white
-          "
-                >
-                    <ArrowUpRight size={20} strokeWidth={1.8} />
-                </div>
-            </div>
-
-            {/* CATEGORY DETAILS */}
-            <div className="p-5 sm:p-6">
-                <h3 className="text-lg font-bold tracking-tight text-[#211e1a] sm:text-xl">
-                    {category.name}
-                </h3>
-                <span className="mt-2 inline-block rounded-full bg-[#F1EADF] px-3 py-1 text-xs text-[#716658]">{category.is_active === false ? "Inactive" : "Active"}</span>
-
-                <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-[#716658]">
-                    {category.description ||
-                        "Explore projects in this category."}
-                </p>
-
-                <div className="mt-5 flex items-center gap-2 border-t border-[#eee6dc] pt-4 text-sm font-semibold text-[#211e1a]">
-                    <FolderKanban size={17} />
-                    View Projects
-                    <ArrowUpRight size={16} className="ml-auto" />
-                </div>
-            </div>
-        </Link>
-    );
+    return <Link to={`/admin/categories/${category.id}`} className="rare-category-card" aria-label={`View projects in ${category.name}`}>
+        <span className="rare-category-cover" aria-hidden="true">
+            {showImage ? <img src={imageUrl} alt="" loading="lazy" onError={() => setImageFailed(true)} /> : <Building2 size={28} strokeWidth={1.5} />}
+        </span>
+        <div className="rare-category-card-body"><h3>{category.name}</h3><p>{category.description || "Explore projects in this category."}</p><span className="rare-category-card-action">View projects <ArrowUpRight size={14} aria-hidden="true" /></span></div>
+    </Link>;
 }
 
 // =====================================================
@@ -158,83 +81,14 @@ export default function ProjectCategories() {
 
         loadCategories();
 
-        return () => {
-            cancelled = true;
-        };
+        return () => { cancelled = true; };
     }, [retryKey]);
 
-    return (
-        <section className="space-y-5">
-            {loading && (
-                <LoadingScreen message="Loading project categories..." />
-            )}
-
-            {/* SECTION HEADER */}
-            <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#716658]">
-                        Explore RARE
-                    </p>
-
-                    <h2 className="text-2xl font-bold tracking-tight text-[#211e1a] sm:text-[28px]">
-                        Project Categories
-                    </h2>
-
-                    <p className="mt-2 text-sm text-[#716658]">
-                        Explore our architecture and construction projects
-                        by category.
-                    </p>
-                </div>
-            </div>
-
-            {/* ERROR */}
-            {!loading && error && (
-                <div className="rounded-[22px] border border-[#e8dfd3] bg-[#fffdfa] p-7 text-center">
-                    <p role="alert" className="text-sm text-[#9e3535]">
-                        {error}
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() => setRetryKey((previous) => previous + 1)}
-                        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#211e1a] px-5 py-3 text-sm font-semibold text-white"
-                    >
-                        <RefreshCw size={17} />
-                        Try Again
-                    </button>
-                </div>
-            )}
-
-            {/* EMPTY STATE */}
-            {!loading && !error && categories.length === 0 && (
-                <div className="rounded-[22px] border border-[#e8dfd3] bg-[#fffdfa] px-6 py-12 text-center">
-                    <FolderKanban
-                        size={34}
-                        strokeWidth={1.5}
-                        className="mx-auto text-[#716658]"
-                    />
-
-                    <h3 className="mt-4 text-lg font-semibold text-[#211e1a]">
-                        No active project categories
-                    </h3>
-
-                    <p className="mt-2 text-sm text-[#716658]">
-                        Active categories will appear here. Manage inactive categories in Settings.
-                    </p>
-                </div>
-            )}
-
-            {/* CATEGORY IMAGE GRID */}
-            {!error && categories.length > 0 && (
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                    {categories.map((category) => (
-                        <CategoryCard
-                            key={category.id}
-                            category={category}
-                        />
-                    ))}
-                </div>
-            )}
-        </section>
-    );
+    return <section className="rare-category-section" aria-labelledby="dashboard-categories-heading">
+        <header className="rare-category-heading"><div><p className="rare-category-eyebrow">Explore your portfolio</p><h2 id="dashboard-categories-heading">Project Categories</h2><p>Find the right projects, organised by category.</p></div>{!loading && !error && <span className="rare-category-count">{categories.length} {categories.length === 1 ? "category" : "categories"}</span>}</header>
+        {loading && <div role="status" className="rare-category-loading">Loading project categories...</div>}
+        {!loading && error && <div className="rare-category-message"><p role="alert">{error}</p><button type="button" className="rare-button rare-button-secondary" onClick={() => setRetryKey((previous) => previous + 1)}><RefreshCw size={16} aria-hidden="true" />Try Again</button></div>}
+        {!loading && !error && categories.length === 0 && <div className="rare-category-message"><FolderKanban size={24} aria-hidden="true" /><h3>No active project categories</h3><p>Active categories will appear here. Manage inactive categories in Settings.</p></div>}
+        {!loading && !error && categories.length > 0 && <div className="rare-category-grid">{categories.map((category) => <CategoryCard key={category.id} category={category} />)}</div>}
+    </section>;
 }

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { registerSW } from "virtual:pwa-register";
 import {
   Navigate,
+  Link,
   Route,
   Routes,
 } from "react-router-dom";
@@ -17,7 +18,7 @@ import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
 import Dashboard from "./pages/Dashboard";
 import CategoryProjectList from "./pages/CategoryProjectList";
-import SectionPlaceholder from "./pages/SectionPlaceholder";
+import CreateRecord from "./pages/admin/CreateRecord";
 
 
 // =====================================================
@@ -103,15 +104,16 @@ function HomeRedirect() {
 
 function UnauthorizedPage() {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-[#f1eadf] p-6">
-      <div className="w-full max-w-md rounded-2xl bg-[#fffdfa] p-8 text-center">
-        <h1 className="text-xl font-bold text-[#211e1a]">
+    <main className="rare-auth-canvas flex min-h-dvh items-center justify-center p-6">
+      <div className="w-full max-w-md rounded-2xl bg-surface p-8 text-center">
+        <h1 className="text-xl font-bold text-ink">
           Access Denied
         </h1>
 
-        <p className="mt-2 text-sm text-[#716658]">
+        <p className="mt-2 text-sm text-muted">
           You do not have permission to access this page.
         </p>
+        <Link to="/" className="rare-button rare-button-primary mt-6">Return to your workspace</Link>
       </div>
     </main>
   );
@@ -208,13 +210,13 @@ export default function App() {
   return (
     <>
       {(connectionError || updateReady || updateMessage) && (
-        <aside aria-label="RARE app status" className="sticky top-0 z-50 border-b border-[#D8C7B2] bg-[#FFFDFA] px-4 py-3 text-sm text-[#211E1A]">
+        <aside aria-label="RARE app status" className="sticky top-0 z-50 border-b border-border-strong bg-surface px-4 py-3 text-sm text-ink">
           {connectionError && <p role="alert">Connection unavailable. RARE needs an internet connection to load or save project data. Changes are not queued for offline submission. Reconnect and retry the action; check the record before submitting again.</p>}
           {updateReady && <p role="status">A new version of RARE is ready. Save your work before updating.</p>}
           {updateMessage && <p role="status">{updateMessage}</p>}
           <div className="mt-2 flex flex-wrap gap-3">
-            {updateReady && <button type="button" onClick={applyUpdate} className="rounded-xl bg-[#211E1A] px-4 py-2 font-semibold text-white">Update RARE</button>}
-            {(connectionError || updateMessage) && <button type="button" onClick={() => { setConnectionError(!navigator.onLine); setUpdateMessage(""); }} className="rounded-xl border border-[#E4DCCD] px-4 py-2 font-semibold">Dismiss</button>}
+            {updateReady && <button type="button" onClick={applyUpdate} className="rounded-xl bg-ink px-4 py-2 font-semibold text-white">Update RARE</button>}
+            {(connectionError || updateMessage) && <button type="button" onClick={() => { setConnectionError(!navigator.onLine); setUpdateMessage(""); }} className="rounded-xl border border-border px-4 py-2 font-semibold">Dismiss</button>}
           </div>
         </aside>
       )}
@@ -283,7 +285,7 @@ export default function App() {
           {/* ADD PROJECT — UPCOMING */}
           <Route
             path="/admin/projects/new"
-            element={<SectionPlaceholder />}
+            element={<CreateRecord kind="project" />}
           />
 
           {/* TASKS */}
@@ -315,7 +317,7 @@ export default function App() {
           {/* ADD SUPERVISOR — UPCOMING */}
           <Route
             path="/admin/supervisors/new"
-            element={<SectionPlaceholder />}
+            element={<CreateRecord kind="supervisor" />}
           />
 
           {/* DAILY REPORTS */}

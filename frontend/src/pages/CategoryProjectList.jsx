@@ -174,9 +174,9 @@ export default function CategoryProjectList() {
       {/* BREADCRUMB */}
       <nav
         aria-label="Breadcrumb"
-        className="flex flex-wrap items-center gap-2 text-xs text-[#716658]"
+        className="flex flex-wrap items-center gap-2 text-xs text-muted"
       >
-        <Link to="/admin/dashboard" className="hover:text-[#211E1A]">
+        <Link to="/admin/dashboard" className="hover:text-ink">
           Dashboard
         </Link>
 
@@ -186,14 +186,14 @@ export default function CategoryProjectList() {
 
         <span>/</span>
 
-        <span className="font-semibold text-[#211E1A]">
+        <span className="font-semibold text-ink">
           {category?.name || "Projects"}
         </span>
       </nav>
 
       {/* ERROR */}
       {error ? (
-        <div className="rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] px-6 py-14 text-center">
+        <div className="rounded-3xl border border-border bg-surface px-6 py-14 text-center">
           <p role="alert" className="text-sm text-[#A44837]">
             {error}
           </p>
@@ -201,7 +201,7 @@ export default function CategoryProjectList() {
           <button
             type="button"
             onClick={() => setRetryKey((previous) => previous + 1)}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white"
           >
             <RefreshCw size={17} />
             Try Again
@@ -216,21 +216,21 @@ export default function CategoryProjectList() {
           <section
             className="
               overflow-hidden rounded-[26px]
-              border border-[#E7DED2]
-              bg-[#FFFDFA]
+              border border-border
+              bg-surface
             "
           >
             <div className="flex min-h-46.25 items-stretch sm:min-h-55">
               <div className="min-w-0 flex-1 p-5 sm:p-8">
                 <Link
                   to="/admin/dashboard"
-                  className="inline-flex items-center gap-2 text-xs font-medium text-[#716658] hover:text-[#211E1A]"
+                  className="inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink"
                 >
                   <ArrowLeft size={15} />
                   Back to Dashboard
                 </Link>
 
-                <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-[#716658]">
+                <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-muted">
                   RARE Project Categories
                 </p>
 
@@ -238,20 +238,20 @@ export default function CategoryProjectList() {
                   className="
                     mt-2 wrap-break-word text-2xl
                     font-bold tracking-tight
-                    text-[#211E1A]
+                    text-ink
                     sm:text-3xl
                   "
                 >
                   {category?.name || "Projects"}
                 </h1>
 
-                <p className="mt-3 max-w-xl text-xs leading-6 text-[#716658] sm:text-sm">
+                <p className="mt-3 max-w-xl text-xs leading-6 text-muted sm:text-sm">
                   {category?.description ||
                     "Explore and manage projects in this category."}
                 </p>
               </div>
 
-              <div className="relative hidden w-[32%] bg-[#E8DFD3] sm:block">
+              <div className="relative hidden w-[32%] bg-pastel-lavender sm:block">
                 {categoryImageUrl && !imageFailed ? (
                   <img
                     src={categoryImageUrl}
@@ -261,7 +261,7 @@ export default function CategoryProjectList() {
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center">
-                    <ImageOff size={32} className="text-[#716658]" />
+                    <ImageOff size={32} className="text-muted" />
                   </div>
                 )}
               </div>
@@ -274,11 +274,11 @@ export default function CategoryProjectList() {
 
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-xl font-bold text-[#211E1A] sm:text-2xl">
+              <h2 className="text-xl font-bold text-ink sm:text-2xl">
                 Projects
               </h2>
 
-              <p className="mt-1 text-sm text-[#716658]">
+              <p className="mt-1 text-sm text-muted">
                 {totalCount === null
                   ? "Browse matching projects"
                   : `${totalCount} matching ${
@@ -293,11 +293,11 @@ export default function CategoryProjectList() {
                 onClick={() => setShowAddProject(true)}
                 className="
                         inline-flex items-center justify-center gap-2
-                        rounded-xl bg-[#211E1A]
+                        rounded-xl bg-ink
                         px-4 py-3
                         text-xs font-semibold text-white
                         transition-all duration-200
-                        hover:bg-[#38332C]
+                        hover:bg-primary-hover
                         hover:-translate-y-0.5
                         active:scale-[0.98]
                         sm:text-sm
@@ -326,11 +326,11 @@ export default function CategoryProjectList() {
                 aria-label="Filter by project status"
                 className="
                   h-12 w-full rounded-xl
-                  border border-[#E4DCCD]
-                  bg-[#FFFDFA] px-3
-                  text-sm text-[#211E1A]
+                  border border-border
+                  bg-surface px-3
+                  text-sm text-ink
                   outline-none
-                  focus:border-[#211E1A]
+                  focus:border-ink
                 "
               >
                 <option value="">All Statuses</option>
@@ -346,11 +346,11 @@ export default function CategoryProjectList() {
                 aria-label="Sort projects"
                 className="
                   h-12 w-full rounded-xl
-                  border border-[#E4DCCD]
-                  bg-[#FFFDFA] px-3
-                  text-sm text-[#211E1A]
+                  border border-border
+                  bg-surface px-3
+                  text-sm text-ink
                   outline-none
-                  focus:border-[#211E1A]
+                  focus:border-ink
                 "
               >
                 <option value="-created_at">Newest First</option>
@@ -370,18 +370,18 @@ export default function CategoryProjectList() {
           {!loading && (
             <>
               {projects.length === 0 ? (
-                <section className="rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] px-6 py-14 text-center">
+                <section className="rounded-3xl border border-border bg-surface px-6 py-14 text-center">
                   <FolderOpen
                     size={37}
                     strokeWidth={1.5}
-                    className="mx-auto text-[#716658]"
+                    className="mx-auto text-muted"
                   />
 
-                  <h3 className="mt-4 text-lg font-bold text-[#211E1A]">
+                  <h3 className="mt-4 text-lg font-bold text-ink">
                     No projects found
                   </h3>
 
-                  <p className="mx-auto mt-2 max-w-md text-sm text-[#716658]">
+                  <p className="mx-auto mt-2 max-w-md text-sm text-muted">
                     No projects match the selected category and filters.
                   </p>
                 </section>
@@ -402,7 +402,7 @@ export default function CategoryProjectList() {
                   ================================= */}
 
               {(hasNext || hasPrevious) && (
-                <nav aria-label="Category project pages" className="rare-pagination rounded-[20px] border border-[#E7DED2] bg-[#FFFDFA] px-4 py-3">
+                <nav aria-label="Category project pages" className="rare-pagination rounded-[20px] border border-border bg-surface px-4 py-3">
                   <button
                     type="button"
                     disabled={!hasPrevious}
@@ -413,13 +413,13 @@ export default function CategoryProjectList() {
                         behavior: "smooth",
                       });
                     }}
-                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-[#211E1A] disabled:opacity-35"
+                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-ink disabled:opacity-35"
                   >
                     <ArrowLeft size={17} />
                     Previous
                   </button>
 
-                  <span aria-live="polite" aria-atomic="true" className="text-xs font-semibold text-[#716658]">
+                  <span aria-live="polite" aria-atomic="true" className="text-xs font-semibold text-muted">
                     Page {page}
                   </span>
 
@@ -433,7 +433,7 @@ export default function CategoryProjectList() {
                         behavior: "smooth",
                       });
                     }}
-                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-[#211E1A] disabled:opacity-35"
+                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-ink disabled:opacity-35"
                   >
                     Next
                     <ArrowRight size={17} />

@@ -66,7 +66,7 @@ export function getNavigation(role) {
         });
     }
 
-    return items;
+    return items.filter((item) => item.path !== `${prefix}/documents`);
 }
 
 export function getMobilePrimaryNavigation(role) {

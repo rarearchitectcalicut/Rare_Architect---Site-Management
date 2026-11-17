@@ -1,0 +1,62 @@
+.rare-guided-report { max-width: 1050px; margin-inline: auto; }
+.rare-guided-report .report-guided-header { border: 1px solid var(--color-border); border-radius: 24px; background: linear-gradient(120deg,#f4f1ff,#fff 65%,#f1f9f4); padding: 16px 20px; }
+.rare-report-stepper { padding: 12px; border: 1px solid var(--color-border); border-radius: 20px; background: white; }
+.rare-report-stepper ol { gap: 8px; }
+.rare-report-stepper .rare-button { border: 0; justify-content: flex-start; gap: 9px; background: var(--color-surface-soft); font-weight: 650; color: var(--color-muted); }
+.rare-report-stepper .rare-button[aria-current="step"] { color: #47498a; background: #eeecff; }
+.rare-report-step-number { display: grid; place-items: center; flex-shrink: 0; width: 24px; height: 24px; border-radius: 8px; background: white; border: 1px solid var(--color-border); font-size: 11px; }
+.rare-report-diary-form { border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 24px; padding: 24px; }
+.rare-guided-report .rare-report-site-update { display: grid; grid-template-columns: minmax(0,1fr); min-width: 0; gap: 20px; align-items: start; }
+.rare-guided-report .rare-report-site-update > * { grid-column: 1 / -1; min-width: 0; }
+.rare-report-select-label { display: block; font-size: 14px; font-weight: 600; }
+.rare-report-select-label select, .rare-report-activities select { display: block; min-height: 48px; width: 100%; max-width: 100%; font-weight: 500; color: var(--color-ink); background-color: #fbfbff; text-overflow: ellipsis; }
+.rare-report-selected-activities { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.rare-report-selected-activities:empty { display: none; }
+.rare-report-selected-activity { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; font-size: 12px; color: #494882; background: #f0eeff; border: 1px solid #d2cfee; border-radius: 999px; }
+.rare-report-selected-activity:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+.rare-guided-report .rare-report-diary-form { width: 100%; }
+.rare-report-step-intro { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--color-border); }
+.rare-report-step-intro > span { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--color-pastel-lavender); color: #59549b; flex-shrink: 0; }
+.rare-report-step-intro h2 { font-size: 20px; font-weight: 750; letter-spacing: -.025em; }
+.rare-report-step-intro p, .rare-report-hint { font-size: 12px; line-height: 1.6; color: var(--color-muted); margin-top: 4px; }
+.rare-report-question { min-width: 0; }
+.rare-report-question legend { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650; margin-bottom: 10px; }
+.rare-report-choice-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.rare-report-question .rare-report-hint { margin: -2px 0 12px; }
+.rare-report-choice { display: flex; min-width: 0; min-height: 48px; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid var(--color-border); border-radius: 14px; text-align: left; font-size: 13px; color: var(--color-muted); background: white; transition: border-color 160ms ease,background 160ms ease; }
+.rare-report-choice:hover { border-color: #b7b5d8; background: #faf9ff; }
+.rare-report-choice[aria-pressed="true"] { border-color: #aaa6d8; color: #494882; background: #f0eeff; box-shadow: inset 0 0 0 1px #aaa6d8; }
+.rare-report-choice > svg { flex-shrink: 0; }
+.rare-report-question-heading { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; border-top: 1px solid var(--color-border); padding-top: 20px; }
+.rare-report-inline-save { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--color-border); }
+.rare-report-inline-save p { color: var(--color-muted); font-size: 12px; }
+.rare-report-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.rare-report-preset { min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 999px; font-size: 12px; color: var(--color-ink); background: white; }
+.rare-report-preset[aria-pressed="true"] { background: var(--color-pastel-mint); border-color: #93bea6; }
+.rare-report-choice:focus-visible, .rare-report-preset:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+.rare-report-save-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--color-border); border-radius: 18px; padding: 12px; background: white; box-shadow: 0 6px 24px rgba(40,55,78,.07); }
+.rare-guided-report .rare-report-save-footer > button { flex: 0 0 auto; }
+.rare-guided-report .rare-report-save-footer > div { flex-wrap: nowrap; }
+.rare-guided-report input, .rare-guided-report textarea, .rare-guided-report select { font-size: 16px; }
+.rare-guided-report fieldset:disabled { opacity: .7; }
+.rare-report-task-pages { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.rare-report-work-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; padding-top: 16px; border-top: 1px solid var(--color-border); align-items: stretch; }
+.daily-report-detail .rare-report-work-actions > button { min-height: 44px; min-width: 0; width: 100%; margin: 0; justify-content: center; flex: 0 0 auto; }
+@media (min-width: 640px) {
+  .rare-report-work-actions { display: flex; justify-content: flex-end; }
+  .daily-report-detail .rare-report-work-actions > button { width: auto; min-width: 112px; }
+}
+@media (max-width: 767px) {
+  .rare-report-diary-form { padding: 16px; border-radius: 20px; }
+  .rare-guided-report .report-guided-header { padding: 12px 16px; border-radius: 20px; }
+  .rare-report-choice-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .rare-report-site-update { gap: 20px; }
+  .rare-report-step-intro { align-items: flex-start; }
+  .rare-report-step-intro h2 { font-size: 18px; }
+  .rare-report-stepper { padding: 8px; }
+  .rare-report-stepper .rare-button { flex-direction: column; align-items: center; text-align: center; padding: 8px 4px; gap: 6px; }
+  .rare-report-save-footer { flex-wrap: wrap; }
+  .rare-report-save-footer > div { flex: 1; }
+  .rare-report-save-footer .rare-button { padding-inline: 10px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .rare-report-choice { transition: none; } }
