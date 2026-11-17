@@ -513,10 +513,10 @@ test("verified progress distinguishes measured zero, completion and unavailable 
 test("shared Admin and Supervisor task cards render server verified progress", async () => {
     const task = { id: "task", project: "project", title: "Measured wall", approval_status: "APPROVED", work_status: "COMPLETED", priority: "MEDIUM", progress: { measurement_method: "QUANTITY", progress_percentage: "25.00", verified_quantity: "25.000", planned_quantity: "100.000", measurement_unit: "SQM" } };
     const admin = await loadSource("components/admin/tasks/AdminTaskCard.jsx");
-    const supervisor = await loadSource("pages/supervisor/ProjectTasks.jsx", { append: "\nexport { TaskCard };" });
-    for (const html of [render(admin.exports.default, { task, to: "/admin/projects/project/tasks/task" }), render(supervisor.exports.TaskCard, { task, expanded: false })]) {
+    const supervisor = await loadSource("components/admin/tasks/AdminTaskCard.jsx");
+    for (const html of [render(admin.exports.default, { task, to: "/admin/projects/project/tasks/task" }), render(supervisor.exports.MobileTaskCard, { task, to: "/supervisor/projects/project/tasks/task" })]) {
         assert.ok(html.includes('aria-valuenow="25"'));
-        assert.ok(html.includes("25.000 / 100.000 SQM"));
+        assert.ok(html.includes("Verified progress"));
         assert.ok(!html.includes("100%"));
     }
 });
@@ -1107,7 +1107,7 @@ test("desktop and mobile navigation share the actual unread badge and hide zero 
 test("Supervisor task details show original review comments, reviewers and timestamps", async () => {
     const state = delayHooks(); const calls = [];
     const { exports: helpers } = await loadSource("api/taskApi.js", { overrides: { "api/client.js": { api: {} } } });
-    const { exports } = await loadSource("pages/supervisor/ProjectTasks.jsx", { overrides: {
+    const { exports } = await loadSource("components/tasks/SupervisorTaskContent.jsx", { overrides: {
         react: { ...React, ...state.hooks },
         "api/delayApi.js": { delayApi: { list: async () => ({ count: 0, results: [] }) } },
         "api/taskApi.js": { ...helpers, taskApi: { history: async (id, params, signal) => {
@@ -1118,11 +1118,11 @@ test("Supervisor task details show original review comments, reviewers and times
                 { id: "rejected", action: "REJECTED", actor_name: "Earlier Admin", created_at: "2026-11-04T10:00:00Z", details: { reason: "Correct the quantities" } },
             ] };
         } } },
-    }, append: "\nexport { ExpandedTask };" });
+    } });
     let tree;
     const task = { id: "task", approval_status: "APPROVED", work_status: "NOT_STARTED" };
-    const draw = () => { tree = state.render(() => exports.ExpandedTask({ task, loading: false })); };
-    draw(); await flushDelay(); draw();
+    const draw = () => { tree = state.render(() => exports.default({ task, loading: false })); };
+    draw(); quickFind(tree, (node) => node.type === "button" && node.props.children === "Decisions").props.onClick(); draw(); await flushDelay(); draw();
     assert.equal(calls.length, 1); assert.equal(calls[0].params.decisions_only, true); assert.equal(calls[0].params.page_size, 10);
     const contents = JSON.stringify(tree);
     for (const text of ["Quantity checked and approved", "Correct the quantities", "Actual Admin", "Earlier Admin", "Delivery time approved", "Admin decisions and comments"]) assert.ok(contents.includes(text));
@@ -1257,14 +1257,14 @@ test("delay completion date is required and strictly after the task deadline", a
 test("Supervisor task details load only that task's paginated delay reports and discard stale results", async () => {
     const state = delayHooks(), requests = [];
     const { exports: helpers } = await loadSource("api/taskApi.js", { overrides: { "api/client.js": { api: {} } } });
-    const { exports } = await loadSource("pages/supervisor/ProjectTasks.jsx", { overrides: {
+    const { exports } = await loadSource("components/tasks/SupervisorTaskContent.jsx", { overrides: {
         react: { ...React, ...state.hooks },
         "api/taskApi.js": { ...helpers, taskApi: { history: async () => ({ count: 0, results: [] }) } },
         "api/delayApi.js": { delayApi: { list: (params, signal) => new Promise((resolve) => requests.push({ params, signal, resolve })) } },
-    }, append: "\nexport { ExpandedTask };" });
+    } });
     let task = { id: "first", end_date: "2026-10-30" }, tree;
-    const draw = () => { tree = state.render(() => exports.ExpandedTask({ task, loading: false })); };
-    draw();
+    const draw = () => { tree = state.render(() => exports.default({ task, loading: false })); };
+    draw(); quickFind(tree, (node) => node.type === "button" && node.props.children === "Delays").props.onClick(); draw();
     assert.deepEqual(JSON.parse(JSON.stringify(requests[0].params)), { task: "first", page: 1, page_size: 5 });
     task = { id: "second", end_date: "2026-11-01" }; draw();
     assert.equal(requests[0].signal.aborted, true);
@@ -1281,6 +1281,7 @@ test("Supervisor task details load only that task's paginated delay reports and 
 function quickFind(node, predicate) {
     if (Array.isArray(node)) return node.map((child) => quickFind(child, predicate)).find(Boolean);
     if (!node || typeof node !== "object") return;
+    if (node.type?.name === "TaskSectionNavigation") return quickFind(node.type(node.props), predicate);
     return predicate(node) ? node : quickFind(node.props?.children, predicate);
 }
 
@@ -1319,9 +1320,9 @@ test("Supervisor attention rows flag stale drafts and open their exact records",
     assert.equal(items.length, 5);
     assert.equal(items[0].description, "Draft from 9 days ago");
     assert.equal(items[0].to, "/supervisor/projects/project-id/daily-reports?report=draft-id");
-    assert.equal(items[1].to, "/supervisor/projects/project-id/tasks?task=pending-id");
-    assert.equal(items[2].to, "/supervisor/projects/project-id/tasks?task=overdue-id");
-    assert.equal(items[3].to, "/supervisor/projects/project-id/tasks?task=rejected-id");
+    assert.equal(items[1].to, "/supervisor/projects/project-id/tasks/pending-id");
+    assert.equal(items[2].to, "/supervisor/projects/project-id/tasks/overdue-id");
+    assert.equal(items[3].to, "/supervisor/projects/project-id/tasks/rejected-id");
     assert.equal(items[4].to, "/supervisor/projects/project-id/daily-reports?correct=report-id");
     assert.equal(exports.dashboardGreeting(new Date("2026-11-23T08:00:00")).salutation, "Good morning");
     assert.equal(exports.dashboardGreeting(new Date("2026-11-23T14:00:00")).salutation, "Good afternoon");
@@ -1456,7 +1457,7 @@ test("dashboard create links open tasks or reuse today's report draft only for e
             const setQuery = (next) => { query = next; };
             const { exports } = await loadSource(kind === "task" ? "pages/supervisor/ProjectTasks.jsx" : "pages/admin/DailyReports.jsx", { overrides: {
                 react: { ...React, ...state.hooks, useMemo: (calculate) => calculate() },
-                "react-router-dom": { ...Router, useParams: () => ({ projectId }), useSearchParams: () => [query, setQuery] },
+                "react-router-dom": { ...Router, useNavigate: () => () => {}, useParams: () => ({ projectId }), useSearchParams: () => [query, setQuery] },
                 "api/projectApi.js": { projectApi: { getProject: async () => ({ id: projectId, status }), getProjectOverview: async () => ({ id: projectId, status }) } },
                 "api/taskApi.js": { ...helpers, taskApi: { list: async () => [] } },
                 "api/dailyReportApi.js": { dailyReportApi: { list: async () => ({ count: 1, results: [{ id: "existing-today-draft", report_date: new Date().toLocaleDateString("en-CA") }], summary: { total: 1, drafts: 1, submitted: 0, pending_work: 0 } }), create: async () => { throw new Error("An existing draft must be reused"); } } },

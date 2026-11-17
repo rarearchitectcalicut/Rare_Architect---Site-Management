@@ -269,7 +269,7 @@ function GlobalTaskRegisterPage({ role }) {
     ];
     const taskHref = (task) => admin
         ? `/admin/projects/${task.project}/tasks/${task.id}`
-        : `/supervisor/projects/${task.project}/tasks?task=${encodeURIComponent(task.id)}`;
+        : `/supervisor/projects/${task.project}/tasks/${encodeURIComponent(task.id)}`;
 
     const projectSuggestions = (data?.results || []).map((task) => ({ id: task.id, name: task.title, context: task.project_name, to: taskHref(task) }));
     return <div className={`rare-tasks mx-auto w-full min-w-0 max-w-[1200px] space-y-4 overflow-x-hidden pb-8 text-ink sm:space-y-5 task-register-desktop-theme`}>

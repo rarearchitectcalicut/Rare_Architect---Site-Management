@@ -1,34 +1,24 @@
-import { InfoField } from "../../components/common/InfoCard";
-import { createPortal } from "react-dom";
 import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
     CheckCircle2,
-    ChevronDown,
     ChevronLeft,
     ChevronRight,
     ClipboardList,
     Filter,
-    FolderOpen,
     Layers3,
     LayoutGrid,
     List,
-    Pencil,
     Plus,
     RefreshCw,
     X,
 } from "lucide-react";
 
 import { projectApi } from "../../api/projectApi";
-import { isTaskOverdue, taskApi, taskScheduleErrors } from "../../api/taskApi";
-import { delayApi } from "../../api/delayApi";
-import DelayReportReview from "../../components/approvals/review/DelayReportReview";
-import { formatDateTime } from "../../components/approvals/approvalUtils";
+import { taskApi } from "../../api/taskApi";
 import LoadingScreen from "../../components/LoadingScreen";
-import TaskDocuments from "../../components/tasks/TaskDocuments";
-import TaskExecutionActions, { TaskProgress } from "../../components/tasks/TaskExecutionActions";
 import TaskForm from "../../modal/supervisor/TaskForm";
 import BulkAddTasks from "../../modal/supervisor/BulkAddTasks";
 import DelayReportForm from "../../modal/supervisor/DelayReportForm";
@@ -36,21 +26,6 @@ import { MobileTaskCard, TaskPageStyles } from "../../components/admin/tasks/Adm
 
 const inputClass =
     "h-11 w-full rounded-xl border border-border bg-surface px-3 text-xs sm:text-sm text-ink outline-none focus:border-border-strong focus:ring-2 focus:ring-pastel-lavender";
-
-const statusColors = {
-    LOW: "bg-pastel-sky text-info",
-    MEDIUM: "bg-app text-muted",
-    HIGH: "bg-pastel-butter text-warning",
-    URGENT: "bg-pastel-blush text-danger",
-    PENDING: "bg-pastel-butter text-warning",
-    APPROVED: "bg-pastel-mint text-success",
-    REJECTED: "bg-pastel-blush text-danger",
-    NOT_STARTED: "bg-app text-muted",
-    IN_PROGRESS: "bg-pastel-sky text-info",
-    COMPLETED: "bg-pastel-mint text-success",
-    DELAYED: "bg-pastel-blush text-danger",
-    CANCELLED: "bg-border text-muted",
-};
 
 function readable(value) {
     if (value === null || value === undefined || value === "") {
@@ -67,20 +42,6 @@ function canReportDelay(task, project) {
     return task?.approval_status === "APPROVED" &&
         !["COMPLETED", "CANCELLED"].includes(task.work_status) &&
         ["ACTIVE", "MAINTENANCE"].includes(project?.status);
-}
-
-function formatDate(value) {
-    if (!value) return "Not specified";
-
-    const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
-
-    if (Number.isNaN(date.getTime())) return String(value);
-
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-    });
 }
 
 function getError(error, fallback) {
@@ -136,416 +97,6 @@ async function fetchAllTasks(projectId) {
 
     throw new Error("Task pagination limit exceeded.");
 }
-
-function Badge({ value }) {
-    if (!value) return null;
-
-    return (
-        <span
-            className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
-                statusColors[value] || "bg-border text-muted"
-            }`}
-        >
-            {readable(value)}
-        </span>
-    );
-}
-
-function DetailItem({ label, value }) {
-    return <InfoField label={label} value={value} />;
-}
-
-function SupervisorDelayCard({ report, taskName }) {
-    const [open, setOpen] = useState(false);
-    const cardRef = useRef(null);
-    useEffect(() => {
-        if (!open) return;
-        function closeOutside(event) {
-            if (event.button === 0 && !cardRef.current?.contains(event.target) && !document.querySelector('dialog[open], [role="dialog"], [role="alertdialog"]')) setOpen(false);
-        }
-        document.addEventListener("pointerdown", closeOutside);
-        return () => document.removeEventListener("pointerdown", closeOutside);
-    }, [open]);
-    return <div ref={cardRef} className="rounded-xl border border-border bg-surface">
-        <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-start justify-between gap-3 rounded-xl p-3 text-left focus-visible:outline-2 focus-visible:outline-warning">
-            <span className="min-w-0"><span className="block text-sm font-bold">Delay report</span><span className="mt-1 block break-words text-sm font-semibold">{report.task_title || taskName}</span><span className="mt-1 block text-xs text-muted">{formatDateTime(report.reported_at)}</span></span><ChevronDown size={18} className={'shrink-0 ' + (open ? 'rotate-180' : '')} />
-        </button>
-        {open && createPortal(<div role="dialog" aria-modal="true" aria-label="Delay report details" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6" onPointerDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}><div className="max-h-[85dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-surface p-6"><div className="mb-4 flex items-start justify-between gap-4"><div><h2 className="text-lg font-bold">Delay report</h2><p className="mt-1 text-sm">{report.task_title || taskName}</p></div><button type="button" aria-label="Close delay report" onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-border"><X size={18} /></button></div><DelayReportReview record={report} role="SUPERVISOR" /></div></div>, document.body)}
-    </div>;
-}
-
-function MobileTaskDelayDialog({ onClose, triggerRef, children }) {
-    const dialogRef = useRef(null);
-    useEffect(() => {
-        const dialog = dialogRef.current;
-        const desktop = window.matchMedia("(min-width: 1024px)");
-        if (desktop.matches) { onClose(false); return; }
-        const previousOverflow = document.body.style.overflow;
-        const trigger = triggerRef.current;
-        dialog.showModal();
-        document.body.style.overflow = "hidden";
-        function handleViewportChange(event) { if (event.matches) onClose(false); }
-        desktop.addEventListener("change", handleViewportChange);
-        return () => {
-            desktop.removeEventListener("change", handleViewportChange);
-            dialog.close();
-            document.body.style.overflow = previousOverflow;
-            if (!desktop.matches && trigger?.isConnected) trigger.focus();
-        };
-    }, [onClose, triggerRef]);
-
-    return createPortal(<dialog ref={dialogRef} aria-label="Task delay reports" aria-modal="true"
-        onCancel={(event) => { event.preventDefault(); event.stopPropagation(); onClose(false); }}
-        onClick={(event) => { if (event.target === event.currentTarget) onClose(false); }}
-        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-2xl overflow-y-auto rounded-2xl border border-border bg-surface p-4 text-ink shadow-2xl backdrop:bg-ink/45">
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-surface pb-3">
-            <h3 className="text-lg font-bold">Delay Reports</h3>
-            <button type="button" autoFocus aria-label="Close task delay reports" onClick={() => onClose(false)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border"><X size={18} /></button>
-        </div>
-        {children}
-    </dialog>, document.body);
-}
-
-function ExpandedTask({
-    task,
-    loading,
-    error,
-    onRetry,
-    onEdit,
-    onStatusChanged,
-    canReportDelay = false,
-    onReportDelay,
-}) {
-    const [documentsOpen, setDocumentsOpen] = useState(false);
-    const [mobileDelayOpen, setMobileDelayOpen] = useState(false);
-    const mobileDelayTriggerRef = useRef(null);
-    const [delayPage, setDelayPage] = useState(1);
-    const [delayRevision, setDelayRevision] = useState(0);
-    const [delayReports, setDelayReports] = useState(null);
-    const delayKey = `${task?.id}:${task?.end_date}:${delayPage}:${delayRevision}`;
-    const delayState = delayReports?.key === delayKey ? delayReports : null;
-    useEffect(() => {
-        if (!task?.id) return;
-        const controller = new AbortController();
-        delayApi.list({ task: task.id, page: delayPage, page_size: 5 }, controller.signal).then((data) => {
-            if (!Array.isArray(data?.results) || !Number.isInteger(data.count)) throw new Error("Unexpected delay report response.");
-            if (!controller.signal.aborted) setDelayReports({ key: delayKey, data });
-        }).catch((failure) => {
-            if (!controller.signal.aborted) setDelayReports({ key: delayKey, error: failure.response?.data?.detail || "Unable to load task delay reports." });
-        });
-        return () => controller.abort();
-    }, [task?.id, delayPage, delayKey]);
-    const [decisionPage, setDecisionPage] = useState(1);
-    const [decisionRevision, setDecisionRevision] = useState(0);
-    const [decisions, setDecisions] = useState(null);
-    const decisionKey = `${task?.id}:${decisionPage}:${decisionRevision}`;
-    const decisionState = decisions?.key === decisionKey ? decisions : null;
-    useEffect(() => {
-        if (!task?.id) return;
-        const controller = new AbortController();
-        taskApi.history(task.id, { decisions_only: true, page: decisionPage, page_size: 10 }, controller.signal).then((data) => {
-            if (!Array.isArray(data?.results) || !Number.isInteger(data.count)) throw new Error("Unexpected decision history response.");
-            if (!controller.signal.aborted) setDecisions({ key: decisionKey, data });
-        }).catch((failure) => {
-            if (!controller.signal.aborted) setDecisions({ key: decisionKey, error: failure.response?.data?.detail || "Unable to load Admin decisions." });
-        });
-        return () => controller.abort();
-    }, [task?.id, decisionPage, decisionRevision, decisionKey]);
-
-    if (loading) {
-        return (
-            <div className="flex items-center gap-3 border-t border-border p-6 text-sm text-muted">
-                <RefreshCw size={18} className="animate-spin" />
-                Loading task details...
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="border-t border-border p-5">
-                <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
-                    <p role="alert">{error}</p>
-
-                    <button
-                        type="button"
-                        onClick={onRetry}
-                        className="mt-3 flex items-center gap-2 font-semibold underline"
-                    >
-                        <RefreshCw size={15} />
-                        Try Again
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    if (!task) return null;
-
-    const canEdit = task.project_status !== "CANCELLED" && ["PENDING", "REJECTED", "APPROVED"].includes(
-        task.approval_status
-    );
-
-    const editLabel =
-        task.approval_status === "REJECTED"
-            ? "Correct & Resubmit"
-            : task.approval_status === "APPROVED"
-                ? "Request Changes"
-                : "Edit Task";
-
-    const quantity =
-        task.planned_quantity !== null &&
-            task.planned_quantity !== undefined
-            ? `${task.planned_quantity} ${task.measurement_unit || ""}`.trim()
-            : "Not applicable";
-
-    return (
-        <div className="expanded-supervisor-task border-t border-border bg-surface p-4 sm:p-6">
-            {/* DETAILS HEADER */}
-            <div className="expanded-task-heading flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-muted">
-                        Task Information
-                    </p>
-
-                    <h3 className="mt-2 text-lg font-bold text-ink">
-                        <span className="lg:hidden">Complete Task Details</span><span className="hidden lg:inline">{task.title}</span>
-                    </h3>
-
-                    <p className="mt-1 text-xs leading-5 text-muted">
-                        Scope, scheduling, approval, execution and documents.
-                    </p>
-                </div>
-
-                {canEdit && (
-                    <button
-                        type="button"
-                        onClick={() => onEdit(task)}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-pastel-butter bg-pastel-butter px-4 py-2.5 text-xs font-bold text-warning transition-colors hover:bg-pastel-butter focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning"
-                    >
-                        <Pencil size={16} />
-                        {editLabel}
-                    </button>
-                )}
-            </div>
-
-            {/* CURRENT STATUSES */}
-            <div className="expanded-task-statuses mt-5 flex flex-wrap gap-3">
-                {[
-                    ["Approval Status", task.approval_status],
-                    ["Work Status", task.work_status],
-                    ["Priority", task.priority],
-                ].map(([label, value]) => (
-                    <div
-                        key={label}
-                        className="rounded-xl bg-surface-soft px-4 py-3"
-                    >
-                        <p className="mb-2 text-xs font-bold uppercase text-muted">
-                            {label}
-                        </p>
-
-                        <Badge value={value} />
-                    </div>
-                ))}
-            </div>
-
-            {/* START / COMPLETE TASK */}
-            <div className="expanded-task-left contents lg:flex">
-            <div className="expanded-task-execution contents lg:block">
-            <TaskExecutionActions
-                key={task.id}
-                task={task}
-                onSuccess={onStatusChanged}
-            />
-
-            <TaskProgress progress={task.progress} />
-            </div>
-
-            {/* DETAILS GRID */}
-            <dl className="rare-info-grid expanded-task-details mt-5 grid gap-4 rounded-[20px] bg-surface-soft p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
-                <DetailItem label="Task Name" value={task.title} />
-                <DetailItem
-                    label="Worker / Team"
-                    value={task.worker_name}
-                />
-                <DetailItem
-                    label="Timeline Order"
-                    value={task.display_order}
-                />
-                <DetailItem
-                    label="Start Date"
-                    value={formatDate(task.start_date)}
-                />
-                <DetailItem
-                    label="End Date"
-                    value={formatDate(task.end_date)}
-                />
-                <DetailItem
-                    label="Measurement Method"
-                    value={readable(task.measurement_method)}
-                />
-                <DetailItem
-                    label="Planned Quantity"
-                    value={quantity}
-                />
-                <DetailItem
-                    label="Created At"
-                    value={formatDate(task.created_at)}
-                />
-                <DetailItem
-                    label="Last Updated"
-                    value={formatDate(task.updated_at)}
-                />
-            </dl>
-
-            <aside className="expanded-task-review contents lg:hidden">
-            <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-border bg-surface-soft p-4 sm:p-5">
-                <h4 className="text-sm font-bold text-ink">Admin decisions and comments</h4>
-                {!decisionState && <p role="status" className="text-xs text-muted">Loading decision history...</p>}
-                {decisionState?.error && <p role="alert" className="text-xs text-red-700">{decisionState.error} <button type="button" className="underline" onClick={() => setDecisionRevision((value) => value + 1)}>Retry</button></p>}
-                {decisionState?.data?.results.map((decision) => <article key={decision.id} className="rounded-xl border border-border bg-surface p-4">
-                    <p className={`text-sm font-semibold ${decision.action.endsWith("REJECTED") ? "text-danger" : "text-success"}`}>{readable(decision.action)}</p>
-                    <p className="mt-1 text-xs text-muted">{decision.actor_name || "Reviewer unavailable"} / {formatDateTime(decision.created_at)}</p>
-                    <p className="mt-3 whitespace-pre-wrap break-words text-xs text-ink sm:text-sm">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
-                </article>)}
-                {decisionState?.data?.count === 0 && <p className="text-xs text-muted">No Admin decision has been recorded yet.</p>}
-                {decisionState?.data && (decisionState.data.next || decisionState.data.previous) && <nav aria-label="Decision history pages" className="rare-pagination">
-                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.previous} onClick={() => setDecisionPage((page) => page - 1)}>Previous decisions</button>
-                    <span aria-live="polite" aria-atomic="true" className="text-xs text-muted">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
-                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.next} onClick={() => setDecisionPage((page) => page + 1)}>Next decisions</button>
-                </nav>}
-            </section>
-            <button ref={mobileDelayTriggerRef} type="button" aria-haspopup="dialog" aria-expanded={mobileDelayOpen}
-                onClick={() => setMobileDelayOpen(true)}
-                className="mt-5 flex min-h-11 w-full items-center justify-between gap-3 rounded-[18px] border border-border bg-surface-soft p-4 text-left text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
-                Delay Reports<ChevronRight size={18} aria-hidden="true" />
-            </button>
-            {mobileDelayOpen && <MobileTaskDelayDialog onClose={setMobileDelayOpen} triggerRef={mobileDelayTriggerRef}>
-            <section aria-label="Task delay reports" className="mt-5 space-y-4 rounded-[18px] border border-border bg-surface-soft p-4 sm:p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h4 className="text-sm font-bold">Delay reports for this task</h4>
-                    <div className="flex flex-wrap items-center gap-2">
-                        {canReportDelay && <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" onClick={() => onReportDelay(task)}>Report delay</button>}
-                        <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" onClick={() => setDelayRevision((value) => value + 1)}>Refresh reports</button>
-                    </div>
-                </div>
-                <p className="text-xs text-muted">Current approved deadline: {formatDate(task.end_date)}. Reporting a delay does not change this deadline; an extension needs separate approval.</p>
-                {!delayState && <p role="status" className="text-xs text-muted">Loading task delay reports...</p>}
-                {delayState?.error && <p role="alert" className="text-xs text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
-                {delayState?.data?.count === 0 && <p className="text-xs text-muted">No delays have been reported for this task.</p>}
-                {delayState?.data?.results.map((report) => <div key={report.id}><div className="lg:hidden"><article className="rounded-xl border border-border bg-surface p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article></div><div className="hidden lg:block"><SupervisorDelayCard report={report} taskName={task.title} /></div></div>)}
-                {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="rare-pagination">
-                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.previous} onClick={() => setDelayPage((page) => page - 1)}>Previous reports</button>
-                    <span aria-live="polite" aria-atomic="true" className="text-xs text-muted">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
-                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
-                </nav>}
-            </section>
-            </MobileTaskDelayDialog>}
-            </aside>
-            {/* DESCRIPTION AND COMPLETION CRITERIA */}
-            <div className="expanded-task-description mt-5 grid gap-4 lg:grid-cols-2">
-                <div className="rounded-[18px] border border-border p-4 sm:p-5">
-                    <h4 className="flex items-center gap-2 text-sm font-bold text-ink">
-                        <ClipboardList size={18} className="text-info" />
-                        Task Description
-                    </h4>
-
-                    <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-muted sm:text-sm">
-                        {task.description || "No description provided."}
-                    </p>
-                </div>
-
-                <div className="rounded-[18px] border border-border p-4 sm:p-5">
-                    <h4 className="flex items-center gap-2 text-sm font-bold text-ink">
-                        <CheckCircle2 size={18} className="text-success" />
-                        Completion Criteria
-                    </h4>
-
-                    <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-muted sm:text-sm">
-                        {task.completion_criteria ||
-                            "No completion criteria specified."}
-                    </p>
-                </div>
-            </div>
-
-            {/* DOCUMENTS */}
-            <div className="mt-5">
-                <button
-                    type="button"
-                    aria-expanded={documentsOpen}
-                    onClick={() => setDocumentsOpen((value) => !value)}
-                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[18px] border border-border bg-surface-soft px-4 py-3.5 text-left transition-colors hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:px-5 sm:py-4"
-                >
-                    <span className="flex items-center gap-3">
-                        <span className="rounded-xl bg-pastel-lavender p-2.5 text-violet sm:p-3">
-                            <FolderOpen size={20} />
-                        </span>
-
-                        <span>
-                            <span className="block text-sm font-bold text-ink">
-                                Documents & Drawings
-                            </span>
-
-                            <span className="mt-1 block text-xs text-muted">
-                                View, upload, download and manage versions
-                            </span>
-                        </span>
-                    </span>
-
-                    <ChevronDown
-                        size={19}
-                        className={`shrink-0 text-muted transition-transform ${
-                            documentsOpen ? "rotate-180" : ""
-                        }`}
-                    />
-                </button>
-
-                {documentsOpen && (
-                    <TaskDocuments taskId={task.id} readOnly={task.project_status === "CANCELLED"} />
-                )}
-            </div>
-            </div>
-            <aside className="expanded-task-review hidden lg:block lg:space-y-4">
-            <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-border bg-surface-soft p-4 sm:p-5">
-                <h4 className="text-sm font-bold text-ink">Admin decisions and comments</h4>
-                {!decisionState && <p role="status" className="text-xs text-muted">Loading decision history...</p>}
-                {decisionState?.error && <p role="alert" className="text-xs text-red-700">{decisionState.error} <button type="button" className="underline" onClick={() => setDecisionRevision((value) => value + 1)}>Retry</button></p>}
-                {decisionState?.data?.results.map((decision) => <article key={decision.id} className="rounded-xl border border-border bg-surface p-4">
-                    <p className={`text-sm font-semibold ${decision.action.endsWith("REJECTED") ? "text-danger" : "text-success"}`}>{readable(decision.action)}</p>
-                    <p className="mt-1 text-xs text-muted">{decision.actor_name || "Reviewer unavailable"} / {formatDateTime(decision.created_at)}</p>
-                    <p className="mt-3 whitespace-pre-wrap break-words text-xs text-ink sm:text-sm">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
-                </article>)}
-                {decisionState?.data?.count === 0 && <p className="text-xs text-muted">No Admin decision has been recorded yet.</p>}
-                {decisionState?.data && (decisionState.data.next || decisionState.data.previous) && <nav aria-label="Decision history pages" className="rare-pagination">
-                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.previous} onClick={() => setDecisionPage((page) => page - 1)}>Previous decisions</button>
-                    <span aria-live="polite" aria-atomic="true" className="text-xs text-muted">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
-                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.next} onClick={() => setDecisionPage((page) => page + 1)}>Next decisions</button>
-                </nav>}
-            </section>
-            <section aria-label="Task delay reports" className="mt-5 space-y-4 rounded-[18px] border border-border bg-surface-soft p-4 sm:p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h4 className="text-sm font-bold">Delay reports for this task</h4>
-                    <div className="flex flex-wrap items-center gap-2">
-                        {canReportDelay && <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" onClick={() => onReportDelay(task)}>Report delay</button>}
-                        <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" onClick={() => setDelayRevision((value) => value + 1)}>Refresh reports</button>
-                    </div>
-                </div>
-                <p className="text-xs text-muted">Current approved deadline: {formatDate(task.end_date)}. Reporting a delay does not change this deadline; an extension needs separate approval.</p>
-                {!delayState && <p role="status" className="text-xs text-muted">Loading task delay reports...</p>}
-                {delayState?.error && <p role="alert" className="text-xs text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
-                {delayState?.data?.count === 0 && <p className="text-xs text-muted">No delays have been reported for this task.</p>}
-                {delayState?.data?.results.map((report) => <div key={report.id}><div className="lg:hidden"><article className="rounded-xl border border-border bg-surface p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article></div><div className="hidden lg:block"><SupervisorDelayCard report={report} taskName={task.title} /></div></div>)}
-                {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="rare-pagination">
-                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.previous} onClick={() => setDelayPage((page) => page - 1)}>Previous reports</button>
-                    <span aria-live="polite" aria-atomic="true" className="text-xs text-muted">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
-                    <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
-                </nav>}
-            </section>
-            </aside>
-        </div>
-    );
-}
-
 
 function ProjectTaskFilterSheet({
     open,
@@ -717,165 +268,9 @@ function ProjectTaskFilterSheet({
     );
 }
 
-function TaskCard({
-    project,
-    task,
-    projectId,
-    expanded,
-    onToggle,
-    detail,
-    detailLoading,
-    detailError,
-    onRetry,
-    onEdit,
-    onStatusChanged,
-}) {
-    const priorityTone = {
-        URGENT: "bg-danger",
-        HIGH: "bg-warning",
-        MEDIUM: "bg-muted",
-        LOW: "bg-info",
-    };
-
-    const overdue = typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task);
-
-    const rawWorker = task.worker_name?.trim();
-    const assignee = rawWorker && rawWorker !== "Not specified"
-        ? rawWorker
-        : Array.isArray(task.supervisors)
-            ? task.supervisors.map((s) => s.name).filter(Boolean).join(", ")
-            : "";
-
-    const formatSafeDate = (value) => {
-        if (!value || value === "Not specified") return "";
-        const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
-        if (Number.isNaN(date.getTime())) return "";
-        return date.toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-        });
-    };
-
-    const startDate = formatSafeDate(task.start_date);
-    const endDate = formatSafeDate(task.end_date);
-    let datesText = "";
-    if (startDate && endDate) {
-        datesText = `${startDate} → ${endDate}`;
-    } else if (endDate) {
-        datesText = `Due ${endDate}`;
-    } else if (startDate) {
-        datesText = `Starts ${startDate}`;
-    }
-
-    const hasLineInfo = Boolean(overdue || assignee || datesText);
-
-    const rawProgress = task.progress?.progress_percentage;
-    const progress = Number(rawProgress);
-    const showProgress = Number.isFinite(progress) && progress > 0;
-    const isAwaitingVerification = !showProgress && task.work_status === "COMPLETED";
-
-    const taskHref = `/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`;
-
-    return (
-        <article className="rare-premium-task-card transition-all hover:border-border-strong hover:shadow-sm">
-            <Link
-                to={expanded ? `/supervisor/projects/${projectId}/tasks` : taskHref}
-                onClick={(event) => {
-                    event.preventDefault();
-                    onToggle();
-                }}
-                aria-expanded={expanded}
-                aria-controls={`task-details-${task.id}`}
-                aria-label={`${task.title || "Untitled Task"}`}
-                className="rare-task-summary group flex min-h-11 min-w-0 flex-col gap-1.5 p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            >
-                {/* Priority dot plus title, chevron */}
-                <span className="flex min-w-0 items-center gap-2">
-                    <span
-                        aria-hidden="true"
-                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                            priorityTone[task.priority] || "bg-muted"
-                        }`}
-                    />
-                    <span className="rare-task-summary-title min-w-0 flex-1 truncate text-base font-semibold leading-5 text-ink">
-                        {task.title || "Untitled Task"}
-                    </span>
-                    <ChevronRight
-                        size={18}
-                        aria-hidden="true"
-                        className={`shrink-0 text-muted transition-transform ${
-                            expanded ? "rotate-90" : ""
-                        }`}
-                    />
-                </span>
-
-                {/* Chips for Work status and Approval status only */}
-                <span className="mt-1 flex min-w-0 flex-wrap gap-1.5"><span className="rounded-full bg-app px-2.5 py-1 text-xs font-semibold leading-4 text-muted">Priority: {readable(task.priority)}</span>
-                    {[
-                        ["Work", task.work_status],
-                        ["Approval", task.approval_status],
-                    ]
-                        .filter(([, value]) => value)
-                        .map(([label, value]) => (
-                            <span
-                                key={label}
-                                className={`max-w-full truncate rounded-full px-2.5 py-1 text-xs font-semibold leading-4 ${
-                                    statusColors[value] || "bg-app text-muted"
-                                }`}
-                            >
-                                {label}: {readable(value)}
-                            </span>
-                        ))}
-                </span>
-
-                {/* One line with assignee and dates (hide "Not specified") */}
-                {hasLineInfo && (
-                    <span className="rare-task-summary-meta flex min-w-0 items-center gap-1 truncate text-xs font-medium leading-4 text-muted">
-                        {overdue && <span className="shrink-0 font-semibold text-red-700">Overdue · </span>}
-                        {assignee && <span className="truncate">{assignee}</span>}
-                        {assignee && datesText && <span className="shrink-0"> · </span>}
-                        {datesText && <span className="shrink-0">{datesText}</span>}
-                    </span>
-                )}
-
-                {/* Show the progress bar only when progress is above 0, otherwise "Completed, awaiting verification" when that applies */}
-                {showProgress ? (
-                    <TaskProgress progress={task.progress} />
-                ) : (
-                    isAwaitingVerification && (
-                        <span className="truncate text-xs font-medium text-warning">
-                            Completed, awaiting verification
-                        </span>
-                    )
-                )}
-
-                {Object.keys(taskScheduleErrors(task, project)).length > 0 && (
-                    <span role="status" className="rounded-lg bg-app p-2 text-xs text-muted">
-                        Task schedule conflicts with current project schedule.
-                    </span>
-                )}
-            </Link>
-
-            {expanded && (
-                <div id={`task-details-${task.id}`}>
-                    <ExpandedTask
-                        key={task.id}
-                        task={detail}
-                        loading={detailLoading}
-                        error={detailError}
-                        onRetry={onRetry}
-                        onEdit={onEdit}
-                        onStatusChanged={onStatusChanged}
-                    />
-                </div>
-            )}
-        </article>
-    );
-}
-
 export default function SupervisorProjectTasks() {
     const { projectId } = useParams();
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const linkedTaskId = searchParams.get("task");
 
@@ -897,39 +292,12 @@ export default function SupervisorProjectTasks() {
     const [filterSheetOpen, setFilterSheetOpen] = useState(false);
     const filterButtonRef = useRef(null);
 
-    const [expandedId, setExpandedId] = useState(null);
-    const expandedCardRef = useRef(null);
-    const [expandedTask, setExpandedTask] = useState(null);
-    const [detailLoading, setDetailLoading] = useState(false);
-    const [detailError, setDetailError] = useState("");
-    const [detailRefreshKey, setDetailRefreshKey] = useState(0);
-
     const [formOpen, setFormOpen] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
     const [bulkOpen, setBulkOpen] = useState(false);
     const [delayReportTask, setDelayReportTask] = useState(null);
     const [notice, setNotice] = useState("");
     const [creationError, setCreationError] = useState("");
-
-    useEffect(() => {
-        if (!expandedId) return;
-        function collapseOutside(event) {
-            if (!window.matchMedia("(min-width: 1024px)").matches ||
-                event.button !== 0 || formOpen || bulkOpen || delayReportTask ||
-                filterSheetOpen || document.querySelector('dialog[open], [role="dialog"]:not(.supervisor-task-popup), [role="alertdialog"]') ||
-                !expandedCardRef.current || expandedCardRef.current.contains(event.target)) return;
-            setExpandedId(null);
-            setExpandedTask(null);
-            setDetailError("");
-            setSearchParams((previous) => {
-                const next = new URLSearchParams(previous);
-                next.delete("task");
-                return next;
-            }, { replace: true });
-        }
-        document.addEventListener("pointerdown", collapseOutside);
-        return () => document.removeEventListener("pointerdown", collapseOutside);
-    }, [expandedId, formOpen, bulkOpen, delayReportTask, filterSheetOpen, setSearchParams]);
 
     useEffect(() => {
         if (searchParams.get("create") !== "true" || loading || String(project?.id) !== projectId || error) return;
@@ -978,43 +346,8 @@ export default function SupervisorProjectTasks() {
         };
     }, [projectId, refreshKey]);
 
-    // LOAD EXPANDED TASK
-    useEffect(() => {
-        if (!expandedId) return;
-
-        let cancelled = false;
-
-        async function loadDetail() {
-            setDetailLoading(true);
-            setDetailError("");
-            setExpandedTask(null);
-
-            try {
-                const result = await taskApi.get(expandedId);
-
-                if (!cancelled) setExpandedTask(result);
-            } catch (err) {
-                if (!cancelled) {
-                    setDetailError(
-                        getError(err, "Unable to load task details.")
-                    );
-                }
-            } finally {
-                if (!cancelled) setDetailLoading(false);
-            }
-        }
-
-        loadDetail();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [expandedId, detailRefreshKey]);
-
     // RESET WHEN SWITCHING PROJECTS
     useEffect(() => {
-        setExpandedId(null);
-        setExpandedTask(null);
         setSearch("");
         setApproval("");
         setPriority("");
@@ -1144,10 +477,6 @@ export default function SupervisorProjectTasks() {
 
     function refreshTasks() {
         setRefreshKey((value) => value + 1);
-
-        if (expandedId) {
-            setDetailRefreshKey((value) => value + 1);
-        }
     }
 
     function clearFilters() {
@@ -1164,37 +493,8 @@ export default function SupervisorProjectTasks() {
         setPage(1);
     }
 
-    function toggleTask(taskId) {
-        if (String(expandedId) === String(taskId)) {
-            setExpandedId(null);
-            setExpandedTask(null);
-            setDetailError("");
-            const next = new URLSearchParams(searchParams);
-            next.delete("task");
-            setSearchParams(next, { replace: true });
-            return;
-        }
-
-        setExpandedTask(null);
-        setDetailError("");
-        setExpandedId(taskId);
-        const next = new URLSearchParams(searchParams);
-        next.set("task", String(taskId));
-        setSearchParams(next, { replace: true });
-    }
-
-    function retryDetails() {
-        setDetailRefreshKey((value) => value + 1);
-    }
-
     function openCreate() {
         setEditingTask(null);
-        setFormOpen(true);
-        setNotice("");
-    }
-
-    function openEdit(task) {
-        setEditingTask(task);
         setFormOpen(true);
         setNotice("");
     }
@@ -1223,58 +523,15 @@ export default function SupervisorProjectTasks() {
         refreshTasks();
     }
 
-    function handleStatusChanged(action) {
-        setNotice(
-            ({
-                start: "Task started successfully.",
-                complete: "Task completed successfully.",
-                cancel: "Cancellation request submitted for Admin approval.",
-            })[action] || "Task updated successfully."
-        );
-
-        refreshTasks();
-    }
-
     function handleDelayReportSaved(report) {
         setDelayReportTask(null);
         setNotice(`Delay report submitted: ${report.status === "PENDING" ? "Pending Admin review" : report.status}.`);
-        setDetailRefreshKey((value) => value + 1);
     }
 
-    // SUPPORT LINKS FROM TIMELINE AND NOTIFICATIONS
+    // Preserve bookmarked notification/timeline links while using the full page.
     useEffect(() => {
-        if (!linkedTaskId || loading || error || !tasks.length) {
-            return;
-        }
-
-        const index = tasks.findIndex(
-            (task) => String(task.id) === String(linkedTaskId)
-        );
-
-        if (index === -1) return;
-
-        setSearch("");
-        setApproval("");
-        setPriority("");
-        setWorkStatus("");
-        setSort("order");
-
-        const ordered = [...tasks].sort(
-            (a, b) =>
-                Number(a.display_order ?? 999999) -
-                Number(b.display_order ?? 999999) ||
-                String(a.created_at || "").localeCompare(
-                    String(b.created_at || "")
-                )
-        );
-
-        const sortedIndex = ordered.findIndex(
-            (task) => String(task.id) === String(linkedTaskId)
-        );
-
-        setPage(Math.floor(sortedIndex / pageSize) + 1);
-        setExpandedId(linkedTaskId);
-    }, [linkedTaskId, loading, error, tasks, pageSize]);
+        if (linkedTaskId) navigate(`/supervisor/projects/${projectId}/tasks/${encodeURIComponent(linkedTaskId)}`, { replace: true });
+    }, [linkedTaskId, projectId, navigate]);
 
     return (
         <div className="supervisor-project-tasks rare-tasks mx-auto w-full min-w-0 max-w-[1400px] space-y-4 pb-8 text-ink">
@@ -1402,7 +659,7 @@ export default function SupervisorProjectTasks() {
                         id: task.id,
                         name: task.title,
                         context: task.worker_name,
-                        to: `/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`,
+                        to: `/supervisor/projects/${projectId}/tasks/${encodeURIComponent(task.id)}`,
                     }))}
                     className="min-w-0 flex-1"
                 />
@@ -1552,51 +809,17 @@ export default function SupervisorProjectTasks() {
                                     : "flex flex-col gap-3"
                             }
                         >
-                            {pageTasks.map((task) => {
-                                const expanded =
-                                    String(expandedId) === String(task.id);
-
-                                return (
-                                    <div key={task.id} ref={expanded ? expandedCardRef : null} className="rare-task-card-item min-w-0">
-                                        <MobileTaskCard
-                                            task={task}
-                                            to={`/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`}
-                                            showProject={false}
-                                            mobilePresentation={layout === "list" ? "row" : "gallery"}
-                                            expanded={expanded}
-                                            onClick={(event) => {
-                                                event.preventDefault();
-                                                toggleTask(task.id);
-                                            }}
-                                        />
-                                        {!expanded && canReportDelay(task, project) && <div className="rare-task-card-actions flex justify-end lg:hidden">
-                                            <button type="button" aria-label={`Report delay for ${task.title || "task"}`} onClick={() => setDelayReportTask(task)} className="min-h-11 px-3 text-sm font-semibold text-muted underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">Report delay</button>
-                                        </div>}
-                                        {expanded && createPortal(<div className="supervisor-task-backdrop hidden lg:block" aria-hidden="true" onPointerDown={(event) => {
-                                            if (event.button !== 0) return;
-                                            event.preventDefault();
-                                            event.stopPropagation();
-                                            toggleTask(task.id);
-                                        }} />, document.body)}
-                                        {expanded && (
-                                            <div id={`task-details-${task.id}`} className="supervisor-task-popup overflow-hidden rounded-b-xl border-x border-b border-border bg-surface">
-                                                <ExpandedTask
-                                                    key={task.id}
-                                                    task={expandedTask}
-                                                    loading={detailLoading}
-                                                    error={detailError}
-                                                    onCollapse={() => toggleTask(task.id)}
-                                                    onRetry={retryDetails}
-                                                    onEdit={openEdit}
-                                                    onStatusChanged={handleStatusChanged}
-                                                    canReportDelay={canReportDelay(expandedTask, project)}
-                                                    onReportDelay={setDelayReportTask}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            {pageTasks.map((task) => (
+                                <div key={task.id} className="rare-task-card-item min-w-0">
+                                    <MobileTaskCard task={task}
+                                        to={`/supervisor/projects/${projectId}/tasks/${encodeURIComponent(task.id)}`}
+                                        showProject={false}
+                                        mobilePresentation={layout === "list" ? "row" : "gallery"} />
+                                    {canReportDelay(task, project) && <div className="rare-task-card-actions flex justify-end lg:hidden">
+                                        <button type="button" aria-label={`Report delay for ${task.title || "task"}`} onClick={() => setDelayReportTask(task)} className="min-h-11 px-3 text-sm font-semibold text-muted underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">Report delay</button>
+                                    </div>}
+                                </div>
+                            ))}
                         </div>
                     ) : (
                         <div className="rounded-[24px] border border-border bg-surface px-5 py-14 text-center">
@@ -1669,8 +892,6 @@ export default function SupervisorProjectTasks() {
                                     type="button"
                                     disabled={safePage === 1}
                                     onClick={() => {
-                                        setExpandedId(null);
-                                        setExpandedTask(null);
                                         setPage((value) =>
                                             Math.max(1, value - 1)
                                         );
@@ -1697,8 +918,6 @@ export default function SupervisorProjectTasks() {
                                     type="button"
                                     disabled={safePage >= pageCount}
                                     onClick={() => {
-                                        setExpandedId(null);
-                                        setExpandedTask(null);
                                         setPage((value) =>
                                             Math.min(pageCount, value + 1)
                                         );

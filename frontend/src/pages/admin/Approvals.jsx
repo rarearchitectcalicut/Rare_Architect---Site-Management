@@ -8,6 +8,7 @@ import ApprovalFilters from "../../components/approvals/ApprovalFilters";
 import RequestList from "../../components/approvals/RequestList";
 import RequestReview from "../../components/approvals/RequestReview";
 import { queueLabels } from "../../components/approvals/queueData";
+import LoadingScreen from "../../components/LoadingScreen";
 
 export default function AdminApprovals() {
     const { queues, projects, errors, loading, refresh, revision, counts, delaySummary } = useApprovalQueues();
@@ -63,6 +64,7 @@ export default function AdminApprovals() {
     function clearFilters() { list.clear(); if (tab === "history") setParams({ tab: "history" }); }
 
     return <div className="admin-approval-center space-y-6 pb-8">
+        {(loading || visibleLoading) && <LoadingScreen message="Loading Approval Center..." />}
         <ApprovalOverview loading={loading} count={pendingCount} onRefresh={refresh} />
         <ApprovalQueueTabs counts={counts} queues={queues} tab={tab} onChange={changeTab} loading={loading} />
         {notice && <p role="status" className="rounded-2xl bg-pastel-mint p-4 text-sm text-success">{notice}</p>}

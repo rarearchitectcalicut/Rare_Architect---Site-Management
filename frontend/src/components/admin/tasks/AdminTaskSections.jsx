@@ -3,12 +3,11 @@ import { useEffect, useState } from "react";
 import { taskApi } from "../../../api/taskApi";
 import { ProjectSearch } from "../../daily-reports/ReportProjectPicker";
 import { Link } from "react-router-dom";
-import { ClipboardList, FileText, GitPullRequest, History, Ruler } from "lucide-react";
+import TaskSectionNavigation from "../../tasks/TaskSectionNavigation";
 import AdminTaskOverview from "./AdminTaskOverview";
 import { formatDate, formatText } from "../../approvals/approvalUtils";
 
 const taskTabs = [["overview", "Overview"], ["documents", "Documents"], ["work", "Work & Reports"], ["changes", "Changes & Delays"], ["history", "History"]];
-const tabIcons = { overview: ClipboardList, documents: FileText, work: Ruler, changes: GitPullRequest, history: History };
 const button = "task-secondary px-3 py-2.5 text-xs font-semibold text-muted disabled:opacity-50";
 
 function Resource({ name, resources, onRetry, children }) {
@@ -137,14 +136,8 @@ function TaskHistory({ events }) {
 
 export default function AdminTaskSections({ task, tab, onTabChange, resources, onRetry, onVersions, onDownload, downloading, downloadError }) {
     const resourceProps = { resources, onRetry };
-    return <section className="task-panel task-enter min-w-0" style={{ "--task-delay": "100ms" }}>
-        <nav aria-label="Task detail sections" className="flex gap-1 overflow-x-auto border-b border-border bg-surface-soft p-3 sm:px-5">{taskTabs.map(([id, label]) => {
-            const Icon = tabIcons[id];
-            return <button key={id} type="button" aria-pressed={tab === id} aria-controls="task-section" onClick={() => onTabChange(id)}
-                className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-3 text-xs font-semibold ${tab === id ? "bg-ink text-surface shadow-[0_4px_10px_#211E1A15]" : "text-muted hover:bg-border hover:text-ink"}`}>
-                <Icon size={16} aria-hidden="true" />{label}
-            </button>;
-        })}</nav>
+    return <section className="rare-task-sections task-panel task-enter min-w-0" style={{ "--task-delay": "100ms" }}>
+        <TaskSectionNavigation tabs={taskTabs.map(([id, label]) => [id, ({ documents: "Docs", work: "Work", changes: "Changes" })[id] || label, label])} activeTab={tab} onChange={onTabChange} panelId="task-section" />
         <div id="task-section" key={tab} data-task-tab={tab} className="task-enter space-y-6 p-4 sm:p-7" style={{ "--task-delay": "0ms" }} aria-label={taskTabs.find(([id]) => id === tab)?.[1]}>
             {tab === "overview" && <AdminTaskOverview task={task} />}
             {tab === "documents" && <Documents taskId={task.id} {...resourceProps} onVersions={onVersions} onDownload={onDownload} downloading={downloading} downloadError={downloadError} />}

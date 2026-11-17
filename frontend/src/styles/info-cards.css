@@ -92,7 +92,6 @@
 .rare-task-card-item > .rare-premium-task-card { border: 0; border-radius: 0; box-shadow: none; }
 .rare-task-card-item:focus-within { outline: 3px solid var(--color-focus); outline-offset: 3px; }
 .rare-task-card-actions { padding: .5rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-surface-soft); }
-.expanded-supervisor-task .expanded-task-details.rare-info-grid { grid-template-columns: minmax(0, 1fr); border-radius: 1.25rem; background: var(--color-surface); padding: 1.25rem; }
 .rare-task-overview { display: grid; gap: 1rem; }
 .rare-task-overview .rare-info-card { align-self: start; }
 .rare-task-overview-description { display: grid; gap: 1rem; }
@@ -104,7 +103,6 @@
 .rare-task-audit[open] summary svg { transform: rotate(180deg); }
 .rare-task-audit .rare-info-grid { padding-block: 1rem .25rem; }
 @media (min-width: 640px) {
-  .expanded-supervisor-task .expanded-task-details.rare-info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rare-project-card { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); align-items: center; gap: .875rem; padding: .875rem; border-radius: 1.25rem; }
   .rare-project-card-cover, .rare-project-card[data-layout="list"] .rare-project-card-cover { width: 4.5rem; height: 5.5rem; min-height: 0; margin: 0; border-radius: .75rem; }
   .rare-project-card-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .5rem; padding: 0; }
@@ -190,4 +188,64 @@
 }
 @media (max-width: 767px) {
   .rare-app .rare-report-register-header { flex-direction: column; align-items: stretch; gap: 16px; }
+}
+
+/* Supervisor task details use a normal route, with the same workspace rhythm as Admin. */
+.rare-task-sections { --task-tabs-top: 5.5rem; }
+.rare-task-tab-dock { position: sticky; top: var(--task-tabs-top); z-index: 10; padding: 4px 0 8px; scroll-margin-top: var(--task-tabs-top); background: var(--rare-canvas-background); background-attachment: fixed; }
+.rare-task-tab-dock::after { content: ""; position: absolute; inset: auto 0 -8px; height: 8px; background: var(--rare-canvas-background); background-attachment: fixed; mask-image: linear-gradient(#000,transparent); pointer-events: none; }
+.rare-task-tabs, .rare-app main .rare-task-tabs { display: flex; flex-wrap: nowrap; gap: 4px; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding: 4px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); box-shadow: 0 3px 10px #313f5b06; }
+.rare-task-tabs::-webkit-scrollbar { display: none; }
+.rare-task-tabs button { display: inline-flex; align-items: center; justify-content: center; flex: 1 0 auto; height: 44px; min-height: 44px; padding: 0 16px; white-space: nowrap; border-radius: 999px; font-size: 12px; line-height: 1.2; font-weight: 600; color: var(--color-muted); transition: background 150ms ease,color 150ms ease; }
+.rare-task-tabs button:hover { background: var(--color-app); }
+.rare-task-tabs button[aria-pressed="true"] { background: var(--color-primary); color: white; }
+.rare-task-tabs button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.supervisor-task-overview { display: grid; gap: 16px; align-items: start; }
+.supervisor-task-overview > *, .supervisor-task-facts > *, .supervisor-task-content { min-width: 0; }
+.supervisor-task-facts { padding: 20px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); }
+.supervisor-task-statuses { margin: 0; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--color-border); }
+.supervisor-task-statuses > div { padding: 0; background: transparent; }
+.supervisor-task-statuses > div > p { font-size: 9px; letter-spacing: .04em; font-weight: 600; }
+.supervisor-task-statuses > div > span { padding: 5px 10px; font-size: 10px; }
+.supervisor-task-fields.rare-info-grid { margin-top: 16px; padding: 0; background: transparent; gap: 16px; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.supervisor-task-description { margin: 0; grid-column: 1 / -1; }
+.supervisor-task-description > div { background: var(--color-surface); }
+.supervisor-task-work > section { margin-top: 0; }
+.supervisor-task-content #supervisor-task-section > div > section { margin-top: 0; background: var(--color-surface); }
+@media (min-width: 768px) {
+  .rare-task-tab-dock { position: static; padding: 0; background: transparent; }
+  .rare-task-tab-dock::after { display: none; }
+  .rare-task-tabs, .rare-app main .rare-task-tabs { width: max-content; }
+  .rare-task-tabs button { flex: 0 0 auto; }
+}
+@media (min-width: 1024px) {
+  .supervisor-task-overview { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); }
+  .supervisor-task-fields.rare-info-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@media (max-width: 639px) { .rare-task-sections { --task-tabs-top: 4.5rem; } .rare-task-tabs button { padding-inline: 12px; } .supervisor-task-facts { padding: 16px; } }
+@media (prefers-reduced-motion: reduce) { .rare-task-tabs button { transition: none; } }
+
+.admin-task-details-page > .rare-task-sections.task-panel { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+
+/* Separate the mobile header, navigation and white information sheet like desktop. */
+@media (max-width: 767px) {
+  .admin-task-details-page > *, .supervisor-task-details-page > * { margin-block: 0 16px; }
+  .admin-task-details-page > :last-child, .supervisor-task-details-page > :last-child { margin-bottom: 0; }
+  .rare-app .admin-task-details-page > header.admin-task-legacy-header { padding: 0; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-surface); box-shadow: none; }
+  .admin-task-details-page > .lg\:hidden { padding: 12px 16px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); }
+  .admin-task-details-page #task-section, .supervisor-task-details-page #supervisor-task-section { margin-top: 16px; padding: 16px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-surface); }
+  .admin-task-details-page #task-section > * { margin-block: 0; }
+  .admin-task-details-page .rare-task-overview, .admin-task-details-page .rare-task-overview > div, .admin-task-details-page .rare-task-overview-description, .supervisor-task-overview, .supervisor-task-description { gap: 0; }
+  .admin-task-details-page .rare-task-overview .rare-info-card, .supervisor-task-overview > .supervisor-task-facts, .supervisor-task-overview > .supervisor-task-work, .supervisor-task-description > div { border: 0; border-radius: 0; border-bottom: 1px solid var(--color-border); padding: 16px 0; background: var(--color-surface); box-shadow: none; }
+  .admin-task-details-page #task-section[data-task-tab="work"] > div + div, .admin-task-details-page #task-section[data-task-tab="changes"] > div + div { border-top: 1px solid var(--color-border); margin-top: 16px; padding-top: 16px; }
+  .admin-task-details-page .admin-task-documents > article, .admin-task-details-page .admin-task-work-entries > article, .admin-task-details-page .admin-task-changes > article { border-radius: 0; border-inline: 0; padding-inline: 0; box-shadow: none; }
+  .admin-task-details-page #task-section[data-task-tab="history"] > ol { padding-top: 8px; }
+  .admin-task-details-page #task-section[data-task-tab="history"] li { margin-block: 0; background: var(--color-surface); border-radius: 0; border-bottom: 1px solid var(--color-border); }
+  .supervisor-task-details-page #supervisor-task-section > section, .supervisor-task-content #supervisor-task-section > div > section { margin: 0; padding: 16px 0; border: 0; border-radius: 0; background: var(--color-surface); box-shadow: none; }
+  .supervisor-task-decisions article, .supervisor-task-delays article { border-radius: 0; border-inline: 0; box-shadow: none; }
+  .rare-task-sections .rare-pagination { grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap: 8px; }
+  .rare-task-sections .rare-pagination > :first-child { grid-column: 1; grid-row: 1; }
+  .rare-task-sections .rare-pagination > :nth-child(2) { grid-column: 2; grid-row: 1; font-size: 11px; }
+  .rare-task-sections .rare-pagination > :last-child { grid-column: 3; grid-row: 1; }
+  .rare-task-sections .rare-pagination > button { padding-inline: 8px; font-size: 11px; }
 }

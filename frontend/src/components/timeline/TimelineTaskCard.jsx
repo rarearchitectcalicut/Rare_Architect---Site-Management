@@ -118,8 +118,7 @@ export default function TimelineTaskCard({
         );
 
     const taskLink =
-        `/supervisor/projects/${projectId}/tasks` +
-        `?task=${encodeURIComponent(task.id)}`;
+        `/supervisor/projects/${projectId}/tasks/${encodeURIComponent(task.id)}`;
 
     const quantity =
         task.planned_quantity !== null &&

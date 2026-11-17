@@ -468,7 +468,7 @@ test("Supervisor register links to the existing selected-task workflow without A
     const ui = await registerHarness("SUPERVISOR");
     ui.requests[0].resolve(registerResponse("SUPERVISOR")); await flushExecution(); ui.render();
     const card = ui.find((node) => node.props?.showProject);
-    assert.equal(card.props.to, `/supervisor/projects/${registerTask.project}/tasks?task=${registerTask.id}`);
+    assert.equal(card.props.to, `/supervisor/projects/${registerTask.project}/tasks/${registerTask.id}`);
     assert.equal(card.props.actionLabel, "View Task");
     assert.equal(card.props.approvalTo, undefined);
     assert.equal(ui.find((node) => node.type === "h1").props.children, "My Tasks");
@@ -548,7 +548,7 @@ test("sidebar Tasks destinations and all existing project-task routes stay regis
     assert(exports.getNavigation("ADMIN").some((item) => item.path === "/admin/tasks" && item.label === "All Tasks"));
     assert(exports.getNavigation("SUPERVISOR").some((item) => item.path === "/supervisor/tasks" && item.label === "My Tasks"));
     const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
-    for (const path of ["/admin/tasks", "/supervisor/tasks", "/admin/projects/:projectId/tasks", "/admin/projects/:projectId/tasks/:taskId", "/supervisor/projects/:projectId/tasks"]) {
+    for (const path of ["/admin/tasks", "/supervisor/tasks", "/admin/projects/:projectId/tasks", "/admin/projects/:projectId/tasks/:taskId", "/supervisor/projects/:projectId/tasks", "/supervisor/projects/:projectId/tasks/:taskId"]) {
         assert.equal(app.split(`path="${path}"`).length - 1, 1);
     }
 });

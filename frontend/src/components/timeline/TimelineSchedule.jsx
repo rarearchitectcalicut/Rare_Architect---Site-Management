@@ -266,7 +266,7 @@ function ScheduleTaskRow({
 
     const href = getTaskHref
         ? getTaskHref(task)
-        : `/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`;
+        : `/supervisor/projects/${projectId}/tasks/${encodeURIComponent(task.id)}`;
 
     return (
         <div className="flex min-h-[78px] border-b border-border last:border-b-0">

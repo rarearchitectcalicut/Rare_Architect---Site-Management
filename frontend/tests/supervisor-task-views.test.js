@@ -14,7 +14,7 @@ const task = {
     priority: "HIGH", approval_status: "APPROVED", work_status: "IN_PROGRESS",
     supervisors: [{ name: "Laya" }], end_date: "2026-11-20", progress: { progress_percentage: 40 },
 };
-const to = "/supervisor/projects/project-1/tasks?task=task-1";
+const to = "/supervisor/projects/project-1/tasks/task-1";
 function render(props = {}) {
     return renderToStaticMarkup(React.createElement(MemoryRouter, null,
         React.createElement(exports.MobileTaskCard, { task, to, ...props })));
@@ -64,10 +64,11 @@ test("global Supervisor branches opt in below the existing breakpoint", async ()
     assert.ok(branch.includes('hidden min-[481px]:block'));
     assert.ok(!source.slice(0, source.indexOf(': layout === "list"')).includes('mobilePresentation='));
 });
-test("project register maps selected mode without replacing expansion or delay actions", async () => {
+test("project register maps selected mode to the detail page and retains delay actions", async () => {
     const source = await readFile(new URL("../src/pages/supervisor/ProjectTasks.jsx", import.meta.url), "utf8");
     assert.ok(source.includes('mobilePresentation={layout === "list" ? "row" : "gallery"}'));
     assert.ok(source.includes('grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3'));
-    assert.ok(source.includes('toggleTask(task.id)'));
+    assert.ok(source.includes('tasks/${encodeURIComponent(task.id)}'));
+    assert.ok(!source.includes('supervisor-task-popup'));
     assert.ok(source.includes('setDelayReportTask(task)'));
 });

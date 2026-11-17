@@ -41,11 +41,21 @@ try {
     await page.goto(`http://127.0.0.1:5174/${role.toLowerCase()}/dashboard`);
     await open();
     if (await editor.inputValue() !== '') throw new Error('Account text leaked');
+    await dialog.screenshot({ path: fileURLToPath(new URL(`${role.toLowerCase()}-empty.png`, output)) });
     for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       const text = `${role} notes at ${width}px\n\nMeasure the site before approving work.`;
       await editor.fill(text); await saved();
       if (notes[role].content !== text) throw new Error('Autosave did not persist exact text');
+      const writeCount = writes.length;
+      for (const tone of ['Lilac', 'Sage', 'Ivory']) {
+        const button = page.getByRole('button', { name: `${tone} paper`, exact: true });
+        await button.click();
+        if (await button.getAttribute('aria-pressed') !== 'true') throw new Error('Paper selection not exposed');
+        const size = await button.boundingBox();
+        if (size.width < 44 || size.height < 44) throw new Error('Paper control too small');
+      }
+      if (writes.length !== writeCount || await editor.inputValue() !== text) throw new Error('Paper tone changed note data');
       const metrics = await dialog.evaluate((element) => ({ width: element.clientWidth, scroll: element.scrollWidth, left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right, viewport: innerWidth }));
       if (metrics.scroll > metrics.width || metrics.left < 0 || metrics.right > width) throw new Error(JSON.stringify(metrics));
       await dialog.screenshot({ path: fileURLToPath(new URL(`${role.toLowerCase()}-${width}.png`, output)) });
@@ -58,6 +68,14 @@ try {
     }
     await page.reload(); await open();
     if (await editor.inputValue() !== notes[role].content) throw new Error('Reload failed');
+    await page.setViewportSize({ width: 390, height: 560 });
+    await page.getByRole('button', { name: 'Sage paper', exact: true }).click();
+    await editor.scrollIntoViewIfNeeded();
+    await editor.fill('Short viewport editing'); await saved();
+    const shortBounds = await dialog.boundingBox();
+    if (shortBounds.y < 0 || shortBounds.y + shortBounds.height > 561) throw new Error('Short viewport dialog is clipped');
+    await page.getByRole('button', { name: 'Close personal notes', exact: true }).click();
+    await page.setViewportSize({ width: 1440, height: 900 }); await open();
     failSave = true;
     await editor.fill('Unsaved text must survive');
     await page.getByRole('button', { name: 'Retry save' }).waitFor();

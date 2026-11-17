@@ -89,3 +89,22 @@ dialog :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"
 @media (prefers-reduced-motion: reduce) {
   .rare-rail-link, .rare-rail-tooltip, .rare-pill-navigation > a { transition: none; }
 }
+
+/* Approval queues mirror report navigation without stacking options on phones. */
+.admin-approval-center { --approval-nav-top: 5.5rem; min-width: 0; }
+.approval-queue-nav-dock { position: sticky; top: var(--approval-nav-top); z-index: 10; min-width: 0; max-width: 100%; padding: 4px 0 8px; scroll-margin-top: var(--approval-nav-top); background: var(--rare-canvas-background); background-attachment: fixed; }
+.approval-queue-nav-dock::after { content: ""; position: absolute; inset: auto 0 -8px; height: 8px; background: var(--rare-canvas-background); background-attachment: fixed; mask-image: linear-gradient(#000,transparent); pointer-events: none; }
+.rare-app main .approval-queue-nav { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 4px; width: 100%; padding: 4px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); box-shadow: 0 3px 10px #313f5b08; }
+.rare-app main .approval-queue-nav > button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: 100%; min-width: 0; min-height: 44px; height: 44px; padding: 0 6px; border-radius: 999px; white-space: nowrap; font-size: 12px; font-weight: 600; color: var(--color-muted); }
+.rare-app main .approval-queue-nav > button[aria-pressed="true"] { background: var(--color-primary); color: white; }
+.approval-tab-compact-label, .approval-tab-phone-label { display: none; }
+@media (max-width: 1279px) { .approval-tab-full-label { display: none; } .approval-tab-compact-label { display: inline; } }
+@media (max-width: 639px) {
+  .admin-approval-center { --approval-nav-top: 4.5rem; }
+  .rare-app main .approval-queue-nav { gap: 0; }
+  .rare-app main .approval-queue-nav > button { padding-inline: 2px; font-size: 11px; }
+  .approval-tab-compact-label, .approval-tab-count { display: none; }
+  .approval-tab-phone-label { display: inline; }
+}
+@media (min-width: 1024px) { .admin-approval-center { --approval-nav-top: 6.5rem; } }
+.approval-tab-count { min-width: 0; max-width: 3.5rem; overflow: hidden; text-overflow: ellipsis; }

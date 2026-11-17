@@ -8,6 +8,10 @@ import { loadSource } from "./source-loader.js";
 const task = { id: "task", project: "project", title: "Foundation", display_order: 2 };
 const tabs = ["overview", "documents", "work", "changes", "history"];
 const { exports: sections } = await loadSource("components/admin/tasks/AdminTaskSections.jsx");
+function navigationButtons(tree) {
+    const navigation = tree.props.children[0];
+    return navigation.type(navigation.props).props.children.props.children;
+}
 const resources = {
     progress: { data: { progress_percentage: 30 } }, entries: { data: [] },
     changes: { data: [] }, orders: { data: [{ id: "order", status: "PENDING", old_values: { timeline: [{ task_id: "task", display_order: 2 }] }, new_values: { timeline: [{ task_id: "task", display_order: 1 }] } }] },
@@ -21,7 +25,7 @@ for (const [tab, content] of [["overview", "Task essentials"], ["documents", "Se
         assert.ok(!html.includes('data-task-tab="timeline"'));
         assert.ok(!html.includes('>Timeline</button>'));
         const tree = sections.default({ task, tab, resources, onTabChange() {} });
-        const buttons = tree.props.children[0].props.children;
+        const buttons = navigationButtons(tree);
         assert.deepEqual(Array.from(buttons, button => button.key), tabs);
         if (tab === "changes") {
             assert.ok(html.includes("Previous task order"));
@@ -34,7 +38,7 @@ for (const [tab, content] of [["overview", "Task essentials"], ["documents", "Se
 test("each retained section button selects its existing section", () => {
     const selected = [];
     const tree = sections.default({ task, tab: "overview", resources, onTabChange: tab => selected.push(tab) });
-    for (const button of tree.props.children[0].props.children) button.props.onClick();
+    for (const button of navigationButtons(tree)) button.props.onClick();
     assert.deepEqual(selected, tabs);
 });
 
