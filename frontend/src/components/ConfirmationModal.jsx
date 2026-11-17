@@ -33,13 +33,13 @@ export default function ConfirmationModal({ title, message, confirmLabel, onDeci
                 // Escape dismisses this confirmation without closing the task form.
                 if (event.key === "Escape") event.stopPropagation();
             }}
-            className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-6 text-[#211E1A] shadow-2xl backdrop:bg-[#211E1A]/55 backdrop:backdrop-blur-sm sm:p-7"
+            className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-border bg-surface p-6 text-ink shadow-2xl backdrop:bg-ink/55 backdrop:backdrop-blur-sm sm:p-7"
         >
-            <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F1EADF] text-[#74614D]">
+            <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-app text-muted">
                 <ClipboardCheck size={24} aria-hidden="true" />
             </span>
             <h2 id={titleId} className="text-xl font-bold">{title}</h2>
-            <p id={messageId} className="mt-3 break-words text-sm leading-6 text-[#716658]">
+            <p id={messageId} className="mt-3 break-words text-sm leading-6 text-muted">
                 {message}
             </p>
             <div className="rare-action-footer mt-5 grid grid-cols-1 gap-3 sm:flex sm:justify-end">

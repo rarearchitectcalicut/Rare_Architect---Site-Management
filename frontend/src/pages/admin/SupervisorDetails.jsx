@@ -46,14 +46,14 @@ import {
 
 const inputClass = `
   h-12 w-full rounded-xl
-  border border-[#E4DCCD]
-  bg-[#FFFDFA] px-4
-  text-sm text-[#211E1A]
+  border border-border
+  bg-surface px-4
+  text-sm text-ink
   outline-none
   transition-all duration-200
-  placeholder:text-[#A99D8E]
-  focus:border-[#B7A58E]
-  focus:ring-4 focus:ring-[#E8DDD0]/60
+  placeholder:text-subtle
+  focus:border-border-strong
+  focus:ring-4 focus:ring-pastel-lavender/60
   disabled:opacity-50
 `;
 
@@ -221,11 +221,11 @@ async function loadAssignedProjects(supervisorId) {
 
 function IconTile({ icon: Icon, tone = "sand" }) {
     const tones = {
-        sand: "bg-[#F1EADF] text-[#74614D] group-hover:bg-[#E5D7C4]",
-        blue: "bg-[#E9F0FC] text-[#3565A5] group-hover:bg-[#D9E7FA]",
-        green: "bg-[#E8F3E9] text-[#368250] group-hover:bg-[#D8EBDC]",
-        violet: "bg-[#F0EAF8] text-[#7C5BA4] group-hover:bg-[#E7DCF5]",
-        rose: "bg-[#FAEBE8] text-[#B45E52] group-hover:bg-[#F5DED9]",
+        sand: "bg-app text-muted group-hover:bg-border",
+        blue: "bg-pastel-sky text-info group-hover:bg-[#D9E7FA]",
+        green: "bg-[#E8F3E9] text-success group-hover:bg-[#D8EBDC]",
+        violet: "bg-pastel-lavender text-violet group-hover:bg-[#E7DCF5]",
+        rose: "bg-[#FAEBE8] text-danger group-hover:bg-[#F5DED9]",
     };
 
     return (
@@ -267,14 +267,14 @@ function ConfirmModal({
             >
                 <h2
                     id="confirm-title"
-                    className="text-xl font-bold text-[#211E1A]"
+                    className="text-xl font-bold text-ink"
                 >
                     {title}
                 </h2>
 
                 <p
                     id="confirm-description"
-                    className="mt-3 text-sm leading-6 text-[#716658]"
+                    className="mt-3 text-sm leading-6 text-muted"
                 >
                     {description}
                 </p>
@@ -293,7 +293,7 @@ function ConfirmModal({
                         onClick={onConfirm}
                         className={
                             danger
-                                ? "rounded-xl bg-[#B5473E] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#97382F]"
+                                ? "rounded-xl bg-danger px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#97382F]"
                                 : darkButton
                         }
                     >
@@ -461,7 +461,7 @@ function ChangePasswordModal({
             )}
 
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-[#211E1A]/55 p-3 backdrop-blur-sm sm:p-6"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 p-3 backdrop-blur-sm sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -476,23 +476,23 @@ function ChangePasswordModal({
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="password-modal-title"
-                    className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-127.5 flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_24px_70px_rgba(33,30,26,0.25)]"
+                    className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-127.5 flex-col overflow-hidden rounded-[26px] border border-border bg-surface shadow-[0_24px_70px_rgba(33,30,26,0.25)]"
                 >
-                    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] p-5 sm:p-6">
+                    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
                         <div className="flex items-start gap-3">
-                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F0EAF8] text-[#7C5BA4]">
+                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-pastel-lavender text-violet">
                                 <KeyRound size={23} />
                             </span>
 
                             <div>
                                 <h2
                                     id="password-modal-title"
-                                    className="text-xl font-bold text-[#211E1A]"
+                                    className="text-xl font-bold text-ink"
                                 >
                                     Change Password
                                 </h2>
 
-                                <p className="mt-1 text-xs leading-5 text-[#716658]">
+                                <p className="mt-1 text-xs leading-5 text-muted">
                                     Set a new password for {name}.
                                 </p>
                             </div>
@@ -503,7 +503,7 @@ function ChangePasswordModal({
                             onClick={onClose}
                             disabled={saving}
                             aria-label="Close password modal"
-                            className="rounded-full bg-[#F1EADF] p-2 text-[#211E1A] hover:bg-[#E6DBCC] disabled:opacity-50"
+                            className="rounded-full bg-app p-2 text-ink hover:bg-border disabled:opacity-50"
                         >
                             <X size={19} />
                         </button>
@@ -511,12 +511,12 @@ function ChangePasswordModal({
 
                     <form onSubmit={handleSubmit} noValidate className="flex min-h-0 flex-col">
                         <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain p-5 sm:p-6">
-                            <div className="flex items-start gap-3 rounded-xl bg-[#F5EFE7] p-4">
+                            <div className="flex items-start gap-3 rounded-xl bg-surface-soft p-4">
                                 <LockKeyhole
                                     size={19}
-                                    className="mt-0.5 shrink-0 text-[#716658]"
+                                    className="mt-0.5 shrink-0 text-muted"
                                 />
-                                <p className="text-xs leading-6 text-[#665E53]">
+                                <p className="text-xs leading-6 text-muted">
                                     As an Admin, you can set a new Supervisor
                                     password without entering their current password.
                                 </p>
@@ -525,7 +525,7 @@ function ChangePasswordModal({
                             <div>
                                 <label
                                     htmlFor="supervisor-new-password"
-                                    className="text-sm font-semibold text-[#665E53]"
+                                    className="text-sm font-semibold text-muted"
                                 >
                                     New Password
                                     <span className="ml-1 text-red-600">*</span>
@@ -556,7 +556,7 @@ function ChangePasswordModal({
                                             showNew ? "Hide new password" : "Show new password"
                                         }
                                         onClick={() => setShowNew((value) => !value)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#716658] hover:bg-[#F1EADF]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted hover:bg-app"
                                     >
                                         {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
@@ -572,7 +572,7 @@ function ChangePasswordModal({
                             <div>
                                 <label
                                     htmlFor="supervisor-confirm-password"
-                                    className="text-sm font-semibold text-[#665E53]"
+                                    className="text-sm font-semibold text-muted"
                                 >
                                     Confirm New Password
                                     <span className="ml-1 text-red-600">*</span>
@@ -605,7 +605,7 @@ function ChangePasswordModal({
                                                 : "Show confirmation password"
                                         }
                                         onClick={() => setShowConfirm((value) => !value)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#716658] hover:bg-[#F1EADF]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted hover:bg-app"
                                     >
                                         {showConfirm
                                             ? <EyeOff size={18} />
@@ -669,16 +669,16 @@ function AssignedProjectCard({ project }) {
             to={`/admin/projects/${project.id}`}
             className="
         group flex min-h-40 flex-col overflow-hidden sm:flex-row
-        rounded-[20px] border border-[#E7DED2]
-        bg-[#FFFDFA]
+        rounded-[20px] border border-border
+        bg-surface
         transition-all duration-300
         hover:-translate-y-0.5
-        hover:border-[#C9B9A6]
+        hover:border-border-strong
         hover:shadow-[0_12px_28px_rgba(33,30,26,0.09)]
         motion-reduce:transform-none
       "
         >
-            <div className="relative h-32 w-full shrink-0 bg-[#E9DFD1] sm:h-auto sm:w-[37%]">
+            <div className="relative h-32 w-full shrink-0 bg-pastel-lavender sm:h-auto sm:w-[37%]">
                 {imageUrl && !imageFailed ? (
                     <img
                         src={imageUrl}
@@ -689,33 +689,33 @@ function AssignedProjectCard({ project }) {
                     />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <ImageOff size={30} className="text-[#9A8A76]" />
+                        <ImageOff size={30} className="text-muted" />
                     </div>
                 )}
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 p-4 sm:p-5">
                 <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#716658]">
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">
                         {project.category_name || "Project"}
                     </p>
 
-                    <h3 className="mt-2 wrap-break-word text-base font-bold text-[#211E1A]">
+                    <h3 className="mt-2 wrap-break-word text-base font-bold text-ink">
                         {project.name}
                     </h3>
 
-                    <p className="mt-2 flex items-start gap-1.5 text-xs text-[#716658]">
+                    <p className="mt-2 flex items-start gap-1.5 text-xs text-muted">
                         <MapPin size={15} className="shrink-0" />
                         {project.location || "Location not provided"}
                     </p>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs font-semibold uppercase text-[#716658]">
+                    <span className="text-xs font-semibold uppercase text-muted">
                         {statusLabel(project.status)}
                     </span>
 
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F1EADF] text-[#211E1A] transition-colors group-hover:bg-[#211E1A] group-hover:text-white">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-app text-ink transition-colors group-hover:bg-ink group-hover:text-white">
                         <ArrowUpRight size={18} />
                     </span>
                 </div>
@@ -970,12 +970,12 @@ export default function SupervisorDetails() {
             )}
 
             {/* BREADCRUMB */}
-            <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs text-[#716658]">
+            <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs text-muted">
                 <Link to="/admin/dashboard">Dashboard</Link>
                 <span>/</span>
                 <Link to="/admin/supervisors">Supervisors</Link>
                 <span>/</span>
-                <span className="font-semibold text-[#211E1A]">
+                <span className="font-semibold text-ink">
                     {name}
                 </span>
             </nav>
@@ -1016,43 +1016,43 @@ export default function SupervisorDetails() {
               PROFILE HERO
               ====================================== */}
 
-                    <section className="supervisor-detail-profile overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA]">
-                        <div className="h-2 bg-linear-to-r from-[#D7C4AA] via-[#EEE5D8] to-[#E3E8EE]" />
+                    <section className="supervisor-detail-profile overflow-hidden rounded-[26px] border border-border bg-surface">
+                        <div className="h-2 bg-linear-to-r from-border-strong via-border to-[#E3E8EE]" />
 
                         <div className="p-5 sm:p-7">
                             <Link
                                 to="/admin/supervisors"
-                                className="inline-flex items-center gap-2 text-xs font-semibold text-[#716658] transition-colors hover:text-[#211E1A]"
+                                className="inline-flex items-center gap-2 text-xs font-semibold text-muted transition-colors hover:text-ink"
                             >
                                 <ArrowLeft size={16} />
                                 Back to Supervisors
                             </Link>
 
                             <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap">
-                                <div className="flex h-17 w-17 shrink-0 items-center justify-center rounded-[22px] bg-linear-to-br from-[#D3C0A8] to-[#F1EADF] text-2xl font-bold text-[#514232] shadow-[0_8px_20px_rgba(33,30,26,0.08)]">
+                                <div className="flex h-17 w-17 shrink-0 items-center justify-center rounded-[22px] bg-linear-to-br from-border-strong to-app text-2xl font-bold text-ink shadow-[0_8px_20px_rgba(33,30,26,0.08)]">
                                     {name.charAt(0).toUpperCase()}
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
+                                    <p className="text-xs font-bold uppercase tracking-[0.17em] text-muted">
                                         RARE / Site Supervisor
                                     </p>
 
-                                    <h1 className="mt-2 wrap-break-word text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">
+                                    <h1 className="mt-2 wrap-break-word text-2xl font-bold tracking-tight text-ink sm:text-3xl">
                                         {name}
                                     </h1>
 
-                                    <p className="mt-1 text-sm text-[#716658]">
+                                    <p className="mt-1 text-sm text-muted">
                                         @{supervisor.username || "Not provided"}
                                     </p>
 
                                     <span className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${supervisor.is_active
-                                            ? "bg-[#E7F2E8] text-[#296F40]"
-                                            : "bg-[#F0E9E1] text-[#756B60]"
+                                            ? "bg-pastel-mint text-success"
+                                            : "bg-surface-soft text-muted"
                                         }`}>
                                         <span className={`h-1.5 w-1.5 rounded-full ${supervisor.is_active
                                                 ? "bg-[#3F9960]"
-                                                : "bg-[#9E9387]"
+                                                : "bg-muted"
                                             }`} />
                                         {supervisor.is_active ? "Active" : "Inactive"}
                                     </span>
@@ -1062,7 +1062,7 @@ export default function SupervisorDetails() {
                                     {supervisor.phone && (
                                         <a
                                             href={`tel:${supervisor.phone}`}
-                                            className="inline-flex items-center gap-2 rounded-xl bg-[#E7F2E8] px-4 py-3 text-sm font-semibold text-[#296F40] transition-all hover:-translate-y-0.5 hover:bg-[#D5EAD9] hover:shadow-sm"
+                                            className="inline-flex items-center gap-2 rounded-xl bg-pastel-mint px-4 py-3 text-sm font-semibold text-success transition-all hover:-translate-y-0.5 hover:bg-pastel-mint hover:shadow-sm"
                                         >
                                             <Phone size={17} />
                                             Call
@@ -1087,13 +1087,13 @@ export default function SupervisorDetails() {
               ACCOUNT DETAILS
               ====================================== */}
 
-                    <section className="supervisor-detail-account rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
+                    <section className="supervisor-detail-account rounded-3xl border border-border bg-surface p-5 sm:p-7">
                         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <h2 className="text-lg font-bold text-[#211E1A]">
+                                <h2 className="text-lg font-bold text-ink">
                                     Account Details
                                 </h2>
-                                <p className="mt-1 text-xs text-[#716658]">
+                                <p className="mt-1 text-xs text-muted">
                                     Personal information and account identity
                                 </p>
                             </div>
@@ -1119,7 +1119,7 @@ export default function SupervisorDetails() {
                                     <div key={field.key} className="min-w-0">
                                         <label
                                             htmlFor={`supervisor-${field.key}`}
-                                            className="text-xs font-bold uppercase tracking-[0.09em] text-[#716658]"
+                                            className="text-xs font-bold uppercase tracking-[0.09em] text-muted"
                                         >
                                             {field.label}{editing ? " *" : ""}
                                         </label>
@@ -1155,7 +1155,7 @@ export default function SupervisorDetails() {
                                                 )}
                                             </>
                                         ) : (
-                                            <p className="mt-2 wrap-break-word text-sm font-semibold text-[#211E1A]">
+                                            <p className="mt-2 wrap-break-word text-sm font-semibold text-ink">
                                                 {supervisor[field.key] || "Not provided"}
                                             </p>
                                         )}
@@ -1164,14 +1164,14 @@ export default function SupervisorDetails() {
                             </div>
 
                             {!editing && (
-                                <div className="mt-6 grid gap-5 border-t border-[#F0E9DF] pt-5 sm:grid-cols-2">
+                                <div className="mt-6 grid gap-5 border-t border-surface-soft pt-5 sm:grid-cols-2">
                                     <div className="group flex items-start gap-3">
                                         <IconTile icon={CalendarDays} tone="blue" />
                                         <div>
-                                            <p className="text-xs font-bold uppercase text-[#716658]">
+                                            <p className="text-xs font-bold uppercase text-muted">
                                                 Account Created
                                             </p>
-                                            <p className="mt-1 text-sm font-semibold text-[#211E1A]">
+                                            <p className="mt-1 text-sm font-semibold text-ink">
                                                 {formatAccountDate(
                                                     supervisor.created_at || supervisor.date_joined
                                                 )}
@@ -1182,10 +1182,10 @@ export default function SupervisorDetails() {
                                     <div className="group flex items-start gap-3">
                                         <IconTile icon={UserRound} tone="violet" />
                                         <div>
-                                            <p className="text-xs font-bold uppercase text-[#716658]">
+                                            <p className="text-xs font-bold uppercase text-muted">
                                                 Last Login
                                             </p>
-                                            <p className="mt-1 text-sm font-semibold text-[#211E1A]">
+                                            <p className="mt-1 text-sm font-semibold text-ink">
                                                 {formatAccountDate(supervisor.last_login)}
                                             </p>
                                         </div>
@@ -1194,7 +1194,7 @@ export default function SupervisorDetails() {
                             )}
 
                             {editing && (
-                                <div className="flex flex-wrap justify-end gap-3 border-t border-[#F0E9DF] mt-6 pt-5">
+                                <div className="flex flex-wrap justify-end gap-3 border-t border-surface-soft mt-6 pt-5">
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -1225,27 +1225,27 @@ export default function SupervisorDetails() {
               SECURITY & ACCESS
               ====================================== */}
 
-                    <section className="supervisor-detail-security rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
-                        <h2 className="text-lg font-bold text-[#211E1A]">
+                    <section className="supervisor-detail-security rounded-3xl border border-border bg-surface p-5 sm:p-7">
+                        <h2 className="text-lg font-bold text-ink">
                             Security & Access
                         </h2>
 
-                        <p className="mt-1 text-xs text-[#716658]">
+                        <p className="mt-1 text-xs text-muted">
                             Manage the Supervisor's login password and account status.
                         </p>
 
                         <div className="mt-6 grid gap-4 lg:grid-cols-2">
                             {/* PASSWORD */}
-                            <article className="group flex flex-col justify-between gap-5 rounded-[20px] border border-[#ECE3D9] bg-[#FFFDFA] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#D8C8E7] hover:shadow-[0_12px_26px_rgba(33,30,26,0.06)]">
+                            <article className="group flex flex-col justify-between gap-5 rounded-[20px] border border-border bg-surface p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#D8C8E7] hover:shadow-[0_12px_26px_rgba(33,30,26,0.06)]">
                                 <div className="flex items-start gap-3">
                                     <IconTile icon={KeyRound} tone="violet" />
 
                                     <div className="min-w-0">
-                                        <h3 className="font-bold text-[#211E1A]">
+                                        <h3 className="font-bold text-ink">
                                             Change Password
                                         </h3>
 
-                                        <p className="mt-2 text-xs leading-6 text-[#716658]">
+                                        <p className="mt-2 text-xs leading-6 text-muted">
                                             Set a new password without needing
                                             the Supervisor's current password.
                                         </p>
@@ -1263,7 +1263,7 @@ export default function SupervisorDetails() {
                             </article>
 
                             {/* STATUS */}
-                            <article className="group flex flex-col justify-between gap-5 rounded-[20px] border border-[#ECE3D9] bg-[#FFFDFA] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#C7DCCB] hover:shadow-[0_12px_26px_rgba(33,30,26,0.06)]">
+                            <article className="group flex flex-col justify-between gap-5 rounded-[20px] border border-border bg-surface p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-pastel-mint hover:shadow-[0_12px_26px_rgba(33,30,26,0.06)]">
                                 <div className="flex items-start gap-3">
                                     <IconTile
                                         icon={
@@ -1275,11 +1275,11 @@ export default function SupervisorDetails() {
                                     />
 
                                     <div className="min-w-0">
-                                        <h3 className="font-bold text-[#211E1A]">
+                                        <h3 className="font-bold text-ink">
                                             Account Status
                                         </h3>
 
-                                        <p className="mt-2 text-xs leading-6 text-[#716658]">
+                                        <p className="mt-2 text-xs leading-6 text-muted">
                                             {supervisor.is_active
                                                 ? "The account is active. Deactivate it to restrict login access."
                                                 : "The account is inactive. Activate it to restore access."}
@@ -1298,7 +1298,7 @@ export default function SupervisorDetails() {
                                     }
                                     className={
                                         supervisor.is_active
-                                            ? "inline-flex items-center justify-center gap-2 rounded-xl border border-[#EDC9C4] bg-[#FFF8F7] px-4 py-3 text-sm font-semibold text-[#B5473E] transition-colors hover:bg-[#FBE9E6]"
+                                            ? "inline-flex items-center justify-center gap-2 rounded-xl border border-[#EDC9C4] bg-[#FFF8F7] px-4 py-3 text-sm font-semibold text-danger transition-colors hover:bg-[#FBE9E6]"
                                             : darkButton
                                     }
                                 >
@@ -1318,19 +1318,19 @@ export default function SupervisorDetails() {
               ASSIGNED PROJECTS
               ====================================== */}
 
-                    <section className="supervisor-detail-projects rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
+                    <section className="supervisor-detail-projects rounded-3xl border border-border bg-surface p-5 sm:p-7">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <h2 className="text-lg font-bold text-[#211E1A]">
+                                <h2 className="text-lg font-bold text-ink">
                                     Assigned Projects
                                 </h2>
-                                <p className="mt-1 text-xs text-[#716658]">
+                                <p className="mt-1 text-xs text-muted">
                                     Open and manage projects assigned to this Supervisor.
                                 </p>
                             </div>
 
                             {!loadingProjects && !projectsError && (
-                                <span className="rounded-full bg-[#F1EADF] px-3 py-1.5 text-xs font-bold text-[#514232]">
+                                <span className="rounded-full bg-app px-3 py-1.5 text-xs font-bold text-ink">
                                     {projects.length}{" "}
                                     {projects.length === 1 ? "Project" : "Projects"}
                                 </span>
@@ -1357,16 +1357,16 @@ export default function SupervisorDetails() {
                         {!loadingProjects &&
                             !projectsError &&
                             projects.length === 0 && (
-                                <div className="mt-6 rounded-[18px] bg-[#F8F4EE] px-5 py-12 text-center">
-                                    <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EEE3D5] text-[#716658]">
+                                <div className="mt-6 rounded-[18px] bg-surface-soft px-5 py-12 text-center">
+                                    <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-border text-muted">
                                         <FolderKanban size={27} />
                                     </span>
 
-                                    <h3 className="mt-4 text-sm font-bold text-[#211E1A]">
+                                    <h3 className="mt-4 text-sm font-bold text-ink">
                                         No assigned projects
                                     </h3>
 
-                                    <p className="mt-2 text-xs text-[#716658]">
+                                    <p className="mt-2 text-xs text-muted">
                                         Assign this Supervisor from a project's Admin Overview.
                                     </p>
                                 </div>

@@ -1,5 +1,5 @@
-import ReportProjectPicker from "../../components/daily-reports/ReportProjectPicker";
+import GlobalDailyReports from "../../components/daily-reports/GlobalDailyReports";
 
 export default function SupervisorDailyReports() {
-    return <ReportProjectPicker role="SUPERVISOR" />;
+    return <GlobalDailyReports role="SUPERVISOR" />;
 }

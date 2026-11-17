@@ -14,24 +14,24 @@ import {
 } from "lucide-react";
 
 const approvalStyles = {
-    PENDING: "bg-[#FFF2D8] text-[#94651D]",
-    APPROVED: "bg-[#E7F2E8] text-[#296F40]",
-    REJECTED: "bg-[#FCE9E6] text-[#B5473E]",
+    PENDING: "bg-pastel-butter text-warning",
+    APPROVED: "bg-pastel-mint text-success",
+    REJECTED: "bg-pastel-blush text-danger",
 };
 
 const workStyles = {
-    NOT_STARTED: "bg-[#F1EADF] text-[#74614D]",
-    IN_PROGRESS: "bg-[#E9F0FC] text-[#3565A5]",
-    COMPLETED: "bg-[#E7F2E8] text-[#296F40]",
-    DELAYED: "bg-[#FCE9E6] text-[#B5473E]",
-    CANCELLED: "bg-[#EEE8E0] text-[#74695D]",
+    NOT_STARTED: "bg-app text-muted",
+    IN_PROGRESS: "bg-pastel-sky text-info",
+    COMPLETED: "bg-pastel-mint text-success",
+    DELAYED: "bg-pastel-blush text-danger",
+    CANCELLED: "bg-border text-muted",
 };
 
 const priorityStyles = {
-    LOW: "bg-[#E9F0FC] text-[#3565A5]",
-    MEDIUM: "bg-[#F1EADF] text-[#74614D]",
-    HIGH: "bg-[#FFF2D8] text-[#94651D]",
-    URGENT: "bg-[#FCE9E6] text-[#B5473E]",
+    LOW: "bg-pastel-sky text-info",
+    MEDIUM: "bg-app text-muted",
+    HIGH: "bg-pastel-butter text-warning",
+    URGENT: "bg-pastel-blush text-danger",
 };
 
 function readable(value) {
@@ -75,7 +75,7 @@ function Badge({ value, styles }) {
 
     return (
         <span
-            className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${styles[value] || "bg-[#EEE8E0] text-[#74695D]"
+            className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${styles[value] || "bg-border text-muted"
                 }`}
         >
             {readable(value)}
@@ -86,11 +86,11 @@ function Badge({ value, styles }) {
 function Detail({ label, value }) {
     return (
         <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#716658]">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted">
                 {label}
             </p>
 
-            <p className="mt-2 break-words text-sm font-semibold text-[#211E1A]">
+            <p className="mt-2 break-words text-sm font-semibold text-ink">
                 {value === null || value === undefined || value === ""
                     ? "Not specified"
                     : value}
@@ -132,12 +132,12 @@ export default function TimelineTaskCard({
         <article
             className={`
         overflow-hidden rounded-[21px]
-        border bg-[#FFFDFA]
+        border bg-surface
         transition-all duration-300
         hover:shadow-[0_10px_24px_rgba(33,30,26,0.06)]
         ${expanded
-                    ? "border-[#C9B9A6]"
-                    : "border-[#E7DED2] hover:border-[#C9B9A6]"
+                    ? "border-border-strong"
+                    : "border-border hover:border-border-strong"
                 }
       `}
         >
@@ -151,20 +151,20 @@ export default function TimelineTaskCard({
             >
                 {/* FUTURE DRAG HANDLE PLACEHOLDER */}
                 <span
-                    className="mt-3 hidden shrink-0 text-[#B7A996] sm:block"
+                    className="mt-3 hidden shrink-0 text-muted sm:block"
                     aria-hidden="true"
                 >
                     <GripVertical size={19} />
                 </span>
 
                 {/* SEQUENCE NUMBER */}
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F1EADF] text-sm font-bold text-[#74614D]">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-app text-sm font-bold text-muted">
                     {String(index + 1).padStart(2, "0")}
                 </span>
 
                 {/* TASK INFORMATION */}
                 <span className="min-w-0 flex-1">
-                    <span className="block break-words text-sm font-bold text-[#211E1A] sm:text-base">
+                    <span className="block break-words text-sm font-bold text-ink sm:text-base">
                         {task.title || "Untitled Task"}
                     </span>
 
@@ -185,13 +185,13 @@ export default function TimelineTaskCard({
                         />
 
                         {overdue && (
-                            <span className="inline-flex rounded-full bg-[#FCE9E6] px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-[#B5473E]">
+                            <span className="inline-flex rounded-full bg-pastel-blush px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-danger">
                                 Overdue
                             </span>
                         )}
                     </span>
 
-                    <span className="mt-3 grid gap-2 text-xs text-[#716658] md:grid-cols-2">
+                    <span className="mt-3 grid gap-2 text-xs text-muted md:grid-cols-2">
                         <span className="flex items-start gap-2">
                             <UserRound size={15} className="mt-0.5 shrink-0" />
 
@@ -214,14 +214,14 @@ export default function TimelineTaskCard({
                         </span>
                     </span>
 
-                    <span className="mt-3 block text-xs font-semibold text-[#74614D]">
+                    <span className="mt-3 block text-xs font-semibold text-muted">
                         {expanded ? "Hide details" : "View task details"}
                     </span>
                 </span>
 
                 <ChevronDown
                     size={20}
-                    className={`mt-3 shrink-0 text-[#716658] transition-transform duration-200 ${expanded ? "rotate-180" : ""
+                    className={`mt-3 shrink-0 text-muted transition-transform duration-200 ${expanded ? "rotate-180" : ""
                         }`}
                 />
             </button>
@@ -230,9 +230,9 @@ export default function TimelineTaskCard({
             {expanded && (
                 <div
                     id={`timeline-details-${task.id}`}
-                    className="space-y-5 border-t border-[#EEE6DC] p-5 sm:p-6"
+                    className="space-y-5 border-t border-border p-5 sm:p-6"
                 >
-                    <div className="grid gap-5 rounded-2xl bg-[#F8F4EE] p-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-5 rounded-2xl bg-surface-soft p-5 sm:grid-cols-2 lg:grid-cols-3">
                         <Detail
                             label="Timeline Position"
                             value={String(index + 1).padStart(2, "0")}
@@ -266,24 +266,24 @@ export default function TimelineTaskCard({
 
                     {/* DESCRIPTION & CRITERIA */}
                     <div className="grid gap-4 lg:grid-cols-2">
-                        <div className="rounded-2xl border border-[#EEE6DC] p-4">
-                            <h4 className="flex items-center gap-2 text-sm font-bold text-[#211E1A]">
-                                <ClipboardList size={17} className="text-[#3565A5]" />
+                        <div className="rounded-2xl border border-border p-4">
+                            <h4 className="flex items-center gap-2 text-sm font-bold text-ink">
+                                <ClipboardList size={17} className="text-info" />
                                 Task Description
                             </h4>
 
-                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#716658]">
+                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted">
                                 {task.description || "No description added."}
                             </p>
                         </div>
 
-                        <div className="rounded-2xl border border-[#EEE6DC] p-4">
-                            <h4 className="flex items-center gap-2 text-sm font-bold text-[#211E1A]">
-                                <Ruler size={17} className="text-[#368250]" />
+                        <div className="rounded-2xl border border-border p-4">
+                            <h4 className="flex items-center gap-2 text-sm font-bold text-ink">
+                                <Ruler size={17} className="text-success" />
                                 Completion Criteria
                             </h4>
 
-                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#716658]">
+                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted">
                                 {task.completion_criteria ||
                                     "No completion criteria specified."}
                             </p>
@@ -291,18 +291,18 @@ export default function TimelineTaskCard({
                     </div>
 
                     {/* OPEN TASK MANAGEMENT */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E4DCCD] bg-[#F8F4EE] p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface-soft p-4">
                         <div className="flex items-start gap-3">
-                            <span className="rounded-xl bg-[#F0EAF8] p-3 text-[#7C5BA4]">
+                            <span className="rounded-xl bg-pastel-lavender p-3 text-violet">
                                 <FileText size={19} />
                             </span>
 
                             <div>
-                                <p className="text-sm font-bold text-[#211E1A]">
+                                <p className="text-sm font-bold text-ink">
                                     Task Documents & Management
                                 </p>
 
-                                <p className="mt-1 text-xs leading-5 text-[#716658]">
+                                <p className="mt-1 text-xs leading-5 text-muted">
                                     Open the full task page to view documents,
                                     upload files, or request changes.
                                 </p>
@@ -311,7 +311,7 @@ export default function TimelineTaskCard({
 
                         <Link
                             to={taskLink}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-4 py-3 text-xs font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#39332B]"
+                            className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-xs font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover"
                         >
                             Open Task
                             <ExternalLink size={15} />

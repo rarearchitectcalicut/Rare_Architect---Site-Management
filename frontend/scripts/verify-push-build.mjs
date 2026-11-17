@@ -38,6 +38,7 @@ for (const url of ["/api/v1/notifications/", "/media/private.pdf", "/private_doc
     assert(!routes[0].options.allowlist.some((pattern) => pattern.test(url)), url);
 }
 assert(routes[0].options.allowlist.some((pattern) => pattern.test("/admin/notifications")));
+assert(routes[0].options.allowlist.some((pattern) => pattern.test("/admin/projects/22222222-2222-4222-8222-222222222222/timeline")), "The implemented Admin timeline deep link must receive the app shell");
 handlers.message({ data: { type: "UNRELATED" } });
 assert.equal(skipped, 0);
 handlers.message({ data: { type: "SKIP_WAITING" } });

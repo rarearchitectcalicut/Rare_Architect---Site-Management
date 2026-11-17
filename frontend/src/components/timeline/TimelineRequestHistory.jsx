@@ -1,3 +1,4 @@
+import { isRecordIdField, recordDisplayText } from "../../utils/recordPresentation";
 
 import { useMemo, useState } from "react";
 import {
@@ -16,17 +17,17 @@ const STATUS_CONFIG = {
     PENDING: {
         icon: Clock3,
         label: "Pending Review",
-        style: "bg-[#FFF2D8] text-[#94651D]",
+        style: "bg-pastel-butter text-warning",
     },
     APPROVED: {
         icon: CheckCircle2,
         label: "Approved",
-        style: "bg-[#E7F2E8] text-[#296F40]",
+        style: "bg-pastel-mint text-success",
     },
     REJECTED: {
         icon: XCircle,
         label: "Rejected",
-        style: "bg-[#FCE9E6] text-[#B5473E]",
+        style: "bg-pastel-blush text-danger",
     },
 };
 
@@ -55,31 +56,7 @@ function formatDate(value) {
     });
 }
 
-function displayValue(value) {
-    if (value === null || value === undefined) {
-        return "Not specified";
-    }
-
-    if (typeof value === "boolean") {
-        return value ? "Yes" : "No";
-    }
-
-    if (Array.isArray(value)) {
-        return value
-            .map((item) =>
-                typeof item === "object"
-                    ? JSON.stringify(item)
-                    : String(item)
-            )
-            .join(", ");
-    }
-
-    if (typeof value === "object") {
-        return JSON.stringify(value, null, 2);
-    }
-
-    return String(value);
-}
+const displayValue = recordDisplayText;
 
 function getSnapshot(request, key) {
     const value = request?.[key];
@@ -97,15 +74,15 @@ function getSnapshot(request, key) {
 
 function TimelineSnapshot({ value, tasks }) {
     let entries = value;
-    if (typeof entries === "string") { try { entries = JSON.parse(entries); } catch { return <p className="mt-2 text-xs text-[#665E53]">Timeline snapshot unavailable.</p>; } }
-    if (!Array.isArray(entries)) return <p className="mt-2 text-xs text-[#665E53]">Timeline snapshot unavailable.</p>;
+    if (typeof entries === "string") { try { entries = JSON.parse(entries); } catch { return <p className="mt-2 text-xs text-muted">Timeline snapshot unavailable.</p>; } }
+    if (!Array.isArray(entries)) return <p className="mt-2 text-xs text-muted">Timeline snapshot unavailable.</p>;
     const ordered = [...entries].sort((a, b) => Number(a.display_order ?? 0) - Number(b.display_order ?? 0));
     return <ol className="mt-3 space-y-2">{ordered.map((entry, index) => {
         const id = entry.task_id ?? entry.task?.id ?? entry.task ?? entry.id;
         const task = tasks.find((item) => String(item.id) === String(id));
         const title = entry.task_title || entry.title || entry.task?.title || task?.title || "Task no longer available";
-        return <li key={String(id) + ':' + index} className="flex items-start gap-2 rounded-lg bg-white/60 p-2 text-xs text-[#665E53]"><span className="shrink-0 font-bold">{index + 1}.</span><span className="min-w-0 break-words">{title}</span></li>;
-    })}{!ordered.length && <li className="text-xs text-[#665E53]">No tasks recorded.</li>}</ol>;
+        return <li key={String(id) + ':' + index} className="flex items-start gap-2 rounded-lg bg-white/60 p-2 text-xs text-muted"><span className="shrink-0 font-bold">{index + 1}.</span><span className="min-w-0 break-words">{title}</span></li>;
+    })}{!ordered.length && <li className="text-xs text-muted">No tasks recorded.</li>}</ol>;
 }
 
 function RequestCard({ request, tasks }) {
@@ -131,7 +108,7 @@ function RequestCard({ request, tasks }) {
     ];
 
     const changes = snapshotKeys.filter(
-        (key) =>
+        (key) => !isRecordIdField(key) &&
             JSON.stringify(oldValues[key] ?? null) !==
             JSON.stringify(newValues[key] ?? null)
     );
@@ -146,7 +123,7 @@ function RequestCard({ request, tasks }) {
         "Timeline Order Change";
 
     return (
-        <article className="overflow-hidden rounded-[20px] border border-[#E7DED2] bg-[#FFFDFA] transition-all hover:border-[#CBBBA9]">
+        <article className="overflow-hidden rounded-[20px] border border-border bg-surface transition-all hover:border-border-strong">
             <button
                 type="button"
                 aria-expanded={expanded}
@@ -154,7 +131,7 @@ function RequestCard({ request, tasks }) {
                 onClick={() =>
                     setExpanded((previous) => !previous)
                 }
-                className="flex w-full items-start gap-3 p-4 text-left hover:bg-[#FCF9F5] sm:p-5"
+                className="flex w-full items-start gap-3 p-4 text-left hover:bg-surface-soft sm:p-5"
             >
                 <span
                     className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${configuration.style}`}
@@ -163,11 +140,11 @@ function RequestCard({ request, tasks }) {
                 </span>
 
                 <span className="min-w-0 flex-1">
-                    <span className="block break-words text-sm font-bold text-[#211E1A]">
+                    <span className="block break-words text-sm font-bold text-ink">
                         {taskTitle}
                     </span>
 
-                    <span className="mt-1 block text-xs text-[#716658]">
+                    <span className="mt-1 block text-xs text-muted">
                         Requested {formatDate(request.created_at)}
                     </span>
 
@@ -178,13 +155,13 @@ function RequestCard({ request, tasks }) {
                             {configuration.label}
                         </span>
 
-                        <span className="rounded-full bg-[#F1EADF] px-3 py-1.5 text-xs font-bold text-[#74614D]">
+                        <span className="rounded-full bg-app px-3 py-1.5 text-xs font-bold text-muted">
                             Order Change
                         </span>
                     </span>
 
                     {request.reason && (
-                        <span className="mt-3 line-clamp-2 block text-xs leading-5 text-[#716658]">
+                        <span className="mt-3 line-clamp-2 block text-xs leading-5 text-muted">
                             {request.reason}
                         </span>
                     )}
@@ -192,7 +169,7 @@ function RequestCard({ request, tasks }) {
 
                 <ChevronDown
                     size={19}
-                    className={`mt-2 shrink-0 text-[#716658] transition-transform duration-200 ${expanded ? "rotate-180" : ""
+                    className={`mt-2 shrink-0 text-muted transition-transform duration-200 ${expanded ? "rotate-180" : ""
                         }`}
                 />
             </button>
@@ -200,42 +177,42 @@ function RequestCard({ request, tasks }) {
             {expanded && (
                 <div
                     id={`timeline-request-${request.id}`}
-                    className="space-y-5 border-t border-[#EEE6DC] p-4 sm:p-5"
+                    className="space-y-5 border-t border-border p-4 sm:p-5"
                 >
                     {/* REQUEST DETAILS */}
-                    <div className="grid gap-4 rounded-2xl bg-[#F8F4EE] p-4 sm:grid-cols-2">
+                    <div className="grid gap-4 rounded-2xl bg-surface-soft p-4 sm:grid-cols-2">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
+                            <p className="text-xs font-bold uppercase tracking-wide text-muted">
                                 Request Type
                             </p>
-                            <p className="mt-2 text-sm font-semibold text-[#211E1A]">
+                            <p className="mt-2 text-sm font-semibold text-ink">
                                 {readable(request.change_type || "ORDER_CHANGE")}
                             </p>
                         </div>
 
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
+                            <p className="text-xs font-bold uppercase tracking-wide text-muted">
                                 Status
                             </p>
-                            <p className="mt-2 text-sm font-semibold text-[#211E1A]">
+                            <p className="mt-2 text-sm font-semibold text-ink">
                                 {configuration.label}
                             </p>
                         </div>
 
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
+                            <p className="text-xs font-bold uppercase tracking-wide text-muted">
                                 Requested On
                             </p>
-                            <p className="mt-2 text-sm font-semibold text-[#211E1A]">
+                            <p className="mt-2 text-sm font-semibold text-ink">
                                 {formatDate(request.created_at)}
                             </p>
                         </div>
 
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
+                            <p className="text-xs font-bold uppercase tracking-wide text-muted">
                                 Reviewed On
                             </p>
-                            <p className="mt-2 text-sm font-semibold text-[#211E1A]">
+                            <p className="mt-2 text-sm font-semibold text-ink">
                                 {formatDate(request.reviewed_at)}
                             </p>
                         </div>
@@ -243,15 +220,15 @@ function RequestCard({ request, tasks }) {
 
                     {/* REQUEST REASON */}
                     <div>
-                        <h4 className="flex items-center gap-2 text-sm font-bold text-[#211E1A]">
+                        <h4 className="flex items-center gap-2 text-sm font-bold text-ink">
                             <MessageSquareText
                                 size={17}
-                                className="text-[#716658]"
+                                className="text-muted"
                             />
                             Reason for Reordering
                         </h4>
 
-                        <p className="mt-3 whitespace-pre-wrap rounded-2xl bg-[#F8F4EE] p-4 text-sm leading-6 text-[#665E53]">
+                        <p className="mt-3 whitespace-pre-wrap rounded-2xl bg-surface-soft p-4 text-sm leading-6 text-muted">
                             {request.reason ||
                                 "No reason was included in this response."}
                         </p>
@@ -259,7 +236,7 @@ function RequestCard({ request, tasks }) {
 
                     {/* BEFORE / AFTER SNAPSHOT */}
                     <div>
-                        <h4 className="text-sm font-bold text-[#211E1A]">
+                        <h4 className="text-sm font-bold text-ink">
                             Proposed Changes
                         </h4>
 
@@ -268,45 +245,45 @@ function RequestCard({ request, tasks }) {
                                 {changes.map((field) => (
                                     <div
                                         key={field}
-                                        className="rounded-2xl border border-[#E7DED2] p-4"
+                                        className="rounded-2xl border border-border p-4"
                                     >
-                                        <p className="mb-3 text-xs font-bold text-[#665E53]">
+                                        <p className="mb-3 text-xs font-bold text-muted">
                                             {readable(field)}
                                         </p>
 
                                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
-                                            <div className="min-w-0 rounded-xl bg-[#FCE9E6] p-3">
-                                                <p className="text-xs font-bold uppercase text-[#B5473E]">
+                                            <div className="min-w-0 rounded-xl bg-pastel-blush p-3">
+                                                <p className="text-xs font-bold uppercase text-danger">
                                                     Original
                                                 </p>
 
-                                                {tasks && field === "timeline" ? <><div className="hidden lg:block"><TimelineSnapshot value={oldValues[field]} tasks={tasks} /></div><p className="mt-2 whitespace-pre-wrap break-all text-xs text-[#665E53] lg:hidden">{displayValue(oldValues[field])}</p></> : <p className="mt-2 whitespace-pre-wrap break-all text-xs text-[#665E53]">{displayValue(oldValues[field])}</p>}
+                                                {field === "timeline" ? <TimelineSnapshot value={oldValues[field]} tasks={tasks || []} /> : <p className="mt-2 whitespace-pre-wrap break-all text-xs text-muted">{displayValue(oldValues[field])}</p>}
                                             </div>
 
                                             <ArrowRight
                                                 size={17}
-                                                className="mx-auto rotate-90 text-[#716658] sm:rotate-0"
+                                                className="mx-auto rotate-90 text-muted sm:rotate-0"
                                             />
 
-                                            <div className="min-w-0 rounded-xl bg-[#E7F2E8] p-3">
-                                                <p className="text-xs font-bold uppercase text-[#296F40]">
+                                            <div className="min-w-0 rounded-xl bg-pastel-mint p-3">
+                                                <p className="text-xs font-bold uppercase text-success">
                                                     Proposed
                                                 </p>
 
-                                                {tasks && field === "timeline" ? <><div className="hidden lg:block"><TimelineSnapshot value={newValues[field]} tasks={tasks} /></div><p className="mt-2 whitespace-pre-wrap break-all text-xs text-[#665E53] lg:hidden">{displayValue(newValues[field])}</p></> : <p className="mt-2 whitespace-pre-wrap break-all text-xs text-[#665E53]">{displayValue(newValues[field])}</p>}
+                                                {field === "timeline" ? <TimelineSnapshot value={newValues[field]} tasks={tasks || []} /> : <p className="mt-2 whitespace-pre-wrap break-all text-xs text-muted">{displayValue(newValues[field])}</p>}
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="mt-3 flex items-start gap-2 rounded-xl bg-[#F8F4EE] p-4">
+                            <div className="mt-3 flex items-start gap-2 rounded-xl bg-surface-soft p-4">
                                 <AlertCircle
                                     size={17}
-                                    className="mt-0.5 shrink-0 text-[#716658]"
+                                    className="mt-0.5 shrink-0 text-muted"
                                 />
 
-                                <p className="text-xs leading-5 text-[#716658]">
+                                <p className="text-xs leading-5 text-muted">
                                     The API response does not contain a
                                     comparable before/after snapshot.
                                     The request status and reason are
@@ -318,13 +295,13 @@ function RequestCard({ request, tasks }) {
 
                     {/* ADMIN COMMENT */}
                     {request.admin_comment && (
-                        <div className="rounded-2xl border border-[#E4DCCD] bg-[#F1EADF] p-4">
-                            <h4 className="flex items-center gap-2 text-sm font-bold text-[#211E1A]">
+                        <div className="rounded-2xl border border-border bg-app p-4">
+                            <h4 className="flex items-center gap-2 text-sm font-bold text-ink">
                                 <MessageSquareText size={18} />
                                 Admin Feedback
                             </h4>
 
-                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#665E53]">
+                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted">
                                 {request.admin_comment}
                             </p>
                         </div>
@@ -405,19 +382,19 @@ export default function TimelineRequestHistory({
             {/* HEADER */}
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <h2 className="flex items-center gap-2 text-lg font-bold text-[#211E1A]">
-                        <History size={20} className="text-[#716658]" />
+                    <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
+                        <History size={20} className="text-muted" />
                         Timeline Change Requests
                     </h2>
 
-                    <p className="mt-2 text-xs leading-5 text-[#716658]">
+                    <p className="mt-2 text-xs leading-5 text-muted">
                         Review submitted order changes and Admin decisions.
                     </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                     {pendingCount > 0 && (
-                        <span className="rounded-full bg-[#FFF2D8] px-3 py-2 text-xs font-bold text-[#94651D]">
+                        <span className="rounded-full bg-pastel-butter px-3 py-2 text-xs font-bold text-warning">
                             {pendingCount} Pending
                         </span>
                     )}
@@ -427,7 +404,7 @@ export default function TimelineRequestHistory({
                             type="button"
                             onClick={onRefresh}
                             disabled={loading}
-                            className="rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-4 py-2.5 text-xs font-semibold text-[#665E53] transition-colors hover:bg-[#F1EADF] disabled:opacity-50"
+                            className="rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-muted transition-colors hover:bg-app disabled:opacity-50"
                         >
                             Refresh
                         </button>
@@ -436,16 +413,16 @@ export default function TimelineRequestHistory({
             </div>
 
             {/* FILTERS */}
-            <div className="flex flex-wrap gap-3 rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4">
+            <div className="flex flex-wrap gap-3 rounded-2xl border border-border bg-surface p-4">
                 <label className="min-w-[140px] flex-1">
-                    <span className="mb-2 block text-xs font-bold text-[#716658]">
+                    <span className="mb-2 block text-xs font-bold text-muted">
                         Status
                     </span>
 
                     <select
                         value={status}
                         onChange={(event) => setStatus(event.target.value)}
-                        className="w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-3 py-2.5 text-sm text-[#211E1A] outline-none focus:border-[#B7A58E]"
+                        className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-border-strong"
                     >
                         <option value="ALL">All Requests</option>
                         <option value="PENDING">Pending</option>
@@ -455,14 +432,14 @@ export default function TimelineRequestHistory({
                 </label>
 
                 <label className="min-w-[140px] flex-1">
-                    <span className="mb-2 block text-xs font-bold text-[#716658]">
+                    <span className="mb-2 block text-xs font-bold text-muted">
                         Sort By
                     </span>
 
                     <select
                         value={sort}
                         onChange={(event) => setSort(event.target.value)}
-                        className="w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-3 py-2.5 text-sm text-[#211E1A] outline-none focus:border-[#B7A58E]"
+                        className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-border-strong"
                     >
                         <option value="NEWEST">Newest First</option>
                         <option value="OLDEST">Oldest First</option>
@@ -482,7 +459,7 @@ export default function TimelineRequestHistory({
 
             {/* LOADING */}
             {loading && (
-                <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-6 text-sm text-[#716658]">
+                <div className="rounded-2xl border border-border bg-surface p-6 text-sm text-muted">
                     Loading timeline change requests...
                 </div>
             )}
@@ -501,16 +478,16 @@ export default function TimelineRequestHistory({
                             ))}
                         </div>
                     ) : (
-                        <div className="rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] px-6 py-12 text-center">
-                            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1EADF] text-[#716658]">
+                        <div className="rounded-[22px] border border-border bg-surface px-6 py-12 text-center">
+                            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-app text-muted">
                                 <ClipboardList size={26} />
                             </span>
 
-                            <h3 className="mt-4 text-base font-bold text-[#211E1A]">
+                            <h3 className="mt-4 text-base font-bold text-ink">
                                 No timeline requests found
                             </h3>
 
-                            <p className="mt-2 text-sm text-[#716658]">
+                            <p className="mt-2 text-sm text-muted">
                                 {status === "ALL"
                                     ? "Submitted timeline order changes will appear here."
                                     : `No ${status.toLowerCase()} order-change requests found.`}

@@ -1,3 +1,4 @@
+import { recordDisplayText } from "../../../utils/recordPresentation";
 import { formatText, getChanges } from "../approvalUtils";
 import Meta from "../ReviewFields";
 
@@ -5,7 +6,7 @@ export default function TaskChangeReview({ record }) {
     const changes = getChanges(record);
     return (
         <>
-            <div className="rounded-2xl bg-[#F8F4EE] p-4">
+            <div className="rounded-2xl bg-surface-soft p-4">
                 <Meta
                     label="Change Type"
                     value={formatText(
@@ -15,10 +16,10 @@ export default function TaskChangeReview({ record }) {
                     )}
                 />
 
-                <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[#716658]">
+                <p className="mt-4 text-xs font-bold uppercase tracking-wide text-muted">
                     Reason for Request
                 </p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#665E53]">
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted">
                     {record.reason ||
                         record.change_reason ||
                         "No reason provided."}
@@ -26,7 +27,7 @@ export default function TaskChangeReview({ record }) {
             </div>
 
             <div>
-                <h4 className="text-sm font-bold text-[#211E1A]">
+                <h4 className="text-sm font-bold text-ink">
                     Requested Changes
                 </h4>
 
@@ -44,32 +45,32 @@ export default function TaskChangeReview({ record }) {
                             return (
                                 <div
                                     key={field}
-                                    className="rounded-xl border border-[#E7DED2] p-4"
+                                    className="rounded-xl border border-border p-4"
                                 >
-                                    <p className="text-xs font-bold text-[#665E53]">
+                                    <p className="text-xs font-bold text-muted">
                                         {formatText(field)}
                                     </p>
 
                                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                        <div className="rounded-xl bg-[#F3F0EB] p-4">
-                                            <p className="text-xs font-bold uppercase tracking-wider text-[#74695D]">
+                                        <div className="rounded-xl bg-surface-soft p-4">
+                                            <p className="text-xs font-bold uppercase tracking-wider text-muted">
                                                 Current
                                             </p>
-                                            <p className="mt-1 wrap-anywhere text-xs text-[#211E1A]">
+                                            <p className="mt-1 wrap-anywhere text-xs text-ink">
                                                 {oldValue == null
                                                     ? "See current task"
-                                                    : String(oldValue)}
+                                                    : recordDisplayText(oldValue)}
                                             </p>
                                         </div>
 
-                                        <div className="rounded-xl border border-[#D4E2F4] bg-[#EDF3FC] p-4">
-                                            <p className="text-xs font-bold uppercase tracking-wider text-[#3565A5]">
+                                        <div className="rounded-xl border border-[#D4E2F4] bg-pastel-sky p-4">
+                                            <p className="text-xs font-bold uppercase tracking-wider text-info">
                                                 Proposed
                                             </p>
-                                            <p className="mt-1 wrap-anywhere text-xs text-[#211E1A]">
+                                            <p className="mt-1 wrap-anywhere text-xs text-ink">
                                                 {newValue == null
                                                     ? "Empty"
-                                                    : String(newValue)}
+                                                    : recordDisplayText(newValue)}
                                             </p>
                                         </div>
                                     </div>
@@ -78,7 +79,7 @@ export default function TaskChangeReview({ record }) {
                         })}
                     </div>
                 ) : (
-                    <p className="mt-3 text-xs leading-5 text-[#716658]">
+                    <p className="mt-3 text-xs leading-5 text-muted">
                         No requested changes are available for this request.
                     </p>
                 )}

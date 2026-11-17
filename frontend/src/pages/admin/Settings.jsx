@@ -27,23 +27,23 @@ import { getMediaUrl } from "../../utils/mediaUrl";
 // =====================================================
 
 const inputClass = `
-  w-full rounded-xl border border-[#E4DCCD]
-  bg-[#FFFDFA] px-4 py-3
-  text-sm text-[#211E1A]
+  w-full rounded-xl border border-border
+  bg-surface px-4 py-3
+  text-sm text-ink
   outline-none transition-all duration-200
-  placeholder:text-[#A99D8E]
-  focus:border-[#B7A58E]
-  focus:ring-4 focus:ring-[#E8DDD0]/60
+  placeholder:text-subtle
+  focus:border-border-strong
+  focus:ring-4 focus:ring-pastel-lavender/60
   disabled:cursor-not-allowed disabled:opacity-50
 `;
 
 const primaryButton = `
   inline-flex items-center justify-center gap-2
-  rounded-xl bg-[#211E1A] px-5 py-3
+  rounded-xl bg-ink px-5 py-3
   text-sm font-semibold text-white
   transition-all duration-200
   hover:-translate-y-0.5
-  hover:bg-[#39332B]
+  hover:bg-primary-hover
   hover:shadow-[0_8px_20px_rgba(33,30,26,0.14)]
   active:translate-y-0
   disabled:pointer-events-none disabled:opacity-50
@@ -52,11 +52,11 @@ const primaryButton = `
 
 const secondaryButton = `
   inline-flex items-center justify-center gap-2
-  rounded-xl border border-[#E4DCCD]
-  bg-[#FFFDFA] px-5 py-3
-  text-sm font-semibold text-[#211E1A]
+  rounded-xl border border-border
+  bg-surface px-5 py-3
+  text-sm font-semibold text-ink
   transition-colors duration-200
-  hover:bg-[#F1EADF]
+  hover:bg-app
   disabled:pointer-events-none disabled:opacity-50
 `;
 
@@ -134,7 +134,7 @@ function CategoryImage({ category }) {
     const imageUrl = getMediaUrl(category.image);
 
     return (
-        <div className="relative h-full min-h-[185px] w-full overflow-hidden bg-[#E9DFD1]">
+        <div className="relative h-full min-h-[185px] w-full overflow-hidden bg-pastel-lavender">
             {imageUrl && !failed ? (
                 <img
                     src={imageUrl}
@@ -152,7 +152,7 @@ function CategoryImage({ category }) {
                     <Layers3
                         size={32}
                         strokeWidth={1.4}
-                        className="text-[#716658]"
+                        className="text-muted"
                     />
                 </div>
             )}
@@ -453,7 +453,7 @@ function CategoryModal({
                 className="
           fixed inset-0 z-50
           flex items-center justify-center
-          bg-[#211E1A]/55 p-3
+          bg-ink/55 p-3
           backdrop-blur-sm sm:p-6
         "
                 onMouseDown={(event) => {
@@ -474,28 +474,28 @@ function CategoryModal({
             flex max-h-[92dvh] w-full
             max-w-[650px] flex-col
             overflow-hidden rounded-[26px]
-            border border-[#E7DED2]
-            bg-[#FFFDFA]
+            border border-border
+            bg-surface
             shadow-[0_24px_70px_rgba(33,30,26,0.25)]
           "
                 >
                     {/* MODAL HEADER */}
-                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-3 border-b border-[#EEE6DC] p-5 sm:p-6">
+                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-3 border-b border-border p-5 sm:p-6">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
+                            <p className="text-xs font-bold uppercase tracking-[0.17em] text-muted">
                                 Admin / Project Categories
                             </p>
 
                             <h2
                                 id="category-modal-title"
-                                className="mt-2 text-xl font-bold text-[#211E1A]"
+                                className="mt-2 text-xl font-bold text-ink"
                             >
                                 {isEditing
                                     ? "Edit Project Category"
                                     : "Create Project Category"}
                             </h2>
 
-                            <p className="mt-2 text-xs text-[#716658]">
+                            <p className="mt-2 text-xs text-muted">
                                 Manage category details,
                                 imagery and visibility.
                             </p>
@@ -507,7 +507,7 @@ function CategoryModal({
                             onClick={onClose}
                             disabled={submitting}
                             aria-label="Close category modal"
-                            className="rounded-full bg-[#F1EADF] p-2.5 text-[#211E1A] transition-colors hover:bg-[#E5D9CA] disabled:opacity-50"
+                            className="rounded-full bg-app p-2.5 text-ink transition-colors hover:bg-border disabled:opacity-50"
                         >
                             <X size={19} />
                         </button>
@@ -522,7 +522,7 @@ function CategoryModal({
                         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
                             {/* IMAGE */}
                             <div>
-                                <p className="mb-2 text-sm font-semibold text-[#665E53]">
+                                <p className="mb-2 text-sm font-semibold text-muted">
                                     Category Cover Image
                                 </p>
 
@@ -536,7 +536,7 @@ function CategoryModal({
                                     onChange={handleImageChange}
                                 />
 
-                                <div className="relative overflow-hidden rounded-2xl border border-dashed border-[#D9CBBB] bg-[#F5EFE7]">
+                                <div className="relative overflow-hidden rounded-2xl border border-dashed border-border bg-surface-soft">
                                     {displayImage ? (
                                         <div className="relative h-44 sm:h-52">
                                             <img
@@ -548,7 +548,7 @@ function CategoryModal({
                                             <div className="absolute bottom-3 left-3 flex gap-2">
                                                 <label
                                                     htmlFor="settings-category-image"
-                                                    className="cursor-pointer rounded-lg bg-[#FFFDFA] px-3 py-2 text-xs font-semibold text-[#211E1A]"
+                                                    className="cursor-pointer rounded-lg bg-surface px-3 py-2 text-xs font-semibold text-ink"
                                                 >
                                                     Change Image
                                                 </label>
@@ -557,7 +557,7 @@ function CategoryModal({
                                                     <button
                                                         type="button"
                                                         onClick={removeSelectedImage}
-                                                        className="rounded-lg bg-[#FFFDFA] px-3 py-2 text-xs font-semibold text-[#211E1A]"
+                                                        className="rounded-lg bg-surface px-3 py-2 text-xs font-semibold text-ink"
                                                     >
                                                         Undo
                                                     </button>
@@ -567,13 +567,13 @@ function CategoryModal({
                                     ) : (
                                         <label
                                             htmlFor="settings-category-image"
-                                            className="flex h-44 cursor-pointer flex-col items-center justify-center gap-3 text-[#716658] sm:h-52"
+                                            className="flex h-44 cursor-pointer flex-col items-center justify-center gap-3 text-muted sm:h-52"
                                         >
-                                            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E8DFD3]">
+                                            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pastel-lavender">
                                                 <ImagePlus size={26} />
                                             </span>
 
-                                            <span className="text-sm font-semibold text-[#211E1A]">
+                                            <span className="text-sm font-semibold text-ink">
                                                 Upload a category image
                                             </span>
 
@@ -598,7 +598,7 @@ function CategoryModal({
                             <div>
                                 <label
                                     htmlFor="settings-category-name"
-                                    className="text-sm font-semibold text-[#665E53]"
+                                    className="text-sm font-semibold text-muted"
                                 >
                                     Category Name
                                     <span className="ml-1 text-red-600">
@@ -633,7 +633,7 @@ function CategoryModal({
                             <div>
                                 <label
                                     htmlFor="settings-category-description"
-                                    className="text-sm font-semibold text-[#665E53]"
+                                    className="text-sm font-semibold text-muted"
                                 >
                                     Description
                                 </label>
@@ -661,13 +661,13 @@ function CategoryModal({
                             </div>
 
                             {/* ACTIVE STATUS */}
-                            <label className="flex items-center justify-between gap-4 rounded-2xl border border-[#ECE3D9] bg-[#F8F4EE] p-4">
+                            <label className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface-soft p-4">
                                 <span>
-                                    <span className="block text-sm font-bold text-[#211E1A]">
+                                    <span className="block text-sm font-bold text-ink">
                                         Active Category
                                     </span>
 
-                                    <span className="mt-1 block text-xs leading-5 text-[#716658]">
+                                    <span className="mt-1 block text-xs leading-5 text-muted">
                                         Control category availability
                                         without deleting existing records.
                                     </span>
@@ -680,7 +680,7 @@ function CategoryModal({
                                         setIsActive(event.target.checked)
                                     }
                                     disabled={submitting}
-                                    className="h-5 w-5 shrink-0 accent-[#211E1A]"
+                                    className="h-5 w-5 shrink-0 accent-ink"
                                 />
                             </label>
 
@@ -701,7 +701,7 @@ function CategoryModal({
                         </div>
 
                         {/* MODAL FOOTER */}
-                        <footer className="flex shrink-0 justify-end gap-3 border-t border-[#EEE6DC] p-5 sm:p-6">
+                        <footer className="flex shrink-0 justify-end gap-3 border-t border-border p-5 sm:p-6">
                             <button
                                 type="button"
                                 onClick={onClose}
@@ -881,21 +881,21 @@ export default function AdminSettings() {
           ===================================== */}
 
             <header>
-                <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#716658]">
+                <p className="text-xs font-bold uppercase tracking-[0.17em] text-muted">
                     Admin / Account & Configuration
                 </p>
 
                 <div className="mt-2 flex items-start gap-3">
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F1EADF] text-[#74614D]">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-app text-muted">
                         <Settings2 size={23} />
                     </span>
 
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">
+                        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
                             Settings
                         </h1>
 
-                        <p className="mt-2 text-sm text-[#716658]">
+                        <p className="mt-2 text-sm text-muted">
                             Manage your profile, account security,
                             and project categories.
                         </p>
@@ -922,14 +922,14 @@ export default function AdminSettings() {
             <section
                 className="
           settings-project-categories rounded-[24px]
-          border border-[#E7DED2]
-          bg-[#FFFDFA] p-5 sm:p-7
+          border border-border
+          bg-surface p-5 sm:p-7
         "
             >
                 {/* SECTION HEADER */}
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#E9F0FC] text-[#3565A5]">
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-pastel-sky text-info">
                             <Layers3
                                 size={23}
                                 strokeWidth={1.8}
@@ -937,11 +937,11 @@ export default function AdminSettings() {
                         </span>
 
                         <div>
-                            <h2 className="text-lg font-bold text-[#211E1A]">
+                            <h2 className="text-lg font-bold text-ink">
                                 Project Categories
                             </h2>
 
-                            <p className="mt-1 max-w-xl text-xs leading-6 text-[#716658]">
+                            <p className="mt-1 max-w-xl text-xs leading-6 text-muted">
                                 Organize projects by category.
                                 Manage names, descriptions,
                                 images and availability.
@@ -964,7 +964,7 @@ export default function AdminSettings() {
                     <div className="relative">
                         <Search
                             size={18}
-                            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
+                            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"
                         />
 
                         <input
@@ -1020,7 +1020,7 @@ export default function AdminSettings() {
 
                 {/* COUNTS */}
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm text-[#716658]">
+                    <p className="text-sm text-muted">
                         {visibleCategories.length}{" "}
                         {visibleCategories.length === 1
                             ? "category"
@@ -1029,7 +1029,7 @@ export default function AdminSettings() {
                     </p>
 
                     {!hasStatusData && (
-                        <p className="text-xs text-[#716658]">
+                        <p className="text-xs text-muted">
                             Status filters require
                             is_active in the category list response.
                         </p>
@@ -1050,7 +1050,7 @@ export default function AdminSettings() {
                 {notice && (
                     <div
                         role="status"
-                        className="mt-5 flex items-center gap-2 rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]"
+                        className="mt-5 flex items-center gap-2 rounded-xl bg-pastel-mint p-4 text-sm text-success"
                     >
                         <CheckCircle2 size={18} />
                         {notice}
@@ -1066,11 +1066,11 @@ export default function AdminSettings() {
                                 className="
                   group overflow-hidden
                   rounded-[20px]
-                  border border-[#E7DED2]
-                  bg-[#FFFDFA]
+                  border border-border
+                  bg-surface
                   transition-all duration-300
                   hover:-translate-y-0.5
-                  hover:border-[#CBB9A3]
+                  hover:border-border-strong
                   hover:shadow-[0_12px_28px_rgba(33,30,26,0.07)]
                   motion-reduce:transform-none
                 "
@@ -1091,8 +1091,8 @@ export default function AdminSettings() {
                             inline-flex rounded-full px-2.5 py-1
                             text-xs font-bold
                             ${category.is_active
-                                                            ? "bg-[#E7F2E8] text-[#296F40]"
-                                                            : "bg-[#EEE8E0] text-[#75695C]"
+                                                            ? "bg-pastel-mint text-success"
+                                                            : "bg-border text-muted"
                                                         }
                           `}
                                                 >
@@ -1102,11 +1102,11 @@ export default function AdminSettings() {
                                                 </span>
                                             )}
 
-                                            <h3 className="mt-2 break-words text-base font-bold text-[#211E1A] sm:text-lg">
+                                            <h3 className="mt-2 break-words text-base font-bold text-ink sm:text-lg">
                                                 {category.name}
                                             </h3>
 
-                                            <p className="mt-2 line-clamp-3 text-xs leading-5 text-[#716658]">
+                                            <p className="mt-2 line-clamp-3 text-xs leading-5 text-muted">
                                                 {category.description ||
                                                     "No description provided."}
                                             </p>
@@ -1120,9 +1120,9 @@ export default function AdminSettings() {
                                             className="
                         inline-flex items-center gap-2
                         self-start text-xs font-bold
-                        text-[#211E1A]
+                        text-ink
                         transition-colors
-                        hover:text-[#8C6A46]
+                        hover:text-muted
                       "
                                         >
                                             <Pencil size={15} />
@@ -1134,17 +1134,17 @@ export default function AdminSettings() {
                         ))}
 
                         {visibleCategories.length === 0 && (
-                            <div className="rounded-[20px] bg-[#F8F4EE] px-6 py-12 text-center xl:col-span-2">
+                            <div className="rounded-[20px] bg-surface-soft px-6 py-12 text-center xl:col-span-2">
                                 <FolderOpen
                                     size={34}
-                                    className="mx-auto text-[#716658]"
+                                    className="mx-auto text-muted"
                                 />
 
-                                <h3 className="mt-4 font-bold text-[#211E1A]">
+                                <h3 className="mt-4 font-bold text-ink">
                                     No categories found
                                 </h3>
 
-                                <p className="mt-2 text-sm text-[#716658]">
+                                <p className="mt-2 text-sm text-muted">
                                     Try a different search,
                                     or create a new category.
                                 </p>

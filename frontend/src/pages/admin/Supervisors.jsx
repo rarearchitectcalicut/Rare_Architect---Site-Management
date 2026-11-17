@@ -64,20 +64,20 @@ const stagger = (index, step = 60, max = 600) =>
 
 // Icon tile tones (literal class strings so Tailwind can detect them)
 const tones = {
-    blue: "bg-[#E8F0FE] text-[#2563EB]",
-    green: "bg-[#E6F4EA] text-[#16A34A]",
-    orange: "bg-[#FFF3E0] text-[#EA8A12]",
-    violet: "bg-[#F1ECFE] text-[#7C3AED]",
-    slate: "bg-[#ece8e2] text-[#72675b]",
+    blue: "bg-pastel-sky text-info",
+    green: "bg-pastel-mint text-success",
+    orange: "bg-pastel-blush text-warning",
+    violet: "bg-pastel-lavender text-violet",
+    slate: "bg-pastel-lavender text-muted",
 };
 
 // Avatar palette: each supervisor gets a stable colour from their name
 const avatarTones = [
-    "bg-[#E8F0FE] text-[#2563EB]",
-    "bg-[#E6F4EA] text-[#16A34A]",
-    "bg-[#FFF3E0] text-[#EA8A12]",
-    "bg-[#F1ECFE] text-[#7C3AED]",
-    "bg-[#fde8e6] text-[#9e3535]",
+    "bg-pastel-sky text-info",
+    "bg-pastel-mint text-success",
+    "bg-pastel-blush text-warning",
+    "bg-pastel-lavender text-violet",
+    "bg-pastel-blush text-danger",
 ];
 
 function avatarTone(name) {
@@ -133,12 +133,12 @@ function AnimatedNumber({ value }) {
 
 const selectClass = `
   h-12 w-full appearance-none rounded-xl
-  border border-[#E4DCCD] bg-[#FFFDFA]
-  pl-4 pr-10 text-sm text-[#211E1A]
+  border border-border bg-surface
+  pl-4 pr-10 text-sm text-ink
   outline-none transition-all duration-200
-  hover:border-[#CFC4B5]
-  focus:border-[#211E1A]
-  focus:ring-4 focus:ring-[#211E1A]/10
+  hover:border-border-strong
+  focus:border-ink
+  focus:ring-4 focus:ring-ink/10
 `;
 
 // =====================================================
@@ -292,15 +292,15 @@ export default function Supervisors() {
             {/* HEADING */}
             <div className="rare-fade flex flex-wrap items-end justify-between gap-4">
                 <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#716658]">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
                         Admin / Team Management
                     </p>
 
-                    <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">
-                        Supervisors <span className="ml-2 hidden rounded-full bg-[#F1EADF] px-3 py-1 align-middle text-sm font-semibold lg:inline-block">{loading ? "..." : supervisors.length}</span>
+                    <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+                        Supervisors <span className="ml-2 hidden rounded-full bg-app px-3 py-1 align-middle text-sm font-semibold lg:inline-block">{loading ? "..." : supervisors.length}</span>
                     </h1>
 
-                    <p className="mt-2 text-sm text-[#716658]">
+                    <p className="mt-2 text-sm text-muted">
                         Manage accounts and project assignments.
                     </p>
                 </div>
@@ -309,15 +309,15 @@ export default function Supervisors() {
                     type="button"
                     onClick={() => setShowAddSupervisor(true)}
                     className="
-                        group inline-flex items-center gap-2 rounded-xl bg-[#211E1A]
+                        group inline-flex items-center gap-2 rounded-xl bg-ink
                         px-4 py-3 text-sm font-semibold text-white
                         shadow-[0_6px_18px_rgba(33,30,26,0.16)]
                         transition-all duration-200 ease-out
-                        hover:-translate-y-0.5 hover:bg-[#38332C]
+                        hover:-translate-y-0.5 hover:bg-primary-hover
                         hover:shadow-[0_12px_26px_rgba(33,30,26,0.24)]
                         active:translate-y-0 active:scale-[0.98]
                         focus-visible:outline-none focus-visible:ring-2
-                        focus-visible:ring-[#211E1A]/40 focus-visible:ring-offset-2
+                        focus-visible:ring-ink/40 focus-visible:ring-offset-2
                         motion-reduce:transition-none
                         motion-reduce:hover:translate-y-0
                         max-sm:w-full max-sm:justify-center
@@ -351,10 +351,10 @@ export default function Supervisors() {
                         <div
                             className="
                                 group h-full cursor-default rounded-[18px]
-                                border border-[#E7DED2] bg-[#FFFDFA]
+                                border border-border bg-surface
                                 p-3.5 shadow-[0_3px_14px_rgba(33,30,26,0.025)]
                                 transition-all duration-300 ease-out
-                                hover:-translate-y-1 hover:border-[#D9CCBA]
+                                hover:-translate-y-1 hover:border-border-strong
                                 hover:shadow-[0_14px_34px_rgba(33,30,26,0.08)]
                                 motion-reduce:transition-none
                                 motion-reduce:hover:translate-y-0
@@ -362,7 +362,7 @@ export default function Supervisors() {
                             "
                         >
                             <div className="flex items-start justify-between gap-2">
-                                <p className="min-w-0 text-xs font-medium text-[#716658] sm:text-sm">
+                                <p className="min-w-0 text-xs font-medium text-muted sm:text-sm">
                                     {label}
                                 </p>
 
@@ -380,7 +380,7 @@ export default function Supervisors() {
                                 </span>
                             </div>
 
-                            <p className="mt-2 text-2xl font-bold leading-none tracking-tight tabular-nums text-[#211E1A] sm:mt-3 sm:text-[30px]">
+                            <p className="mt-2 text-2xl font-bold leading-none tracking-tight tabular-nums text-ink sm:mt-3 sm:text-[30px]">
                                 <AnimatedNumber value={value} />
                             </p>
                         </div>
@@ -388,7 +388,7 @@ export default function Supervisors() {
                 ))}
             </div>
 
-            <div className="hidden items-center gap-5 text-sm text-[#716658] lg:flex"><span>Total <strong className="ml-1 text-[#211E1A]">{loading ? "..." : supervisors.length}</strong></span><span aria-hidden="true" className="text-[#CDBDAA]">|</span><span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#16A34A]" />Active <strong className="text-[#211E1A]">{loading ? "..." : activeCount}</strong></span><span aria-hidden="true" className="text-[#CDBDAA]">|</span><span>Inactive <strong className="ml-1 text-[#211E1A]">{loading ? "..." : supervisors.length - activeCount}</strong></span></div>
+            <div className="hidden items-center gap-5 text-sm text-muted lg:flex"><span>Total <strong className="ml-1 text-ink">{loading ? "..." : supervisors.length}</strong></span><span aria-hidden="true" className="text-border-strong">|</span><span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-success" />Active <strong className="text-ink">{loading ? "..." : activeCount}</strong></span><span aria-hidden="true" className="text-border-strong">|</span><span>Inactive <strong className="ml-1 text-ink">{loading ? "..." : supervisors.length - activeCount}</strong></span></div>
             {/* FILTERS */}
             <section className="supervisor-directory-toolbar rare-rise" style={{ "--d": `${stagger(4, 70)}ms` }}>
                 <SearchFilterToolbar
@@ -396,7 +396,7 @@ export default function Supervisors() {
                     search={<ProjectSearch compact query={search} delay={0} onSearch={setSearch} label="Search supervisors" labelClassName="sr-only" placeholder="Name, phone, email or username" suggestions={visibleSupervisors.map((person) => ({ id: person.id, name: supervisorName(person), context: person.username, to: `/admin/supervisors/${person.id}` }))} />}
                     activeCount={Number(status !== "all") + Number(sort !== "name")}
                     onClear={() => { setSearch(""); setStatus("all"); setSort("name"); }}
-                    actions={<button type="button" onClick={() => setRefreshKey((key) => key + 1)} aria-label="Refresh supervisors" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] text-sm font-semibold text-[#211E1A] hover:bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"><RefreshCw size={18} className={loading ? "animate-spin" : ""} aria-hidden="true" /></button>}
+                    actions={<button type="button" onClick={() => setRefreshKey((key) => key + 1)} aria-label="Refresh supervisors" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-sm font-semibold text-ink hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"><RefreshCw size={18} className={loading ? "animate-spin" : ""} aria-hidden="true" /></button>}
                 >
                     <div className="grid gap-3">
                     <div className="relative min-w-0">
@@ -412,7 +412,7 @@ export default function Supervisors() {
                         </select>
                         <ChevronDown
                             size={16}
-                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
+                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted"
                         />
                     </div>
 
@@ -431,7 +431,7 @@ export default function Supervisors() {
                         </select>
                         <ChevronDown
                             size={16}
-                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
+                            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted"
                         />
                     </div>
 
@@ -449,12 +449,12 @@ export default function Supervisors() {
                 </div>
             )}
 
-            {!loading && !error && <section className="supervisor-desktop-table hidden overflow-hidden rounded-b-2xl border border-t-0 border-[#E7DED2] bg-[#FFFDFA] lg:block"><table className="w-full table-fixed text-left text-sm"><thead className="border-y border-[#E7DED2] bg-[#FAF6F0] text-[#716658]"><tr>{[["Supervisor", "28%"], ["Email", "27%"], ["Phone", "17%"], ["Status", "10%"], ["Actions", "18%"]].map(([label, width]) => <th key={label} scope="col" className="px-5 py-4 font-semibold" style={{ width }}>{label}</th>)}</tr></thead><tbody>{visibleSupervisors.map((person) => { const name = supervisorName(person); return <tr key={person.id} className="border-b border-[#EEE6DC] last:border-b-0 hover:bg-[#FAF6F0]"><td className="px-5 py-5"><div className="flex min-w-0 items-center gap-3"><span className={'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-bold ' + avatarTone(name)}>{name.charAt(0).toUpperCase()}</span><div className="min-w-0"><Link to={'/admin/supervisors/' + person.id} className="break-words text-base font-bold text-[#211E1A] hover:underline">{name}</Link><p className="mt-1 break-all text-xs text-[#716658]">@{person.username || "No username"}</p></div></div></td><td className="break-all px-5 py-5 text-[#665E53]">{person.email ? <a href={'mailto:' + person.email} className="hover:underline">{person.email}</a> : "Not provided"}</td><td className="break-words px-5 py-5 text-[#665E53]">{person.phone || "Not provided"}</td><td className="px-5 py-5"><span className="inline-flex items-center gap-2 text-xs"><span className={'h-2 w-2 shrink-0 rounded-full ' + (person.is_active ? 'bg-[#16A34A]' : 'bg-[#94826B]')} />{person.is_active ? "Active" : "Inactive"}</span></td><td className="px-5 py-5"><div className="flex items-center gap-3">{person.phone && <a href={'tel:' + person.phone} aria-label={'Call ' + name} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E7DED2] text-[#296F40] hover:bg-[#E7F2E8]"><Phone size={16} /></a>}<Link to={'/admin/supervisors/' + person.id} className="inline-flex items-center gap-1 border-l border-[#E7DED2] pl-3 text-xs font-semibold text-[#211E1A] hover:underline">View details<ArrowUpRight size={15} /></Link></div></td></tr>; })}</tbody></table>{!visibleSupervisors.length && <p className="p-8 text-center text-sm text-[#716658]">No supervisors match this search or status filter.</p>}<footer className="border-t border-[#E7DED2] px-5 py-4 text-xs text-[#716658]">{visibleSupervisors.length} {visibleSupervisors.length === 1 ? "supervisor" : "supervisors"}</footer></section>}
+            {!loading && !error && <section className="supervisor-desktop-table hidden overflow-hidden rounded-b-2xl border border-t-0 border-border bg-surface lg:block"><table className="w-full table-fixed text-left text-sm"><thead className="border-y border-border bg-surface-soft text-muted"><tr>{[["Supervisor", "28%"], ["Email", "27%"], ["Phone", "17%"], ["Status", "10%"], ["Actions", "18%"]].map(([label, width]) => <th key={label} scope="col" className="px-5 py-4 font-semibold" style={{ width }}>{label}</th>)}</tr></thead><tbody>{visibleSupervisors.map((person) => { const name = supervisorName(person); return <tr key={person.id} className="border-b border-border last:border-b-0 hover:bg-surface-soft"><td className="px-5 py-5"><div className="flex min-w-0 items-center gap-3"><span className={'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-bold ' + avatarTone(name)}>{name.charAt(0).toUpperCase()}</span><div className="min-w-0"><Link to={'/admin/supervisors/' + person.id} className="break-words text-base font-bold text-ink hover:underline">{name}</Link><p className="mt-1 break-all text-xs text-muted">@{person.username || "No username"}</p></div></div></td><td className="break-all px-5 py-5 text-muted">{person.email ? <a href={'mailto:' + person.email} className="hover:underline">{person.email}</a> : "Not provided"}</td><td className="break-words px-5 py-5 text-muted">{person.phone || "Not provided"}</td><td className="px-5 py-5"><span className="inline-flex items-center gap-2 text-xs"><span className={'h-2 w-2 shrink-0 rounded-full ' + (person.is_active ? 'bg-success' : 'bg-muted')} />{person.is_active ? "Active" : "Inactive"}</span></td><td className="px-5 py-5"><div className="flex items-center gap-3">{person.phone && <a href={'tel:' + person.phone} aria-label={'Call ' + name} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-success hover:bg-pastel-mint"><Phone size={16} /></a>}<Link to={'/admin/supervisors/' + person.id} className="inline-flex items-center gap-1 border-l border-border pl-3 text-xs font-semibold text-ink hover:underline">View details<ArrowUpRight size={15} /></Link></div></td></tr>; })}</tbody></table>{!visibleSupervisors.length && <p className="p-8 text-center text-sm text-muted">No supervisors match this search or status filter.</p>}<footer className="border-t border-border px-5 py-4 text-xs text-muted">{visibleSupervisors.length} {visibleSupervisors.length === 1 ? "supervisor" : "supervisors"}</footer></section>}
             {/* DIRECTORY */}
             {!loading && !error && (
                 <section className="space-y-3 sm:space-y-4 lg:hidden">
-                    <p className="rare-fade flex items-center gap-2 text-sm text-[#716658]">
-                        <span className="rounded-full bg-[#F1EADF] px-2.5 py-0.5 text-xs font-bold tabular-nums text-[#211E1A]">
+                    <p className="rare-fade flex items-center gap-2 text-sm text-muted">
+                        <span className="rounded-full bg-app px-2.5 py-0.5 text-xs font-bold tabular-nums text-ink">
                             {visibleSupervisors.length}
                         </span>
                         {visibleSupervisors.length === 1
@@ -471,10 +471,10 @@ export default function Supervisors() {
                             <article
                                 key={person.id}
                                 className="
-                                    rare-rise group rounded-[20px] border border-[#E7DED2]
-                                    bg-[#FFFDFA] p-4
+                                    rare-rise group rounded-[20px] border border-border
+                                    bg-surface p-4
                                     transition-all duration-300 ease-out
-                                    hover:-translate-y-0.5 hover:border-[#CFC1B0]
+                                    hover:-translate-y-0.5 hover:border-border-strong
                                     hover:shadow-[0_14px_34px_rgba(33,30,26,0.08)]
                                     motion-reduce:transition-none
                                     motion-reduce:hover:translate-y-0
@@ -504,10 +504,10 @@ export default function Supervisors() {
                                                 to={`/admin/supervisors/${person.id}`}
                                                 className="
                                                     wrap-break-word rounded text-base font-bold
-                                                    text-[#211E1A] transition-colors duration-200
+                                                    text-ink transition-colors duration-200
                                                     hover:underline
                                                     focus-visible:outline-none focus-visible:ring-2
-                                                    focus-visible:ring-[#211E1A]/30
+                                                    focus-visible:ring-ink/30
                                                     sm:text-lg
                                                 "
                                             >
@@ -516,8 +516,8 @@ export default function Supervisors() {
 
                                             <span
                                                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${isActive
-                                                    ? "bg-[#E7F2E8] text-[#296F40]"
-                                                    : "bg-[#EEE8E0] text-[#74695D]"
+                                                    ? "bg-pastel-mint text-success"
+                                                    : "bg-border text-muted"
                                                     }`}
                                             >
                                                 <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
@@ -525,11 +525,11 @@ export default function Supervisors() {
                                             </span>
                                         </div>
 
-                                        <p className="mt-1 break-all text-xs text-[#716658]">
+                                        <p className="mt-1 break-all text-xs text-muted">
                                             @{person.username || "No username"}
                                         </p>
 
-                                        <div className="mt-3 grid gap-2 text-sm text-[#665E53] sm:grid-cols-2">
+                                        <div className="mt-3 grid gap-2 text-sm text-muted sm:grid-cols-2">
                                             <span className="flex min-w-0 items-center gap-2.5">
                                                 <span className={`shrink-0 rounded-lg p-1.5 ${tones.green}`}>
                                                     <Phone size={14} />
@@ -551,20 +551,20 @@ export default function Supervisors() {
                                     </div>
                                 </div>
 
-                                <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#F0E9DF] pt-4">
+                                <div className="mt-4 flex items-center justify-between gap-3 border-t border-surface-soft pt-4">
                                     <div className="flex gap-2">
                                         {person.phone && (
                                             <a
                                                 href={`tel:${person.phone}`}
                                                 className="
                                                     group/call inline-flex items-center gap-2 rounded-xl
-                                                    bg-[#E7F2E8] px-3.5 py-2 text-xs font-semibold text-[#296F40]
+                                                    bg-pastel-mint px-3.5 py-2 text-xs font-semibold text-success
                                                     transition-all duration-200 ease-out
-                                                    hover:bg-[#D6EAD9]
+                                                    hover:bg-pastel-mint
                                                     hover:shadow-[0_6px_16px_rgba(41,111,64,0.15)]
                                                     active:scale-[0.97]
                                                     focus-visible:outline-none focus-visible:ring-2
-                                                    focus-visible:ring-[#296F40]/40
+                                                    focus-visible:ring-success/40
                                                 "
                                             >
                                                 <Phone
@@ -585,9 +585,9 @@ export default function Supervisors() {
                                         to={`/admin/supervisors/${person.id}`}
                                         className="
                                             group/view inline-flex items-center gap-2 rounded-lg
-                                            px-1 py-0.5 text-sm font-semibold text-[#211E1A]
+                                            px-1 py-0.5 text-sm font-semibold text-ink
                                             focus-visible:outline-none focus-visible:ring-2
-                                            focus-visible:ring-[#211E1A]/30
+                                            focus-visible:ring-ink/30
                                         "
                                     >
                                         View Details
@@ -607,14 +607,14 @@ export default function Supervisors() {
                     })}
 
                     {!visibleSupervisors.length && (
-                        <div className="rare-fade rounded-[22px] border border-[#E7DED2] bg-[#FFFDFA] px-5 py-12 text-center sm:py-14">
+                        <div className="rare-fade rounded-[22px] border border-border bg-surface px-5 py-12 text-center sm:py-14">
                             <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${tones.blue}`}>
                                 <UsersRound size={30} strokeWidth={1.6} />
                             </div>
-                            <h3 className="mt-4 font-bold text-[#211E1A]">
+                            <h3 className="mt-4 font-bold text-ink">
                                 No supervisors found
                             </h3>
-                            <p className="mt-2 text-sm text-[#716658]">
+                            <p className="mt-2 text-sm text-muted">
                                 Try a different search or status filter.
                             </p>
                         </div>

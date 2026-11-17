@@ -66,13 +66,13 @@ const loginCss = `
 
 const inputClass = `
   h-12 w-full rounded-xl
-  border border-[#e4dccd] bg-[#fffdfa]
-  pl-11 pr-4 text-[15px] text-[#29251f]
+  border border-border bg-surface
+  pl-11 pr-4 text-[15px] text-ink
   outline-none transition-all duration-200
-  placeholder:text-[#b0a99f]
-  hover:border-[#cfc4b5]
-  focus:border-[#292620]
-  focus:ring-4 focus:ring-[#292620]/10
+  placeholder:text-subtle
+  hover:border-border-strong
+  focus:border-ink
+  focus:ring-4 focus:ring-ink/10
   disabled:cursor-not-allowed disabled:opacity-60
   aria-invalid:border-red-600
   aria-invalid:ring-4 aria-invalid:ring-red-600/10
@@ -193,11 +193,11 @@ export default function Login() {
         <LoadingScreen message="Signing you in..." />
       )}
 
-      <main className="min-h-dvh lg:grid lg:grid-cols-[50%_50%]">
+      <main className="rare-auth-canvas min-h-dvh lg:grid lg:grid-cols-[46%_54%]">
         {/* ============================================= */}
         {/* LEFT: ARCHITECTURAL PANEL                      */}
         {/* ============================================= */}
-        <section className="relative hidden min-h-dvh overflow-hidden bg-[#211e1a] lg:flex">
+        <section className="rare-auth-art relative hidden overflow-hidden bg-ink lg:flex">
           {/* Background image */}
           <img
             src={loginBg}
@@ -208,11 +208,11 @@ export default function Login() {
           {/* Legibility overlays */}
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-linear-to-t from-[#211e1a]/90 via-[#211e1a]/35 to-[#211e1a]/10"
+            className="absolute inset-0 bg-linear-to-t from-ink/90 via-ink/35 to-ink/10"
           />
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-linear-to-r from-[#211e1a]/30 to-transparent"
+            className="absolute inset-0 bg-linear-to-r from-ink/30 to-transparent"
           />
 
           {/* Top badge */}
@@ -271,16 +271,16 @@ export default function Login() {
         {/* ============================================= */}
         {/* RIGHT: AUTHENTICATION PANEL                    */}
         {/* ============================================= */}
-        <section className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#f1eadf] px-4 py-6 sm:px-8 lg:px-10">
+        <section className="rare-auth-panel relative flex min-h-dvh items-center justify-center overflow-hidden bg-app px-4 py-6 sm:px-8 lg:px-10">
           {/* Soft decorative background */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-            <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#e8dfd3] blur-3xl" />
-            <div className="absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-[#fffdfa]/70 blur-3xl" />
+            <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-pastel-lavender blur-3xl" />
+            <div className="absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-surface/70 blur-3xl" />
             <div
               className="absolute inset-0 opacity-[0.35]"
               style={{
                 backgroundImage:
-                  "radial-gradient(#d9cfc0 1px, transparent 1px)",
+                  "radial-gradient(var(--color-border-strong) 1px, transparent 1px)",
                 backgroundSize: "22px 22px",
                 maskImage:
                   "radial-gradient(ellipse at center, black 30%, transparent 75%)",
@@ -302,11 +302,11 @@ export default function Login() {
                 className="mb-3 h-auto w-32 object-contain sm:w-36"
               />
 
-              <h1 className="text-2xl font-bold tracking-tight text-[#211e1a] sm:text-3xl">
+              <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
                 Welcome Back
               </h1>
 
-              <p className="mt-1 text-sm leading-6 text-[#716658]">
+              <p className="mt-1 text-sm leading-6 text-muted">
                 Sign in to your RARE account
               </p>
             </div>
@@ -314,8 +314,8 @@ export default function Login() {
             {/* Card */}
             <div
               className="
-                rare-rise rounded-[28px] border border-[#e8dfd3]
-                bg-[#fffdfa] p-5
+                rare-auth-card rare-rise rounded-[28px] border border-pastel-lavender
+                bg-surface p-5
                 shadow-sm
                 sm:p-8
               "
@@ -330,7 +330,7 @@ export default function Login() {
                 <div className="space-y-2">
                   <label
                     htmlFor="phone"
-                    className="block text-[13px] font-semibold text-[#665e53]"
+                    className="block text-[13px] font-semibold text-muted"
                   >
                     Phone Number
                   </label>
@@ -338,7 +338,7 @@ export default function Login() {
                   <div className="group relative">
                     <Phone
                       size={17}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#716658] transition-colors duration-200 group-focus-within:text-[#211e1a]"
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors duration-200 group-focus-within:text-ink"
                     />
 
                     <input
@@ -367,7 +367,7 @@ export default function Login() {
                 <div className="space-y-2">
                   <label
                     htmlFor="password"
-                    className="block text-[13px] font-semibold text-[#665e53]"
+                    className="block text-[13px] font-semibold text-muted"
                   >
                     Password
                   </label>
@@ -375,7 +375,7 @@ export default function Login() {
                   <div className="group relative">
                     <LockKeyhole
                       size={17}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#716658] transition-colors duration-200 group-focus-within:text-[#211e1a]"
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted transition-colors duration-200 group-focus-within:text-ink"
                     />
 
                     <input
@@ -401,12 +401,12 @@ export default function Login() {
                       aria-pressed={showPassword}
                       className="
                         absolute right-2.5 top-1/2 -translate-y-1/2
-                        rounded-lg p-1.5 text-[#716658]
+                        rounded-lg p-1.5 text-muted
                         transition-all duration-200
-                        hover:bg-[#f1eadf] hover:text-[#292620]
+                        hover:bg-app hover:text-ink
                         active:scale-90
                         focus-visible:outline-none focus-visible:ring-2
-                        focus-visible:ring-[#292620]/40
+                        focus-visible:ring-ink/40
                       "
                     >
                       {showPassword ? (
@@ -447,15 +447,15 @@ export default function Login() {
                   disabled={loading}
                   className="
                     group mt-1 flex h-12 items-center justify-center gap-2
-                    rounded-xl bg-[#211e1a] px-4
+                    rounded-xl bg-ink px-4
                     text-[15px] font-semibold text-white
                     shadow-[0_8px_20px_rgba(33,30,26,0.18)]
                     transition-all duration-200 ease-out
-                    hover:-translate-y-0.5 hover:bg-[#38332c]
+                    hover:-translate-y-0.5 hover:bg-primary-hover
                     hover:shadow-[0_12px_28px_rgba(33,30,26,0.26)]
                     active:translate-y-0 active:scale-[0.98]
                     focus-visible:outline-none focus-visible:ring-2
-                    focus-visible:ring-[#211e1a]/40 focus-visible:ring-offset-2
+                    focus-visible:ring-ink/40 focus-visible:ring-offset-2
                     disabled:pointer-events-none disabled:opacity-60
                     motion-reduce:transition-none
                     motion-reduce:hover:translate-y-0
@@ -492,12 +492,12 @@ export default function Login() {
               className="rare-fade mt-6 flex flex-col items-center gap-2 text-center"
               style={{ "--d": "500ms" }}
             >
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E6F4EA] px-3 py-1 text-xs font-semibold text-[#246b3b]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-pastel-mint px-3 py-1 text-xs font-semibold text-success">
                 <ShieldCheck size={13} />
                 Secure access for authorised staff
               </span>
 
-              <p className="text-xs text-[#9b9287]">
+              <p className="text-xs text-subtle">
                 RARE Project &amp; Site Management
               </p>
             </div>

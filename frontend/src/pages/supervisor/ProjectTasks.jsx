@@ -1,3 +1,4 @@
+import { InfoField } from "../../components/common/InfoCard";
 import { createPortal } from "react-dom";
 import { ProjectSearch } from "../../components/daily-reports/ReportProjectPicker";
 
@@ -34,21 +35,21 @@ import DelayReportForm from "../../modal/supervisor/DelayReportForm";
 import { MobileTaskCard, TaskPageStyles } from "../../components/admin/tasks/AdminTaskCard";
 
 const inputClass =
-    "h-11 w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-3 text-xs sm:text-sm text-[#211E1A] outline-none focus:border-[#B7A58E] focus:ring-2 focus:ring-[#E8DDD0]";
+    "h-11 w-full rounded-xl border border-border bg-surface px-3 text-xs sm:text-sm text-ink outline-none focus:border-border-strong focus:ring-2 focus:ring-pastel-lavender";
 
 const statusColors = {
-    LOW: "bg-[#E9F0FC] text-[#3565A5]",
-    MEDIUM: "bg-[#F1EADF] text-[#74614D]",
-    HIGH: "bg-[#FFF2D8] text-[#94651D]",
-    URGENT: "bg-[#FCE9E6] text-[#B5473E]",
-    PENDING: "bg-[#FFF2D8] text-[#94651D]",
-    APPROVED: "bg-[#E7F2E8] text-[#296F40]",
-    REJECTED: "bg-[#FCE9E6] text-[#B5473E]",
-    NOT_STARTED: "bg-[#F1EADF] text-[#74614D]",
-    IN_PROGRESS: "bg-[#E9F0FC] text-[#3565A5]",
-    COMPLETED: "bg-[#E7F2E8] text-[#296F40]",
-    DELAYED: "bg-[#FCE9E6] text-[#B5473E]",
-    CANCELLED: "bg-[#EEE8E0] text-[#74695D]",
+    LOW: "bg-pastel-sky text-info",
+    MEDIUM: "bg-app text-muted",
+    HIGH: "bg-pastel-butter text-warning",
+    URGENT: "bg-pastel-blush text-danger",
+    PENDING: "bg-pastel-butter text-warning",
+    APPROVED: "bg-pastel-mint text-success",
+    REJECTED: "bg-pastel-blush text-danger",
+    NOT_STARTED: "bg-app text-muted",
+    IN_PROGRESS: "bg-pastel-sky text-info",
+    COMPLETED: "bg-pastel-mint text-success",
+    DELAYED: "bg-pastel-blush text-danger",
+    CANCELLED: "bg-border text-muted",
 };
 
 function readable(value) {
@@ -142,7 +143,7 @@ function Badge({ value }) {
     return (
         <span
             className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
-                statusColors[value] || "bg-[#EEE8E0] text-[#74695D]"
+                statusColors[value] || "bg-border text-muted"
             }`}
         >
             {readable(value)}
@@ -151,19 +152,7 @@ function Badge({ value }) {
 }
 
 function DetailItem({ label, value }) {
-    return (
-        <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#716658]">
-                {label}
-            </p>
-
-            <p className="mt-2 break-words text-sm font-semibold text-[#211E1A]">
-                {value === null || value === undefined || value === ""
-                    ? "Not specified"
-                    : value}
-            </p>
-        </div>
-    );
+    return <InfoField label={label} value={value} />;
 }
 
 function SupervisorDelayCard({ report, taskName }) {
@@ -177,11 +166,11 @@ function SupervisorDelayCard({ report, taskName }) {
         document.addEventListener("pointerdown", closeOutside);
         return () => document.removeEventListener("pointerdown", closeOutside);
     }, [open]);
-    return <div ref={cardRef} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA]">
-        <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-start justify-between gap-3 rounded-xl p-3 text-left focus-visible:outline-2 focus-visible:outline-[#94651D]">
-            <span className="min-w-0"><span className="block text-sm font-bold">Delay report</span><span className="mt-1 block break-words text-sm font-semibold">{report.task_title || taskName}</span><span className="mt-1 block text-xs text-[#716658]">{formatDateTime(report.reported_at)}</span></span><ChevronDown size={18} className={'shrink-0 ' + (open ? 'rotate-180' : '')} />
+    return <div ref={cardRef} className="rounded-xl border border-border bg-surface">
+        <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-start justify-between gap-3 rounded-xl p-3 text-left focus-visible:outline-2 focus-visible:outline-warning">
+            <span className="min-w-0"><span className="block text-sm font-bold">Delay report</span><span className="mt-1 block break-words text-sm font-semibold">{report.task_title || taskName}</span><span className="mt-1 block text-xs text-muted">{formatDateTime(report.reported_at)}</span></span><ChevronDown size={18} className={'shrink-0 ' + (open ? 'rotate-180' : '')} />
         </button>
-        {open && createPortal(<div role="dialog" aria-modal="true" aria-label="Delay report details" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6" onPointerDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}><div className="max-h-[85dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-6"><div className="mb-4 flex items-start justify-between gap-4"><div><h2 className="text-lg font-bold">Delay report</h2><p className="mt-1 text-sm">{report.task_title || taskName}</p></div><button type="button" aria-label="Close delay report" onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E7DED2]"><X size={18} /></button></div><DelayReportReview record={report} role="SUPERVISOR" /></div></div>, document.body)}
+        {open && createPortal(<div role="dialog" aria-modal="true" aria-label="Delay report details" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-6" onPointerDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}><div className="max-h-[85dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-surface p-6"><div className="mb-4 flex items-start justify-between gap-4"><div><h2 className="text-lg font-bold">Delay report</h2><p className="mt-1 text-sm">{report.task_title || taskName}</p></div><button type="button" aria-label="Close delay report" onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-border"><X size={18} /></button></div><DelayReportReview record={report} role="SUPERVISOR" /></div></div>, document.body)}
     </div>;
 }
 
@@ -208,10 +197,10 @@ function MobileTaskDelayDialog({ onClose, triggerRef, children }) {
     return createPortal(<dialog ref={dialogRef} aria-label="Task delay reports" aria-modal="true"
         onCancel={(event) => { event.preventDefault(); event.stopPropagation(); onClose(false); }}
         onClick={(event) => { if (event.target === event.currentTarget) onClose(false); }}
-        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-2xl overflow-y-auto rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-[#211E1A] shadow-2xl backdrop:bg-[#211E1A]/45">
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-[#FFFDFA] pb-3">
+        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-2xl overflow-y-auto rounded-2xl border border-border bg-surface p-4 text-ink shadow-2xl backdrop:bg-ink/45">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-surface pb-3">
             <h3 className="text-lg font-bold">Delay Reports</h3>
-            <button type="button" autoFocus aria-label="Close task delay reports" onClick={() => onClose(false)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#E7DED2]"><X size={18} /></button>
+            <button type="button" autoFocus aria-label="Close task delay reports" onClick={() => onClose(false)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border"><X size={18} /></button>
         </div>
         {children}
     </dialog>, document.body);
@@ -265,7 +254,7 @@ function ExpandedTask({
 
     if (loading) {
         return (
-            <div className="flex items-center gap-3 border-t border-[#EEE6DC] p-6 text-sm text-[#716658]">
+            <div className="flex items-center gap-3 border-t border-border p-6 text-sm text-muted">
                 <RefreshCw size={18} className="animate-spin" />
                 Loading task details...
             </div>
@@ -274,7 +263,7 @@ function ExpandedTask({
 
     if (error) {
         return (
-            <div className="border-t border-[#EEE6DC] p-5">
+            <div className="border-t border-border p-5">
                 <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
                     <p role="alert">{error}</p>
 
@@ -311,19 +300,19 @@ function ExpandedTask({
             : "Not applicable";
 
     return (
-        <div className="expanded-supervisor-task border-t border-[#EEE6DC] bg-[#FFFDFA] p-4 sm:p-6">
+        <div className="expanded-supervisor-task border-t border-border bg-surface p-4 sm:p-6">
             {/* DETAILS HEADER */}
             <div className="expanded-task-heading flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-[#716658]">
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted">
                         Task Information
                     </p>
 
-                    <h3 className="mt-2 text-lg font-bold text-[#211E1A]">
+                    <h3 className="mt-2 text-lg font-bold text-ink">
                         <span className="lg:hidden">Complete Task Details</span><span className="hidden lg:inline">{task.title}</span>
                     </h3>
 
-                    <p className="mt-1 text-xs leading-5 text-[#716658]">
+                    <p className="mt-1 text-xs leading-5 text-muted">
                         Scope, scheduling, approval, execution and documents.
                     </p>
                 </div>
@@ -332,7 +321,7 @@ function ExpandedTask({
                     <button
                         type="button"
                         onClick={() => onEdit(task)}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#F0D99A] bg-[#FFF5D6] px-4 py-2.5 text-xs font-bold text-[#8A620D] transition-colors hover:bg-[#FFE9A8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8A620D]"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-pastel-butter bg-pastel-butter px-4 py-2.5 text-xs font-bold text-warning transition-colors hover:bg-pastel-butter focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning"
                     >
                         <Pencil size={16} />
                         {editLabel}
@@ -349,9 +338,9 @@ function ExpandedTask({
                 ].map(([label, value]) => (
                     <div
                         key={label}
-                        className="rounded-xl bg-[#F8F4EE] px-4 py-3"
+                        className="rounded-xl bg-surface-soft px-4 py-3"
                     >
-                        <p className="mb-2 text-xs font-bold uppercase text-[#716658]">
+                        <p className="mb-2 text-xs font-bold uppercase text-muted">
                             {label}
                         </p>
 
@@ -373,7 +362,7 @@ function ExpandedTask({
             </div>
 
             {/* DETAILS GRID */}
-            <div className="expanded-task-details mt-5 grid gap-4 rounded-[20px] bg-[#F8F4EE] p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
+            <dl className="rare-info-grid expanded-task-details mt-5 grid gap-4 rounded-[20px] bg-surface-soft p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
                 <DetailItem label="Task Name" value={task.title} />
                 <DetailItem
                     label="Worker / Team"
@@ -407,32 +396,32 @@ function ExpandedTask({
                     label="Last Updated"
                     value={formatDate(task.updated_at)}
                 />
-            </div>
+            </dl>
 
             <aside className="expanded-task-review contents lg:hidden">
-            <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
-                <h4 className="text-sm font-bold text-[#211E1A]">Admin decisions and comments</h4>
-                {!decisionState && <p role="status" className="text-xs text-[#716658]">Loading decision history...</p>}
+            <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-border bg-surface-soft p-4 sm:p-5">
+                <h4 className="text-sm font-bold text-ink">Admin decisions and comments</h4>
+                {!decisionState && <p role="status" className="text-xs text-muted">Loading decision history...</p>}
                 {decisionState?.error && <p role="alert" className="text-xs text-red-700">{decisionState.error} <button type="button" className="underline" onClick={() => setDecisionRevision((value) => value + 1)}>Retry</button></p>}
-                {decisionState?.data?.results.map((decision) => <article key={decision.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4">
-                    <p className={`text-sm font-semibold ${decision.action.endsWith("REJECTED") ? "text-[#B42318]" : "text-[#166534]"}`}>{readable(decision.action)}</p>
-                    <p className="mt-1 text-xs text-[#716658]">{decision.actor_name || "Reviewer unavailable"} / {formatDateTime(decision.created_at)}</p>
-                    <p className="mt-3 whitespace-pre-wrap break-words text-xs text-[#211E1A] sm:text-sm">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
+                {decisionState?.data?.results.map((decision) => <article key={decision.id} className="rounded-xl border border-border bg-surface p-4">
+                    <p className={`text-sm font-semibold ${decision.action.endsWith("REJECTED") ? "text-danger" : "text-success"}`}>{readable(decision.action)}</p>
+                    <p className="mt-1 text-xs text-muted">{decision.actor_name || "Reviewer unavailable"} / {formatDateTime(decision.created_at)}</p>
+                    <p className="mt-3 whitespace-pre-wrap break-words text-xs text-ink sm:text-sm">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
                 </article>)}
-                {decisionState?.data?.count === 0 && <p className="text-xs text-[#716658]">No Admin decision has been recorded yet.</p>}
+                {decisionState?.data?.count === 0 && <p className="text-xs text-muted">No Admin decision has been recorded yet.</p>}
                 {decisionState?.data && (decisionState.data.next || decisionState.data.previous) && <nav aria-label="Decision history pages" className="rare-pagination">
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.previous} onClick={() => setDecisionPage((page) => page - 1)}>Previous decisions</button>
-                    <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
+                    <span aria-live="polite" aria-atomic="true" className="text-xs text-muted">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.next} onClick={() => setDecisionPage((page) => page + 1)}>Next decisions</button>
                 </nav>}
             </section>
             <button ref={mobileDelayTriggerRef} type="button" aria-haspopup="dialog" aria-expanded={mobileDelayOpen}
                 onClick={() => setMobileDelayOpen(true)}
-                className="mt-5 flex min-h-11 w-full items-center justify-between gap-3 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 text-left text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]">
+                className="mt-5 flex min-h-11 w-full items-center justify-between gap-3 rounded-[18px] border border-border bg-surface-soft p-4 text-left text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
                 Delay Reports<ChevronRight size={18} aria-hidden="true" />
             </button>
             {mobileDelayOpen && <MobileTaskDelayDialog onClose={setMobileDelayOpen} triggerRef={mobileDelayTriggerRef}>
-            <section aria-label="Task delay reports" className="mt-5 space-y-4 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
+            <section aria-label="Task delay reports" className="mt-5 space-y-4 rounded-[18px] border border-border bg-surface-soft p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <h4 className="text-sm font-bold">Delay reports for this task</h4>
                     <div className="flex flex-wrap items-center gap-2">
@@ -440,14 +429,14 @@ function ExpandedTask({
                         <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" onClick={() => setDelayRevision((value) => value + 1)}>Refresh reports</button>
                     </div>
                 </div>
-                <p className="text-xs text-[#716658]">Current approved deadline: {formatDate(task.end_date)}. Reporting a delay does not change this deadline; an extension needs separate approval.</p>
-                {!delayState && <p role="status" className="text-xs text-[#716658]">Loading task delay reports...</p>}
+                <p className="text-xs text-muted">Current approved deadline: {formatDate(task.end_date)}. Reporting a delay does not change this deadline; an extension needs separate approval.</p>
+                {!delayState && <p role="status" className="text-xs text-muted">Loading task delay reports...</p>}
                 {delayState?.error && <p role="alert" className="text-xs text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
-                {delayState?.data?.count === 0 && <p className="text-xs text-[#716658]">No delays have been reported for this task.</p>}
-                {delayState?.data?.results.map((report) => <div key={report.id}><div className="lg:hidden"><article className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article></div><div className="hidden lg:block"><SupervisorDelayCard report={report} taskName={task.title} /></div></div>)}
+                {delayState?.data?.count === 0 && <p className="text-xs text-muted">No delays have been reported for this task.</p>}
+                {delayState?.data?.results.map((report) => <div key={report.id}><div className="lg:hidden"><article className="rounded-xl border border-border bg-surface p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article></div><div className="hidden lg:block"><SupervisorDelayCard report={report} taskName={task.title} /></div></div>)}
                 {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="rare-pagination">
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.previous} onClick={() => setDelayPage((page) => page - 1)}>Previous reports</button>
-                    <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
+                    <span aria-live="polite" aria-atomic="true" className="text-xs text-muted">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
                 </nav>}
             </section>
@@ -455,24 +444,24 @@ function ExpandedTask({
             </aside>
             {/* DESCRIPTION AND COMPLETION CRITERIA */}
             <div className="expanded-task-description mt-5 grid gap-4 lg:grid-cols-2">
-                <div className="rounded-[18px] border border-[#EEE6DC] p-4 sm:p-5">
-                    <h4 className="flex items-center gap-2 text-sm font-bold text-[#211E1A]">
-                        <ClipboardList size={18} className="text-[#3565A5]" />
+                <div className="rounded-[18px] border border-border p-4 sm:p-5">
+                    <h4 className="flex items-center gap-2 text-sm font-bold text-ink">
+                        <ClipboardList size={18} className="text-info" />
                         Task Description
                     </h4>
 
-                    <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-[#716658] sm:text-sm">
+                    <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-muted sm:text-sm">
                         {task.description || "No description provided."}
                     </p>
                 </div>
 
-                <div className="rounded-[18px] border border-[#EEE6DC] p-4 sm:p-5">
-                    <h4 className="flex items-center gap-2 text-sm font-bold text-[#211E1A]">
-                        <CheckCircle2 size={18} className="text-[#368250]" />
+                <div className="rounded-[18px] border border-border p-4 sm:p-5">
+                    <h4 className="flex items-center gap-2 text-sm font-bold text-ink">
+                        <CheckCircle2 size={18} className="text-success" />
                         Completion Criteria
                     </h4>
 
-                    <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-[#716658] sm:text-sm">
+                    <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-muted sm:text-sm">
                         {task.completion_criteria ||
                             "No completion criteria specified."}
                     </p>
@@ -485,19 +474,19 @@ function ExpandedTask({
                     type="button"
                     aria-expanded={documentsOpen}
                     onClick={() => setDocumentsOpen((value) => !value)}
-                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[18px] border border-[#E4DCCD] bg-[#F8F4EE] px-4 py-3.5 text-left transition-colors hover:bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] sm:px-5 sm:py-4"
+                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[18px] border border-border bg-surface-soft px-4 py-3.5 text-left transition-colors hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:px-5 sm:py-4"
                 >
                     <span className="flex items-center gap-3">
-                        <span className="rounded-xl bg-[#F0EAF8] p-2.5 text-[#7C5BA4] sm:p-3">
+                        <span className="rounded-xl bg-pastel-lavender p-2.5 text-violet sm:p-3">
                             <FolderOpen size={20} />
                         </span>
 
                         <span>
-                            <span className="block text-sm font-bold text-[#211E1A]">
+                            <span className="block text-sm font-bold text-ink">
                                 Documents & Drawings
                             </span>
 
-                            <span className="mt-1 block text-xs text-[#716658]">
+                            <span className="mt-1 block text-xs text-muted">
                                 View, upload, download and manage versions
                             </span>
                         </span>
@@ -505,7 +494,7 @@ function ExpandedTask({
 
                     <ChevronDown
                         size={19}
-                        className={`shrink-0 text-[#716658] transition-transform ${
+                        className={`shrink-0 text-muted transition-transform ${
                             documentsOpen ? "rotate-180" : ""
                         }`}
                     />
@@ -517,23 +506,23 @@ function ExpandedTask({
             </div>
             </div>
             <aside className="expanded-task-review hidden lg:block lg:space-y-4">
-            <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
-                <h4 className="text-sm font-bold text-[#211E1A]">Admin decisions and comments</h4>
-                {!decisionState && <p role="status" className="text-xs text-[#716658]">Loading decision history...</p>}
+            <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-border bg-surface-soft p-4 sm:p-5">
+                <h4 className="text-sm font-bold text-ink">Admin decisions and comments</h4>
+                {!decisionState && <p role="status" className="text-xs text-muted">Loading decision history...</p>}
                 {decisionState?.error && <p role="alert" className="text-xs text-red-700">{decisionState.error} <button type="button" className="underline" onClick={() => setDecisionRevision((value) => value + 1)}>Retry</button></p>}
-                {decisionState?.data?.results.map((decision) => <article key={decision.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4">
-                    <p className={`text-sm font-semibold ${decision.action.endsWith("REJECTED") ? "text-[#B42318]" : "text-[#166534]"}`}>{readable(decision.action)}</p>
-                    <p className="mt-1 text-xs text-[#716658]">{decision.actor_name || "Reviewer unavailable"} / {formatDateTime(decision.created_at)}</p>
-                    <p className="mt-3 whitespace-pre-wrap break-words text-xs text-[#211E1A] sm:text-sm">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
+                {decisionState?.data?.results.map((decision) => <article key={decision.id} className="rounded-xl border border-border bg-surface p-4">
+                    <p className={`text-sm font-semibold ${decision.action.endsWith("REJECTED") ? "text-danger" : "text-success"}`}>{readable(decision.action)}</p>
+                    <p className="mt-1 text-xs text-muted">{decision.actor_name || "Reviewer unavailable"} / {formatDateTime(decision.created_at)}</p>
+                    <p className="mt-3 whitespace-pre-wrap break-words text-xs text-ink sm:text-sm">{decision.details?.reason || decision.details?.comment || decision.details?.admin_comment || "No comment provided."}</p>
                 </article>)}
-                {decisionState?.data?.count === 0 && <p className="text-xs text-[#716658]">No Admin decision has been recorded yet.</p>}
+                {decisionState?.data?.count === 0 && <p className="text-xs text-muted">No Admin decision has been recorded yet.</p>}
                 {decisionState?.data && (decisionState.data.next || decisionState.data.previous) && <nav aria-label="Decision history pages" className="rare-pagination">
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.previous} onClick={() => setDecisionPage((page) => page - 1)}>Previous decisions</button>
-                    <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
+                    <span aria-live="polite" aria-atomic="true" className="text-xs text-muted">Page {decisionPage} / {Math.max(1, Math.ceil(decisionState.data.count / 10))}</span>
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.next} onClick={() => setDecisionPage((page) => page + 1)}>Next decisions</button>
                 </nav>}
             </section>
-            <section aria-label="Task delay reports" className="mt-5 space-y-4 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
+            <section aria-label="Task delay reports" className="mt-5 space-y-4 rounded-[18px] border border-border bg-surface-soft p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <h4 className="text-sm font-bold">Delay reports for this task</h4>
                     <div className="flex flex-wrap items-center gap-2">
@@ -541,14 +530,14 @@ function ExpandedTask({
                         <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" onClick={() => setDelayRevision((value) => value + 1)}>Refresh reports</button>
                     </div>
                 </div>
-                <p className="text-xs text-[#716658]">Current approved deadline: {formatDate(task.end_date)}. Reporting a delay does not change this deadline; an extension needs separate approval.</p>
-                {!delayState && <p role="status" className="text-xs text-[#716658]">Loading task delay reports...</p>}
+                <p className="text-xs text-muted">Current approved deadline: {formatDate(task.end_date)}. Reporting a delay does not change this deadline; an extension needs separate approval.</p>
+                {!delayState && <p role="status" className="text-xs text-muted">Loading task delay reports...</p>}
                 {delayState?.error && <p role="alert" className="text-xs text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
-                {delayState?.data?.count === 0 && <p className="text-xs text-[#716658]">No delays have been reported for this task.</p>}
-                {delayState?.data?.results.map((report) => <div key={report.id}><div className="lg:hidden"><article className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article></div><div className="hidden lg:block"><SupervisorDelayCard report={report} taskName={task.title} /></div></div>)}
+                {delayState?.data?.count === 0 && <p className="text-xs text-muted">No delays have been reported for this task.</p>}
+                {delayState?.data?.results.map((report) => <div key={report.id}><div className="lg:hidden"><article className="rounded-xl border border-border bg-surface p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article></div><div className="hidden lg:block"><SupervisorDelayCard report={report} taskName={task.title} /></div></div>)}
                 {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="rare-pagination">
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.previous} onClick={() => setDelayPage((page) => page - 1)}>Previous reports</button>
-                    <span aria-live="polite" aria-atomic="true" className="text-xs text-[#716658]">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
+                    <span aria-live="polite" aria-atomic="true" className="text-xs text-muted">Page {delayPage} / {Math.max(1, Math.ceil(delayState.data.count / 5))}</span>
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
                 </nav>}
             </section>
@@ -629,10 +618,10 @@ function ProjectTaskFilterSheet({
             onClick={(event) => {
                 if (event.target === dialogRef.current) onClose();
             }}
-            className="fixed inset-x-0 bottom-0 top-auto m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-[#211E1A] shadow-[0_-12px_36px_rgba(33,30,26,0.18)] backdrop:bg-[#211E1A]/45 min-[1024px]:inset-auto min-[1024px]:top-1/2 min-[1024px]:left-1/2 min-[1024px]:-translate-x-1/2 min-[1024px]:-translate-y-1/2 min-[1024px]:w-[min(28rem,calc(100vw-2rem))] min-[1024px]:rounded-2xl min-[1024px]:shadow-2xl"
+            className="fixed inset-x-0 bottom-0 top-auto m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 text-ink shadow-[0_-12px_36px_rgba(33,30,26,0.18)] backdrop:bg-ink/45 min-[1024px]:inset-auto min-[1024px]:top-1/2 min-[1024px]:left-1/2 min-[1024px]:-translate-x-1/2 min-[1024px]:-translate-y-1/2 min-[1024px]:w-[min(28rem,calc(100vw-2rem))] min-[1024px]:rounded-2xl min-[1024px]:shadow-2xl"
         >
-            <div className="mb-4 flex items-center justify-between gap-3 border-b border-[#EEE6DC] pb-3">
-                <h2 id="task-filters-sheet-title" className="text-base font-semibold text-[#211E1A]">
+            <div className="mb-4 flex items-center justify-between gap-3 border-b border-border pb-3">
+                <h2 id="task-filters-sheet-title" className="text-base font-semibold text-ink">
                     Filters and sorting
                 </h2>
                 <button
@@ -640,14 +629,14 @@ function ProjectTaskFilterSheet({
                     type="button"
                     onClick={onClose}
                     aria-label="Close filters"
-                    className="flex h-11 w-11 items-center justify-center rounded-xl text-[#716658] hover:bg-[#F1EADF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl text-muted hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                     <X size={20} aria-hidden="true" />
                 </button>
             </div>
 
             <div className="space-y-4">
-                <label className="block text-xs font-semibold text-[#716658]">
+                <label className="block text-xs font-semibold text-muted">
                     Approvals
                     <select
                         value={approval}
@@ -662,7 +651,7 @@ function ProjectTaskFilterSheet({
                     </select>
                 </label>
 
-                <label className="block text-xs font-semibold text-[#716658]">
+                <label className="block text-xs font-semibold text-muted">
                     Priorities
                     <select
                         value={priority}
@@ -678,7 +667,7 @@ function ProjectTaskFilterSheet({
                     </select>
                 </label>
 
-                <label className="block text-xs font-semibold text-[#716658]">
+                <label className="block text-xs font-semibold text-muted">
                     Work statuses
                     <select
                         value={workStatus}
@@ -695,7 +684,7 @@ function ProjectTaskFilterSheet({
                     </select>
                 </label>
 
-                <label className="block text-xs font-semibold text-[#716658]">
+                <label className="block text-xs font-semibold text-muted">
                     Sort by
                     <select
                         value={sort}
@@ -713,11 +702,11 @@ function ProjectTaskFilterSheet({
                     </select>
                 </label>
 
-                <div className="flex justify-end border-t border-[#EEE6DC] pt-4">
+                <div className="flex justify-end border-t border-border pt-4">
                     <button
                         type="button"
                         onClick={onClearAll}
-                        className="flex min-h-11 items-center gap-2 rounded-xl border border-[#9A8872] bg-[#FFFDFA] px-4 py-2 text-xs font-semibold text-[#514538] hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                        className="flex min-h-11 items-center gap-2 rounded-xl border border-subtle bg-surface px-4 py-2 text-xs font-semibold text-muted hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                     >
                         <X size={15} aria-hidden="true" />
                         Clear all filters
@@ -742,10 +731,10 @@ function TaskCard({
     onStatusChanged,
 }) {
     const priorityTone = {
-        URGENT: "bg-[#B5473E]",
-        HIGH: "bg-[#94651D]",
-        MEDIUM: "bg-[#74614D]",
-        LOW: "bg-[#3565A5]",
+        URGENT: "bg-danger",
+        HIGH: "bg-warning",
+        MEDIUM: "bg-muted",
+        LOW: "bg-info",
     };
 
     const overdue = typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task);
@@ -789,7 +778,7 @@ function TaskCard({
     const taskHref = `/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`;
 
     return (
-        <article className="overflow-hidden rounded-xl border border-[#E7DED2] bg-[#FFFDFA] transition-all hover:border-[#C9B9A6] hover:shadow-sm">
+        <article className="rare-premium-task-card transition-all hover:border-border-strong hover:shadow-sm">
             <Link
                 to={expanded ? `/supervisor/projects/${projectId}/tasks` : taskHref}
                 onClick={(event) => {
@@ -799,30 +788,30 @@ function TaskCard({
                 aria-expanded={expanded}
                 aria-controls={`task-details-${task.id}`}
                 aria-label={`${task.title || "Untitled Task"}`}
-                className="group flex min-h-11 min-w-0 flex-col gap-1.5 p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                className="rare-task-summary group flex min-h-11 min-w-0 flex-col gap-1.5 p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
                 {/* Priority dot plus title, chevron */}
                 <span className="flex min-w-0 items-center gap-2">
                     <span
                         aria-hidden="true"
                         className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                            priorityTone[task.priority] || "bg-[#74614D]"
+                            priorityTone[task.priority] || "bg-muted"
                         }`}
                     />
-                    <span className="min-w-0 flex-1 truncate text-base font-semibold leading-5 text-[#211E1A]">
+                    <span className="rare-task-summary-title min-w-0 flex-1 truncate text-base font-semibold leading-5 text-ink">
                         {task.title || "Untitled Task"}
                     </span>
                     <ChevronRight
                         size={18}
                         aria-hidden="true"
-                        className={`shrink-0 text-[#716658] transition-transform ${
+                        className={`shrink-0 text-muted transition-transform ${
                             expanded ? "rotate-90" : ""
                         }`}
                     />
                 </span>
 
                 {/* Chips for Work status and Approval status only */}
-                <span className="flex min-w-0 flex-wrap gap-1.5">
+                <span className="mt-1 flex min-w-0 flex-wrap gap-1.5"><span className="rounded-full bg-app px-2.5 py-1 text-xs font-semibold leading-4 text-muted">Priority: {readable(task.priority)}</span>
                     {[
                         ["Work", task.work_status],
                         ["Approval", task.approval_status],
@@ -832,7 +821,7 @@ function TaskCard({
                             <span
                                 key={label}
                                 className={`max-w-full truncate rounded-full px-2.5 py-1 text-xs font-semibold leading-4 ${
-                                    statusColors[value] || "bg-[#F1EADF] text-[#74614D]"
+                                    statusColors[value] || "bg-app text-muted"
                                 }`}
                             >
                                 {label}: {readable(value)}
@@ -842,7 +831,7 @@ function TaskCard({
 
                 {/* One line with assignee and dates (hide "Not specified") */}
                 {hasLineInfo && (
-                    <span className="flex min-w-0 items-center gap-1 truncate text-xs font-medium leading-4 text-[#716658]">
+                    <span className="rare-task-summary-meta flex min-w-0 items-center gap-1 truncate text-xs font-medium leading-4 text-muted">
                         {overdue && <span className="shrink-0 font-semibold text-red-700">Overdue · </span>}
                         {assignee && <span className="truncate">{assignee}</span>}
                         {assignee && datesText && <span className="shrink-0"> · </span>}
@@ -855,14 +844,14 @@ function TaskCard({
                     <TaskProgress progress={task.progress} />
                 ) : (
                     isAwaitingVerification && (
-                        <span className="truncate text-xs font-medium text-[#94651D]">
+                        <span className="truncate text-xs font-medium text-warning">
                             Completed, awaiting verification
                         </span>
                     )
                 )}
 
                 {Object.keys(taskScheduleErrors(task, project)).length > 0 && (
-                    <span role="status" className="rounded-lg bg-[#F1EADF] p-2 text-xs text-[#665E53]">
+                    <span role="status" className="rounded-lg bg-app p-2 text-xs text-muted">
                         Task schedule conflicts with current project schedule.
                     </span>
                 )}
@@ -1288,7 +1277,7 @@ export default function SupervisorProjectTasks() {
     }, [linkedTaskId, loading, error, tasks, pageSize]);
 
     return (
-        <div className="supervisor-project-tasks rare-tasks mx-auto w-full min-w-0 max-w-[1400px] space-y-4 pb-8 text-[#211E1A]">
+        <div className="supervisor-project-tasks rare-tasks mx-auto w-full min-w-0 max-w-[1400px] space-y-4 pb-8 text-ink">
             <TaskPageStyles />
             {loading && (
                 <LoadingScreen message="Loading project tasks..." />
@@ -1299,7 +1288,7 @@ export default function SupervisorProjectTasks() {
                 <Link
                     to={`/supervisor/projects/${projectId}`}
                     aria-label={`Back to ${project?.name || "Project"}`}
-                    className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-[#716658] hover:text-[#211E1A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                    className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                     <ChevronLeft size={16} aria-hidden="true" />
                     <span className="truncate">{project?.name || "Project"}</span>
@@ -1309,7 +1298,7 @@ export default function SupervisorProjectTasks() {
             {/* 2. HEADER ROW: title + refresh, project name caption, then actions row */}
             <header className="min-w-0">
                 <div className="project-task-title-row flex w-full min-w-0 items-center justify-between gap-3">
-                    <h1 className="min-w-0 truncate text-xl font-bold tracking-tight text-[#211E1A] sm:text-2xl">
+                    <h1 className="min-w-0 truncate text-xl font-bold tracking-tight text-ink sm:text-2xl">
                         Project Tasks
                     </h1>
 
@@ -1318,7 +1307,7 @@ export default function SupervisorProjectTasks() {
                         onClick={refreshTasks}
                         disabled={loading}
                         aria-label="Refresh tasks"
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] text-[#514538] hover:bg-[#F1EADF] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-muted hover:bg-app disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                     >
                         <RefreshCw
                             size={18}
@@ -1329,7 +1318,7 @@ export default function SupervisorProjectTasks() {
                 </div>
 
                 {project?.name && (
-                    <p className="mt-0.5 truncate text-xs text-[#716658]">
+                    <p className="mt-0.5 truncate text-xs text-muted">
                         {project.name}
                     </p>
                 )}
@@ -1344,7 +1333,7 @@ export default function SupervisorProjectTasks() {
                             Boolean(error) ||
                             !["ACTIVE", "MAINTENANCE"].includes(project?.status)
                         }
-                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[#211E1A] px-4 text-xs font-semibold text-white hover:bg-[#39332B] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] sm:flex-none sm:text-sm"
+                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-ink px-4 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:flex-none sm:text-sm"
                     >
                         <Plus size={17} aria-hidden="true" className="shrink-0" />
                         Create Task
@@ -1358,7 +1347,7 @@ export default function SupervisorProjectTasks() {
                             Boolean(error) ||
                             !["ACTIVE", "MAINTENANCE"].includes(project?.status)
                         }
-                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-4 text-xs font-semibold text-[#514538] hover:bg-[#F1EADF] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] sm:flex-none sm:text-sm"
+                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-xs font-semibold text-muted hover:bg-app disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:flex-none sm:text-sm"
                     >
                         <Layers3 size={17} aria-hidden="true" className="shrink-0" />
                         Bulk Add Tasks
@@ -1385,14 +1374,14 @@ export default function SupervisorProjectTasks() {
                             type="button"
                             aria-pressed={isSelected}
                             onClick={() => updateFilter(setApproval, chip.id)}
-                            className={`flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] ${
+                            className={`flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
                                 isSelected
-                                    ? "border-[#211E1A] bg-[#211E1A] text-[#FFFDFA]"
-                                    : "border-[#E7DED2] bg-[#FFFDFA] text-[#665C50] hover:bg-[#F8F5F0]"
+                                    ? "border-ink bg-ink text-surface"
+                                    : "border-border bg-surface text-muted hover:bg-surface-soft"
                             }`}
                         >
                             <span>{chip.label}</span>
-                            <span className={isSelected ? "text-white/80" : "text-[#716658]"}>
+                            <span className={isSelected ? "text-white/80" : "text-muted"}>
                                 {error ? "—" : chip.count}
                             </span>
                         </button>
@@ -1425,13 +1414,13 @@ export default function SupervisorProjectTasks() {
                     aria-label={`Filters and sorting, ${activeFilterCount} active ${
                         activeFilterCount === 1 ? "filter" : "filters"
                     }`}
-                    className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#E7DED2] bg-[#FFFDFA] text-[#211E1A] hover:bg-[#F8F5F0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                    className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-ink hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                     <Filter size={18} aria-hidden="true" />
                     {activeFilterCount > 0 && (
                         <span
                             aria-hidden="true"
-                            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#211E1A] px-1 text-xs font-semibold text-[#FFFDFA]"
+                            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-xs font-semibold text-surface"
                         >
                             {activeFilterCount}
                         </span>
@@ -1457,7 +1446,7 @@ export default function SupervisorProjectTasks() {
 
             {/* NOTICES */}
             {project?.status === "CANCELLED" && (
-                <p role="status" className="rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-xs text-[#716658]">
+                <p role="status" className="rounded-xl border border-border bg-surface p-4 text-xs text-muted">
                     This project has been cancelled. Existing records remain available for reference.
                 </p>
             )}
@@ -1469,14 +1458,14 @@ export default function SupervisorProjectTasks() {
             {notice && (
                 <div
                     role="status"
-                    className="flex items-start gap-3 rounded-2xl border border-[#C9E2CE] bg-[#E7F2E8] p-4"
+                    className="flex items-start gap-3 rounded-2xl border border-pastel-mint bg-pastel-mint p-4"
                 >
                     <CheckCircle2
                         size={20}
-                        className="shrink-0 text-[#296F40]"
+                        className="shrink-0 text-success"
                     />
 
-                    <p className="flex-1 text-xs font-medium text-[#296F40]">
+                    <p className="flex-1 text-xs font-medium text-success">
                         {notice}
                     </p>
 
@@ -1484,9 +1473,9 @@ export default function SupervisorProjectTasks() {
                         type="button"
                         onClick={() => setNotice("")}
                         aria-label="Dismiss message"
-                        className="flex h-11 w-11 -mr-2 -mt-2 items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#296F40]"
+                        className="flex h-11 w-11 -mr-2 -mt-2 items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success"
                     >
-                        <X size={17} className="text-[#296F40]" />
+                        <X size={17} className="text-success" />
                     </button>
                 </div>
             )}
@@ -1496,7 +1485,7 @@ export default function SupervisorProjectTasks() {
                 <p
                     role="status"
                     aria-live="polite"
-                    className="min-w-0 truncate text-sm font-medium text-[#716658]"
+                    className="min-w-0 truncate text-sm font-medium text-muted"
                 >
                     {loading
                         ? "Updating tasks..."
@@ -1510,7 +1499,7 @@ export default function SupervisorProjectTasks() {
                 <div
                     role="group"
                     aria-label="Task view"
-                    className="ml-auto inline-flex shrink-0 gap-1 rounded-2xl border border-[#D8C7B2] bg-[#F1EADF] p-1"
+                    className="ml-auto inline-flex shrink-0 gap-1 rounded-2xl border border-border-strong bg-app p-1"
                 >
                     {[
                         ["list", "List", List],
@@ -1522,10 +1511,10 @@ export default function SupervisorProjectTasks() {
                             aria-label={`${label} view`}
                             aria-pressed={layout === value}
                             onClick={() => setLayout(value)}
-                            className={`inline-flex h-11 w-11 min-h-11 items-center justify-center rounded-xl p-0 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#94651D] ${
+                            className={`inline-flex h-11 w-11 min-h-11 items-center justify-center rounded-xl p-0 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning ${
                                 layout === value
-                                    ? "bg-[#FFFDFA] text-[#352D24] shadow-sm"
-                                    : "text-[#66543D] hover:bg-white/60"
+                                    ? "bg-surface text-ink shadow-sm"
+                                    : "text-muted hover:bg-white/60"
                             }`}
                         >
                             <Icon size={18} aria-hidden="true" />
@@ -1536,7 +1525,7 @@ export default function SupervisorProjectTasks() {
 
             {/* ERROR */}
             {!loading && error && (
-                <div className="rounded-2xl border border-red-200 bg-[#FFFDFA] p-5">
+                <div className="rounded-2xl border border-red-200 bg-surface p-5">
                     <p role="alert" className="text-xs text-red-700 sm:text-sm">
                         {error}
                     </p>
@@ -1544,7 +1533,7 @@ export default function SupervisorProjectTasks() {
                     <button
                         type="button"
                         onClick={refreshTasks}
-                        className="mt-3 flex min-h-11 items-center gap-2 text-xs font-semibold underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A] sm:text-sm"
+                        className="mt-3 flex min-h-11 items-center gap-2 text-xs font-semibold underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:text-sm"
                     >
                         <RefreshCw size={16} />
                         Try Again
@@ -1568,7 +1557,7 @@ export default function SupervisorProjectTasks() {
                                     String(expandedId) === String(task.id);
 
                                 return (
-                                    <div key={task.id} ref={expanded ? expandedCardRef : null} className="min-w-0">
+                                    <div key={task.id} ref={expanded ? expandedCardRef : null} className="rare-task-card-item min-w-0">
                                         <MobileTaskCard
                                             task={task}
                                             to={`/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`}
@@ -1580,8 +1569,8 @@ export default function SupervisorProjectTasks() {
                                                 toggleTask(task.id);
                                             }}
                                         />
-                                        {!expanded && canReportDelay(task, project) && <div className="-mt-2 flex lg:hidden justify-end rounded-b-xl border-x border-b border-[#E7DED2] bg-[#FFFDFA] px-3 pb-2">
-                                            <button type="button" aria-label={`Report delay for ${task.title || "task"}`} onClick={() => setDelayReportTask(task)} className="min-h-11 px-3 text-sm font-semibold text-[#514538] underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]">Report delay</button>
+                                        {!expanded && canReportDelay(task, project) && <div className="rare-task-card-actions flex justify-end lg:hidden">
+                                            <button type="button" aria-label={`Report delay for ${task.title || "task"}`} onClick={() => setDelayReportTask(task)} className="min-h-11 px-3 text-sm font-semibold text-muted underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">Report delay</button>
                                         </div>}
                                         {expanded && createPortal(<div className="supervisor-task-backdrop hidden lg:block" aria-hidden="true" onPointerDown={(event) => {
                                             if (event.button !== 0) return;
@@ -1590,7 +1579,7 @@ export default function SupervisorProjectTasks() {
                                             toggleTask(task.id);
                                         }} />, document.body)}
                                         {expanded && (
-                                            <div id={`task-details-${task.id}`} className="supervisor-task-popup overflow-hidden rounded-b-xl border-x border-b border-[#E7DED2] bg-[#FFFDFA]">
+                                            <div id={`task-details-${task.id}`} className="supervisor-task-popup overflow-hidden rounded-b-xl border-x border-b border-border bg-surface">
                                                 <ExpandedTask
                                                     key={task.id}
                                                     task={expandedTask}
@@ -1610,19 +1599,19 @@ export default function SupervisorProjectTasks() {
                             })}
                         </div>
                     ) : (
-                        <div className="rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA] px-5 py-14 text-center">
+                        <div className="rounded-[24px] border border-border bg-surface px-5 py-14 text-center">
                             <ClipboardList
                                 size={32}
-                                className="mx-auto text-[#716658]"
+                                className="mx-auto text-muted"
                             />
 
-                            <h3 className="mt-5 text-lg font-bold text-[#211E1A]">
+                            <h3 className="mt-5 text-lg font-bold text-ink">
                                 {hasFilters
                                     ? "No matching tasks"
                                     : "No tasks added yet"}
                             </h3>
 
-                            <p className="mt-2 text-xs text-[#716658]">
+                            <p className="mt-2 text-xs text-muted">
                                 {hasFilters
                                     ? "Try adjusting the filters."
                                     : "Create your first project task to get started."}
@@ -1632,7 +1621,7 @@ export default function SupervisorProjectTasks() {
                                 <button
                                     type="button"
                                     onClick={clearFilters}
-                                    className="mt-5 min-h-11 rounded-xl border border-[#9A8872] bg-[#FFFDFA] px-4 py-2.5 text-xs font-semibold text-[#514538] hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                                    className="mt-5 min-h-11 rounded-xl border border-subtle bg-surface px-4 py-2.5 text-xs font-semibold text-muted hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                                 >
                                     Clear Filters
                                 </button>
@@ -1641,7 +1630,7 @@ export default function SupervisorProjectTasks() {
                                     type="button"
                                     onClick={openCreate}
                                     disabled={project?.status === "CANCELLED"}
-                                    className="rare-button rare-button-primary mt-5 min-h-11 px-4 py-2.5 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                                    className="rare-button rare-button-primary mt-5 min-h-11 px-4 py-2.5 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                                 >
                                     <Plus size={18} aria-hidden="true" />
                                     Create First Task
@@ -1652,8 +1641,8 @@ export default function SupervisorProjectTasks() {
 
                     {/* 7. PAGINATION AND PER PAGE: HIDE WHEN ONE PAGE */}
                     {pageCount > 1 && (
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E0D5C6] pt-4">
-                            <label className="flex items-center gap-2 text-xs font-medium text-[#716658]">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                            <label className="flex items-center gap-2 text-xs font-medium text-muted">
                                 Per page
                                 <select
                                     aria-label="Tasks per page"
@@ -1662,7 +1651,7 @@ export default function SupervisorProjectTasks() {
                                         setPageSize(Number(event.target.value));
                                         setPage(1);
                                     }}
-                                    className="min-h-11 rounded-lg border border-[#E7DED2] bg-[#FFFDFA] px-2 py-2 text-xs text-[#211E1A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                                    className="min-h-11 rounded-lg border border-border bg-surface px-2 py-2 text-xs text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                                 >
                                     {[12, 24, 48].map((size) => (
                                         <option key={size} value={size}>
@@ -1686,7 +1675,7 @@ export default function SupervisorProjectTasks() {
                                             Math.max(1, value - 1)
                                         );
                                     }}
-                                    className="flex min-h-11 items-center gap-1 rounded-xl border border-[#9A8872] bg-[#FFFDFA] px-3 py-2 text-xs font-semibold text-[#514538] hover:bg-[#F8F4EE] disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                                    className="flex min-h-11 items-center gap-1 rounded-xl border border-subtle bg-surface px-3 py-2 text-xs font-semibold text-muted hover:bg-surface-soft disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                                 >
                                     <ChevronLeft size={16} aria-hidden="true" />
                                     Previous
@@ -1695,10 +1684,10 @@ export default function SupervisorProjectTasks() {
                                 <span
                                     aria-live="polite"
                                     aria-atomic="true"
-                                    className="px-1 text-[#716658]"
+                                    className="px-1 text-muted"
                                 >
                                     Page{" "}
-                                    <strong className="font-semibold text-[#211E1A]">
+                                    <strong className="font-semibold text-ink">
                                         {safePage}
                                     </strong>{" "}
                                     of {pageCount}
@@ -1714,7 +1703,7 @@ export default function SupervisorProjectTasks() {
                                             Math.min(pageCount, value + 1)
                                         );
                                     }}
-                                    className="flex min-h-11 items-center gap-1 rounded-xl border border-[#9A8872] bg-[#FFFDFA] px-3 py-2 text-xs font-semibold text-[#514538] hover:bg-[#F8F4EE] disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]"
+                                    className="flex min-h-11 items-center gap-1 rounded-xl border border-subtle bg-surface px-3 py-2 text-xs font-semibold text-muted hover:bg-surface-soft disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                                 >
                                     Next
                                     <ChevronRight size={16} aria-hidden="true" />

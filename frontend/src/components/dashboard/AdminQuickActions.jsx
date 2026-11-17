@@ -21,29 +21,29 @@ const quickActions = [
         label: "Add Project",
         action: "add-project",
         icon: FolderPlus,
-        tile: "bg-[#E8F0FE] text-[#2563EB] group-hover:bg-[#2563EB]",
-        ring: "focus-visible:ring-[#2563EB]/40",
+        tile: "bg-pastel-sky text-info group-hover:bg-info",
+        ring: "focus-visible:ring-info/40",
     },
     {
         label: "Add Supervisor",
         action: "add-supervisor",
         icon: UserRoundPlus,
-        tile: "bg-[#E6F4EA] text-[#16A34A] group-hover:bg-[#16A34A]",
-        ring: "focus-visible:ring-[#16A34A]/40",
+        tile: "bg-pastel-mint text-success group-hover:bg-success",
+        ring: "focus-visible:ring-success/40",
     },
     {
         label: "Approvals",
         path: "/admin/approvals",
         icon: ClipboardCheck,
-        tile: "bg-[#FFF3E0] text-[#EA8A12] group-hover:bg-[#EA8A12]",
-        ring: "focus-visible:ring-[#EA8A12]/40",
+        tile: "bg-pastel-blush text-warning group-hover:bg-warning",
+        ring: "focus-visible:ring-warning/40",
     },
     {
         label: "Delay Reports",
         path: "/admin/delays",
         icon: Clock3,
-        tile: "bg-[#FCE9E6] text-[#B5473E] group-hover:bg-[#B5473E]",
-        ring: "focus-visible:ring-[#B5473E]/40",
+        tile: "bg-pastel-blush text-danger group-hover:bg-danger",
+        ring: "focus-visible:ring-danger/40",
     },
 ];
 
@@ -81,17 +81,17 @@ export default function AdminQuickActions() {
             <section
                 className="
           rounded-[22px]
-          border border-[#e8dfd3]
-          bg-[#fffdfa]
+          border border-pastel-lavender
+          bg-surface
           px-4 py-5
           sm:px-6
         "
             >
-                <h2 className="mb-4 text-base font-bold text-[#211e1a] sm:mb-5">
+                <h2 className="mb-4 text-base font-bold text-ink sm:mb-5">
                     Quick Actions
                 </h2>
 
-                <Link to="/admin/approvals" className="admin-primary-approval hidden items-center gap-3 rounded-xl border border-[#CDE5D9] bg-[#EFF9F3] p-4 lg:flex"><span className="rounded-full bg-white p-2 text-[#16845B]"><ClipboardCheck size={18} /></span><span className="min-w-0 flex-1"><span className="block text-sm font-bold">Open approvals</span><span className="mt-1 block text-xs text-[#716658]">Recent items waiting for an Admin decision.</span></span><span aria-hidden="true">&rarr;</span></Link>
+                <Link to="/admin/approvals" className="admin-primary-approval hidden items-center gap-3 rounded-xl border border-[#CDE5D9] bg-[#EFF9F3] p-4 lg:flex"><span className="rounded-full bg-white p-2 text-[#16845B]"><ClipboardCheck size={18} /></span><span className="min-w-0 flex-1"><span className="block text-sm font-bold">Open approvals</span><span className="mt-1 block text-xs text-muted">Recent items waiting for an Admin decision.</span></span><span aria-hidden="true">&rarr;</span></Link>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
                     {quickActions.map((action) => {
                         const Icon = action.icon;
@@ -123,9 +123,9 @@ export default function AdminQuickActions() {
 
                                 <span
                                     className="
-                    text-xs font-medium text-[#665e53]
+                    text-xs font-medium text-muted
                     transition-colors duration-200
-                    group-hover:text-[#211e1a]
+                    group-hover:text-ink
                     sm:text-sm
                   "
                                 >

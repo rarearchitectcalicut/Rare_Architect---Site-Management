@@ -1,3 +1,4 @@
+import { withoutRecordIds } from "../../utils/recordPresentation";
 import { ProjectSearch } from "../daily-reports/ReportProjectPicker";
 import SearchFilterToolbar from "../common/SearchFilterToolbar";
 import ApprovalModal from "../approvals/ApprovalModal";
@@ -35,37 +36,37 @@ const TYPE_CONFIG = {
     TASK_APPROVAL: {
         label: "Task approval",
         icon: ClipboardCheck,
-        tone: "bg-[#F1EADF] text-[#74614D]",
+        tone: "bg-app text-muted",
     },
     TASK_CHANGE_REQUEST: {
         label: "Change request",
         icon: ClipboardList,
-        tone: "bg-[#FFF2D8] text-[#94651D]",
+        tone: "bg-pastel-butter text-warning",
     },
     PROJECT_ASSIGNMENT: {
         label: "Project assignment",
         icon: UserRoundCheck,
-        tone: "bg-[#E9F0FC] text-[#3565A5]",
+        tone: "bg-pastel-sky text-info",
     },
     DAILY_REPORT: {
         label: "Daily report",
         icon: FileText,
-        tone: "bg-[#EDF3FC] text-[#3565A5]",
+        tone: "bg-pastel-sky text-info",
     },
     DELAY_REPORT: {
         label: "Delay report",
         icon: Clock3,
-        tone: "bg-[#FFF2D8] text-[#94651D]",
+        tone: "bg-pastel-butter text-warning",
     },
     EXTENSION_REQUEST: {
         label: "Extension request",
         icon: Clock3,
-        tone: "bg-[#FFF2D8] text-[#94651D]",
+        tone: "bg-pastel-butter text-warning",
     },
     SYSTEM: {
         label: "System",
         icon: Bell,
-        tone: "bg-[#F1EADF] text-[#74614D]",
+        tone: "bg-app text-muted",
     },
 };
 
@@ -345,15 +346,15 @@ async function resolveDestination(notification, role) {
 
 function configFor(notification) {
     const type = notification.notification_type || notification.type;
-    const base = TYPE_CONFIG[type] || { label: readableType(type), icon: Bell, tone: "bg-[#F1EADF] text-[#74614D]" };
+    const base = TYPE_CONFIG[type] || { label: readableType(type), icon: Bell, tone: "bg-app text-muted" };
     const event = notification.event || "";
     if (["TASK_REJECTED", "TASK_EDIT_REJECTED", "TIMELINE_REORDER_REJECTED", "DELAY_REPORT_REJECTED", "EXTENSION_REJECTED", "DAILY_TASK_WORK_REJECTED", "PROJECT_CANCELLED"].includes(event)) {
-        return { ...base, label: event === "PROJECT_CANCELLED" ? "Project cancelled" : `${base.label} / Rejected`, icon: XCircle, tone: "bg-[#FCE9E6] text-[#B42318]" };
+        return { ...base, label: event === "PROJECT_CANCELLED" ? "Project cancelled" : `${base.label} / Rejected`, icon: XCircle, tone: "bg-pastel-blush text-danger" };
     }
     if (["TASK_APPROVED", "TASK_EDIT_APPROVED", "TIMELINE_REORDER_APPROVED", "DELAY_REPORT_APPROVED", "EXTENSION_APPROVED", "DAILY_TASK_WORK_VERIFIED"].includes(event)) {
-        return { ...base, label: `${base.label} / ${event.endsWith("VERIFIED") ? "Verified" : "Approved"}`, icon: CheckCircle2, tone: "bg-[#E7F2E8] text-[#166534]" };
+        return { ...base, label: `${base.label} / ${event.endsWith("VERIFIED") ? "Verified" : "Approved"}`, icon: CheckCircle2, tone: "bg-pastel-mint text-success" };
     }
-    if (event === "PROJECT_DATES_CHANGED") return { ...base, label: "Project dates changed", tone: "bg-[#E9F0FC] text-[#3565A5]" };
+    if (event === "PROJECT_DATES_CHANGED") return { ...base, label: "Project dates changed", tone: "bg-pastel-sky text-info" };
     return base;
 }
 
@@ -372,15 +373,15 @@ function NotificationRow({ notification, busy, onOpen }) {
             disabled={busy}
             onClick={() => onOpen(notification)}
             data-unread={unread}
-            className={`notification-list-row group relative flex w-full items-start gap-3.5 px-4 py-4 text-left transition-colors duration-200 focus:outline-none focus-visible:bg-[#EDF3FC] disabled:cursor-wait disabled:opacity-70 sm:gap-4 sm:px-6 sm:py-5 ${unread
-                    ? "bg-[#FAF6FD] hover:bg-[#F5EFFA]"
-                    : "bg-[#FFFDFA] hover:bg-[#F8F4EE]"
+            className={`notification-list-row group relative flex w-full items-start gap-3.5 px-4 py-4 text-left transition-colors duration-200 focus:outline-none focus-visible:bg-pastel-sky disabled:cursor-wait disabled:opacity-70 sm:gap-4 sm:px-6 sm:py-5 ${unread
+                    ? "bg-pastel-lavender hover:bg-pastel-lavender"
+                    : "bg-surface hover:bg-surface-soft"
                 }`}
         >
             {unread && (
                 <span
                     aria-hidden="true"
-                    className="absolute inset-y-0 left-0 w-1 bg-[#3565A5]"
+                    className="absolute inset-y-0 left-0 w-1 bg-info"
                 />
             )}
 
@@ -392,43 +393,43 @@ function NotificationRow({ notification, busy, onOpen }) {
                 </span>
 
                 {unread && (
-                    <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-[#FAF6FD] bg-[#3565A5] group-hover:border-[#F5EFFA]" />
+                    <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-pastel-lavender bg-info group-hover:border-pastel-lavender" />
                 )}
             </span>
 
             <span className="min-w-0 flex-1">
                 <span className="flex items-start justify-between gap-3">
                     <span
-                        className={`line-clamp-2 break-words text-sm leading-snug text-[#211E1A] sm:text-[15px] ${unread ? "font-bold" : "font-semibold"
+                        className={`line-clamp-2 break-words text-sm leading-snug text-ink sm:text-[15px] ${unread ? "font-bold" : "font-semibold"
                             }`}
                     >
-                        {notification.title || "Notification"}
+                        {withoutRecordIds(notification.title || "Notification")}
                     </span>
 
                     <time
                         dateTime={notification.created_at}
                         title={formatDate(notification.created_at)}
                         className={`shrink-0 pt-0.5 text-xs ${unread
-                                ? "font-semibold text-[#3565A5]"
-                                : "text-[#716658]"
+                                ? "font-semibold text-info"
+                                : "text-muted"
                             }`}
                     >
                         {formatRelative(notification.created_at)}
                     </time>
                 </span>
 
-                <span className="mt-1.5 block line-clamp-2 whitespace-pre-wrap break-words text-sm leading-6 text-[#716658]">
-                    {notification.message || "Open to view details."}
+                <span className="mt-1.5 block line-clamp-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted">
+                    {withoutRecordIds(notification.message || "Open to view details.")}
                 </span>
 
-                <span className="mt-2.5 inline-flex items-center rounded-full bg-[#F1EADF] px-2.5 py-1 text-xs font-semibold text-[#665E53]">
+                <span className="mt-2.5 inline-flex items-center rounded-full bg-app px-2.5 py-1 text-xs font-semibold text-muted">
                     {configuration.label}
                 </span>
             </span>
 
             <ChevronRight
                 size={18}
-                className="mt-3 hidden shrink-0 text-[#B7AC9C] transition-all group-hover:translate-x-0.5 group-hover:text-[#211E1A] sm:block"
+                className="mt-3 hidden shrink-0 text-border-strong transition-all group-hover:translate-x-0.5 group-hover:text-ink sm:block"
             />
         </button>
     );
@@ -705,7 +706,7 @@ export default function NotificationCenter({
     ];
 
     const selectClass =
-        "h-11 w-full appearance-none rounded-xl border border-[#E4DCCD] bg-white pl-4 pr-10 text-sm text-[#211E1A] outline-none transition-all hover:border-[#CFC3B1] focus:border-[#3565A5] focus:ring-4 focus:ring-[#3565A5]/15";
+        "h-11 w-full appearance-none rounded-xl border border-border bg-white pl-4 pr-10 text-sm text-ink outline-none transition-all hover:border-border-strong focus:border-info focus:ring-4 focus:ring-info/15";
 
     return (
         <div className="notifications-page mx-auto max-w-4xl space-y-5 pb-10 sm:space-y-6">
@@ -720,26 +721,26 @@ export default function NotificationCenter({
             )}
 
             {unreadCount > 0 && <div className="flex justify-end lg:hidden"><button type="button" onClick={markAllRead} disabled={markingAll || loading || Boolean(openingId)} className="rare-button rare-button-secondary">{markingAll ? "Marking as read..." : "Mark all as read"}</button></div>}
-            <header className="notification-desktop-header hidden lg:flex"><div><p className="mb-4 text-xs text-[#716658]">{role === "ADMIN" ? "Admin" : "Supervisor"} / Notifications</p><div className="flex items-center gap-3"><h1 className="text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">Notifications</h1><span className="rounded-full bg-[#F1EADF] px-3 py-1 text-xs font-semibold">{unreadCount == null ? "..." : unreadCount + " unread"}</span></div><p className="mt-2 text-sm text-[#716658]">Stay up to date with your team and projects.</p></div><div className="flex items-center gap-2"><button type="button" onClick={markAllRead} disabled={markingAll || loading || Boolean(openingId) || !unreadCount} className="rare-button rare-button-primary"><CheckCircle2 size={17} />{markingAll ? "Marking as read..." : "Mark all as read"}</button><button type="button" aria-label="Refresh notifications" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading || Boolean(openingId)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#E7DED2] bg-[#FFFDFA]"><RefreshCw size={18} className={loading ? "animate-spin" : ""} /></button></div></header>
+            <header className="notification-desktop-header hidden lg:flex"><div><p className="mb-4 text-xs text-muted">{role === "ADMIN" ? "Admin" : "Supervisor"} / Notifications</p><div className="flex items-center gap-3"><h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">Notifications</h1><span className="rounded-full bg-app px-3 py-1 text-xs font-semibold">{unreadCount == null ? "..." : unreadCount + " unread"}</span></div><p className="mt-2 text-sm text-muted">Stay up to date with your team and projects.</p></div><div className="flex items-center gap-2"><button type="button" onClick={markAllRead} disabled={markingAll || loading || Boolean(openingId) || !unreadCount} className="rare-button rare-button-primary"><CheckCircle2 size={17} />{markingAll ? "Marking as read..." : "Mark all as read"}</button><button type="button" aria-label="Refresh notifications" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading || Boolean(openingId)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-surface"><RefreshCw size={18} className={loading ? "animate-spin" : ""} /></button></div></header>
             {/* HEADER */}
             <header className="rare-page-header lg:hidden flex items-start justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-4">
-                    <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#211E1A] text-white shadow-lg shadow-[#211E1A]/20">
+                    <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-ink text-white shadow-lg shadow-ink/20">
                         <BellRing size={25} strokeWidth={1.7} />
 
                         {unreadCount > 0 && (
-                            <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-[#FFFDFA] bg-[#3565A5] px-1.5 text-xs font-bold">
+                            <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-surface bg-info px-1.5 text-xs font-bold">
                                 {unreadCount > 99 ? "99+" : unreadCount}
                             </span>
                         )}
                     </span>
 
                     <div className="min-w-0">
-                        <h1 className="text-2xl font-bold tracking-tight text-[#211E1A] sm:text-3xl">
+                        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
                             Notifications
                         </h1>
 
-                        <p className="mt-1 text-sm text-[#716658]">
+                        <p className="mt-1 text-sm text-muted">
                             {loading
                                 ? "Checking for updates..."
                                 : unreadCount > 0
@@ -754,7 +755,7 @@ export default function NotificationCenter({
                     onClick={() => setRefreshKey((v) => v + 1)}
                     disabled={loading}
                     aria-label="Refresh notifications"
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#E4DCCD] bg-white text-[#211E1A] transition-colors hover:bg-[#F1EADF] disabled:opacity-50 sm:w-auto sm:gap-2 sm:px-4"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-ink transition-colors hover:bg-app disabled:opacity-50 sm:w-auto sm:gap-2 sm:px-4"
                 >
                     <RefreshCw size={17} />
                     <span className="hidden text-sm font-semibold sm:inline">
@@ -764,7 +765,7 @@ export default function NotificationCenter({
             </header>
 
             {/* TOOLBAR */}
-            <div className="notifications-toolbar"><div className="notification-desktop-tabs hidden lg:flex" role="group" aria-label="Notification read status">{tabs.filter((tab) => tab.key !== "READ").map((tab) => <button key={tab.key} type="button" aria-pressed={visibility === tab.key} onClick={() => { setVisibility(tab.key); setPage(1); }} className={'inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold ' + (visibility === tab.key ? 'border-[#211E1A] text-[#211E1A]' : 'border-transparent text-[#716658]')}>{tab.label}<span className="rounded-full bg-[#F1EADF] px-2 py-0.5 text-xs">{tab.count ?? "..."}</span></button>)}</div>
+            <div className="notifications-toolbar"><div className="notification-desktop-tabs hidden lg:flex" role="group" aria-label="Notification read status">{tabs.filter((tab) => tab.key !== "READ").map((tab) => <button key={tab.key} type="button" aria-pressed={visibility === tab.key} onClick={() => { setVisibility(tab.key); setPage(1); }} className={'inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold ' + (visibility === tab.key ? 'border-ink text-ink' : 'border-transparent text-muted')}>{tab.label}<span className="rounded-full bg-app px-2 py-0.5 text-xs">{tab.count ?? "..."}</span></button>)}</div>
             <SearchFilterToolbar
                 label="Notification search and filters"
                 search={<ProjectSearch compact query={search} delay={0} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search notifications" labelClassName="sr-only" placeholder="Title or message" />}
@@ -776,7 +777,7 @@ export default function NotificationCenter({
                     <div
                         role="tablist"
                         aria-label="Read status"
-                        className="flex rounded-xl bg-[#F1EADF] p-1"
+                        className="flex rounded-xl bg-app p-1"
                     >
                         {tabs.map((tab) => (
                             <button
@@ -788,15 +789,15 @@ export default function NotificationCenter({
                                     setVisibility(tab.key);
                                     setPage(1);
                                 }}
-                                className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3565A5] sm:flex-none ${visibility === tab.key
-                                        ? "bg-white text-[#211E1A] shadow-sm"
-                                        : "text-[#716658] hover:text-[#211E1A]"
+                                className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-info sm:flex-none ${visibility === tab.key
+                                        ? "bg-white text-ink shadow-sm"
+                                        : "text-muted hover:text-ink"
                                     }`}
                             >
                                 {tab.label}
                                 <span
                                     className={`ml-1.5 text-xs ${visibility === tab.key
-                                            ? "text-[#3565A5]"
+                                            ? "text-info"
                                             : "opacity-70"
                                         }`}
                                 >
@@ -828,7 +829,7 @@ export default function NotificationCenter({
 
                             <ChevronDown
                                 size={16}
-                                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
+                                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted"
                             />
                         </div>
 
@@ -848,7 +849,7 @@ export default function NotificationCenter({
 
                             <ChevronDown
                                 size={16}
-                                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
+                                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted"
                             />
                         </div>
                     </div>
@@ -869,7 +870,7 @@ export default function NotificationCenter({
             {notice && (
                 <div
                     role="status"
-                    className="rounded-xl border border-[#F0DDB0] bg-[#FFF2D8] p-4 text-sm text-[#94651D]"
+                    className="rounded-xl border border-[#F0DDB0] bg-pastel-butter p-4 text-sm text-warning"
                 >
                     {notice}
                 </div>
@@ -877,15 +878,15 @@ export default function NotificationCenter({
 
             {/* INBOX */}
             {!loading && !error && (
-                <section className="notifications-inbox overflow-hidden rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] shadow-[0_20px_50px_-30px_rgba(33,30,26,0.25)]">
+                <section className="notifications-inbox overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_20px_50px_-30px_rgba(33,30,26,0.25)]">
                     {groups.length ? (
                         groups.map((group) => (
                             <div key={group.label}>
-                                <h2 className="border-b border-[#EEE6DC] bg-[#F8F4EE] px-4 py-2.5 text-xs font-semibold text-[#716658] sm:px-6">
+                                <h2 className="border-b border-border bg-surface-soft px-4 py-2.5 text-xs font-semibold text-muted sm:px-6">
                                     {group.label}
                                 </h2>
 
-                                <div className="divide-y divide-[#EEE6DC] [&:not(:last-child)]:border-b [&:not(:last-child)]:border-[#EEE6DC]">
+                                <div className="divide-y divide-border [&:not(:last-child)]:border-b [&:not(:last-child)]:border-border">
                                     {group.items.map((notification) => (
                                         <NotificationRow
                                             key={notification.id}
@@ -899,17 +900,17 @@ export default function NotificationCenter({
                         ))
                     ) : (
                         <div className="px-6 py-16 text-center">
-                            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#EDF3FC] text-[#3565A5]">
+                            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-pastel-sky text-info">
                                 <Inbox size={29} strokeWidth={1.6} />
                             </span>
 
-                            <h3 className="mt-5 text-lg font-bold text-[#211E1A]">
+                            <h3 className="mt-5 text-lg font-bold text-ink">
                                 {hasFilters
                                     ? "No matching notifications"
                                     : "Your inbox is empty"}
                             </h3>
 
-                            <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-[#716658]">
+                            <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-muted">
                                 {hasFilters
                                     ? "Try a different search or clear your filters."
                                     : "Important project updates will appear here."}
@@ -919,7 +920,7 @@ export default function NotificationCenter({
                                 <button
                                     type="button"
                                     onClick={resetFilters}
-                                    className="mt-6 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#3565A5]"
+                                    className="mt-6 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-info"
                                 >
                                     Clear filters
                                 </button>
@@ -927,23 +928,23 @@ export default function NotificationCenter({
                         </div>
                     )}
 
-                    <footer className="hidden border-t border-[#E7DED2] px-6 py-4 text-xs text-[#716658] lg:block">{filtered.length} notifications</footer>
+                    <footer className="hidden border-t border-border px-6 py-4 text-xs text-muted lg:block">{filtered.length} notifications</footer>
                     {pageCount > 1 && (
-                        <nav aria-label="Notification pages" className="rare-pagination border-t border-[#EEE6DC] bg-[#FFFDFA] p-3 sm:px-5">
+                        <nav aria-label="Notification pages" className="rare-pagination border-t border-border bg-surface p-3 sm:px-5">
                             <button
                                 type="button"
                                 disabled={safePage === 1}
                                 onClick={() =>
                                     setPage((v) => Math.max(1, v - 1))
                                 }
-                                className="inline-flex h-10 items-center gap-1 rounded-xl pl-2.5 pr-3.5 text-sm font-semibold text-[#211E1A] transition-colors hover:bg-[#F1EADF] disabled:opacity-35 disabled:hover:bg-transparent"
+                                className="inline-flex h-10 items-center gap-1 rounded-xl pl-2.5 pr-3.5 text-sm font-semibold text-ink transition-colors hover:bg-app disabled:opacity-35 disabled:hover:bg-transparent"
                             >
                                 <ChevronLeft size={18} />
                                 Previous
                             </button>
 
-                            <span aria-live="polite" aria-atomic="true" className="text-sm text-[#716658]">
-                                <span className="font-semibold text-[#211E1A]">
+                            <span aria-live="polite" aria-atomic="true" className="text-sm text-muted">
+                                <span className="font-semibold text-ink">
                                     {safePage}
                                 </span>{" "}
                                 of {pageCount}
@@ -957,7 +958,7 @@ export default function NotificationCenter({
                                         Math.min(pageCount, v + 1)
                                     )
                                 }
-                                className="inline-flex h-10 items-center gap-1 rounded-xl pl-3.5 pr-2.5 text-sm font-semibold text-[#211E1A] transition-colors hover:bg-[#F1EADF] disabled:opacity-35 disabled:hover:bg-transparent"
+                                className="inline-flex h-10 items-center gap-1 rounded-xl pl-3.5 pr-2.5 text-sm font-semibold text-ink transition-colors hover:bg-app disabled:opacity-35 disabled:hover:bg-transparent"
                             >
                                 Next
                                 <ChevronRight size={18} />
@@ -986,35 +987,35 @@ export default function NotificationCenter({
                                     type="button"
                                     onClick={() => setOpenedNotification(null)}
                                     aria-label="Close notification"
-                                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F1EADF] text-[#665E53] transition-colors hover:bg-[#E8DDD0]"
+                                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-app text-muted transition-colors hover:bg-pastel-lavender"
                                 >
                                     <X size={18} />
                                 </button>
                             </div>
 
-                            <p className="mt-5 text-xs font-semibold text-[#3565A5]">
+                            <p className="mt-5 text-xs font-semibold text-info">
                                 {configuration.label}
                             </p>
 
                             <h2
                                 id="notification-detail-title"
-                                className="mt-1.5 wrap-break-word text-xl font-bold leading-snug text-[#211E1A]"
+                                className="mt-1.5 wrap-break-word text-xl font-bold leading-snug text-ink"
                             >
-                                {openedNotification.title || "Notification"}
+                                {withoutRecordIds(openedNotification.title || "Notification")}
                             </h2>
 
-                            <p className="mt-4 whitespace-pre-wrap wrap-break-word text-sm leading-7 text-[#665E53]">
-                                {openedNotification.message}
+                            <p className="mt-4 whitespace-pre-wrap wrap-break-word text-sm leading-7 text-muted">
+                                {withoutRecordIds(openedNotification.message)}
                             </p>
 
-                            <p className="mt-5 border-t border-[#EEE6DC] pt-4 text-xs text-[#716658]">
+                            <p className="mt-5 border-t border-border pt-4 text-xs text-muted">
                                 {formatDate(openedNotification.created_at)}
                             </p>
 
                             <button
                                 type="button"
                                 onClick={() => setOpenedNotification(null)}
-                                className="mt-5 h-12 w-full rounded-xl bg-[#211E1A] text-sm font-semibold text-white transition-colors hover:bg-[#3565A5]"
+                                className="mt-5 h-12 w-full rounded-xl bg-ink text-sm font-semibold text-white transition-colors hover:bg-info"
                             >
                                 Done
                             </button>

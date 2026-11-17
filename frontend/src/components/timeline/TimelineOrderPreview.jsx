@@ -40,27 +40,27 @@ export default function TimelineOrderPreview({
         <section className="space-y-4">
             {/* HEADER */}
             <div>
-                <h3 className="flex items-center gap-2 text-base font-bold text-[#211E1A]">
+                <h3 className="flex items-center gap-2 text-base font-bold text-ink">
                     <ListOrdered size={19} />
                     Order Change Preview
                 </h3>
 
-                <p className="mt-2 text-xs leading-5 text-[#716658]">
+                <p className="mt-2 text-xs leading-5 text-muted">
                     Review every changed position before requesting
                     Admin approval.
                 </p>
             </div>
 
             {/* SUMMARY */}
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#F8F4EE] p-4">
-                <span className="rounded-full bg-[#F1EADF] px-3 py-2 text-xs font-bold text-[#74614D]">
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-surface-soft p-4">
+                <span className="rounded-full bg-app px-3 py-2 text-xs font-bold text-muted">
                     {proposedTasks.length} Tasks
                 </span>
 
                 <span
                     className={`rounded-full px-3 py-2 text-xs font-bold ${changedTasks.length
-                            ? "bg-[#FFF2D8] text-[#94651D]"
-                            : "bg-[#E7F2E8] text-[#296F40]"
+                            ? "bg-pastel-butter text-warning"
+                            : "bg-pastel-mint text-success"
                         }`}
                 >
                     {changedTasks.length} Position Changes
@@ -69,12 +69,12 @@ export default function TimelineOrderPreview({
 
             {/* CHANGED TASKS */}
             {changedTasks.length === 0 ? (
-                <div className="flex items-center gap-3 rounded-2xl border border-[#CFE2D2] bg-[#E7F2E8] p-4">
+                <div className="flex items-center gap-3 rounded-2xl border border-[#CFE2D2] bg-pastel-mint p-4">
                     <CheckCircle2
                         size={19}
-                        className="text-[#296F40]"
+                        className="text-success"
                     />
-                    <p className="text-sm font-medium text-[#296F40]">
+                    <p className="text-sm font-medium text-success">
                         No task positions changed.
                     </p>
                 </div>
@@ -93,14 +93,14 @@ export default function TimelineOrderPreview({
                         return (
                             <div
                                 key={task.id}
-                                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"
+                                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4"
                             >
                                 <div className="min-w-0 flex-1">
-                                    <p className="break-words text-sm font-bold text-[#211E1A]">
+                                    <p className="break-words text-sm font-bold text-ink">
                                         {task.title}
                                     </p>
 
-                                    <p className="mt-1 text-xs text-[#716658]">
+                                    <p className="mt-1 text-xs text-muted">
                                         {String(
                                             task.approval_status || "PENDING"
                                         ).replaceAll("_", " ")}
@@ -108,16 +108,16 @@ export default function TimelineOrderPreview({
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F1EADF] text-xs font-bold text-[#74614D]">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-app text-xs font-bold text-muted">
                                         {previous ?? "—"}
                                     </span>
 
                                     <ArrowRight
                                         size={16}
-                                        className="text-[#716658]"
+                                        className="text-muted"
                                     />
 
-                                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FFF2D8] text-xs font-bold text-[#94651D]">
+                                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-pastel-butter text-xs font-bold text-warning">
                                         {proposed}
                                     </span>
                                 </div>

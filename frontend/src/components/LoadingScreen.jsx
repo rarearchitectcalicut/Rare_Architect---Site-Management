@@ -24,7 +24,7 @@ export default function LoadingScreen({ message = "Loading...", standalone = fal
             )}
             <div
                 aria-hidden="true"
-                className="absolute inset-0 -z-10 bg-[#f1eadf]/40 backdrop-blur-xl backdrop-saturate-125"
+                className="absolute inset-0 -z-10 bg-app/40 backdrop-blur-xl backdrop-saturate-125"
             />
             <div className="flex max-w-full flex-col items-center justify-center gap-7">
 
@@ -43,14 +43,14 @@ export default function LoadingScreen({ message = "Loading...", standalone = fal
                     {[0, 1, 2].map((i) => (
                         <span
                             key={i}
-                            className="loading-dot h-3 w-3 rounded-full bg-[#211e1a]"
+                            className="loading-dot h-3 w-3 rounded-full bg-ink"
                             style={{ animationDelay: `${i * -0.2}s` }}
                         />
                     ))}
                 </div>
 
                 {/* Loading Message */}
-                <p className="text-center text-sm font-medium text-[#494239]">
+                <p className="text-center text-sm font-medium text-ink">
                     {message}
                 </p>
 

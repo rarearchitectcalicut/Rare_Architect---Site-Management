@@ -1,6 +1,8 @@
 import { api } from "./client";
 
 export const dailyReportApi = {
+    myRegister: async (params = {}, signal) => (await api.get("my-daily-reports/", { params, signal })).data,
+    register: async (params = {}, signal) => (await api.get("daily-reports/", { params, signal })).data,
     saveCorrectionReport: async (projectId, sourceId, plan, onProgress = () => {}) => {
         let step = "Create report draft";
         try {
@@ -53,7 +55,31 @@ export const dailyReportApi = {
     saveRow: async (id, section, payload, rowId) => {
         const resources = { "work-entries": "daily-task-work", manpower: "daily-manpower", materials: "daily-materials" };
         if (!resources[section]) throw new Error("Unsupported report section.");
-        return rowId ? (await api.patch(`${resources[section]}/${rowId}/`, payload)).data : (await api.post(`daily-reports/${id}/${section}/`, payload)).data;
+        if (rowId) return (await api.patch(`${resources[section]}/${rowId}/`, payload)).data;
+        try { return (await api.post(`daily-reports/${id}/${section}/`, payload)).data; }
+        catch (failure) {
+            // A lost response must not create a duplicate work entry. Recover only
+            // an exact record in this report; retain server validation failures.
+            if (section === "work-entries" && !failure.response) {
+                const quantity = (value) => {
+                    const text = String(value ?? "0");
+                    if (!/^\d+(?:\.\d{1,3})?$/.test(text)) return null;
+                    const [whole, fraction = ""] = text.split(".");
+                    return BigInt(whole) * 1000n + BigInt(fraction.padEnd(3, "0"));
+                };
+                try {
+                    for (let page = 1; page <= 20; page++) {
+                        const { data } = await api.get(`daily-reports/${id}/work-entries/`, { params: { page, page_size: 100 } });
+                        const rows = Array.isArray(data) ? data : data.results;
+                        if (!Array.isArray(rows)) break;
+                        const saved = rows.find((row) => row.daily_report === id && row.task === payload.task && !row.correction_of && row.work_description === payload.work_description && (row.location_detail || "") === (payload.location_detail || "") && Boolean(row.completion_claimed) === Boolean(payload.completion_claimed) && quantity(row.quantity_completed_today) !== null && quantity(row.quantity_completed_today) === quantity(payload.quantity_completed_today));
+                        if (saved) return saved;
+                        if (!data.next) break;
+                    }
+                } catch { /* Re-throw the original write failure for a safe retry. */ }
+            }
+            throw failure;
+        }
     },
     removeRow: async (section, rowId) => {
         const resources = { "work-entries": "daily-task-work", manpower: "daily-manpower", materials: "daily-materials", attachments: "daily-report-attachments" };

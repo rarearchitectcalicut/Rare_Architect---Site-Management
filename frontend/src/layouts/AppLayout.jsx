@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     NavLink,
     Outlet,
@@ -10,10 +10,12 @@ import { Bell } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { notificationApi } from "../api/notificationApi";
 import LoadingScreen from "../components/LoadingScreen";
+import { PillNavigation } from "../components/common/WorkspaceUI";
 
 import DesktopSidebar from "../components/layout/DesktopSidebar";
 import MobileBottomNav from "../components/layout/MobileBottomNav";
 import MobileMoreSheet from "../components/layout/MobileMoreSheet";
+import PersonalNotepad from "../components/notes/PersonalNotepad";
 
 import {
     getNavigation,
@@ -60,8 +62,9 @@ export default function AppLayout() {
     const location = useLocation();
 
     const [loggingOut, setLoggingOut] = useState(false);
+    const notepad = useRef(null);
+    const logoutPending = useRef(false);
     const [moreOpen, setMoreOpen] = useState(false);
-    const [scrolled, setScrolled] = useState(false);
     const [unreadState, setUnreadState] = useState({ userId: null, count: null });
     const unreadCount = unreadState.userId === user.id ? unreadState.count : null;
 
@@ -114,17 +117,6 @@ export default function AppLayout() {
     }, [user.id, loggingOut, location.pathname]);
 
     // ---------------------------------------------
-    // HEADER GETS A SHADOW ONCE THE PAGE SCROLLS
-    // ---------------------------------------------
-
-    useEffect(() => {
-        const onScroll = () => setScrolled(window.scrollY > 4);
-        onScroll();
-        window.addEventListener("scroll", onScroll, { passive: true });
-        return () => window.removeEventListener("scroll", onScroll);
-    }, []);
-
-    // ---------------------------------------------
     // CURRENT PAGE TITLE
     // ---------------------------------------------
 
@@ -153,7 +145,12 @@ export default function AppLayout() {
     // ---------------------------------------------
 
     const handleLogout = async () => {
-        if (loggingOut) return;
+        if (loggingOut || logoutPending.current) return;
+        logoutPending.current = true;
+        if (notepad.current && !await notepad.current.prepareToLeave()) {
+            logoutPending.current = false;
+            return;
+        }
 
         setUnreadState({ userId: null, count: null });
         setLoggingOut(true);
@@ -171,7 +168,7 @@ export default function AppLayout() {
     // ---------------------------------------------
 
     return (
-        <div className="rare-app min-h-dvh min-w-0 bg-[#F1EADF]">
+        <div className="rare-app min-h-dvh min-w-0">
             <a href="#rare-main-content" className="rare-skip-link">Skip to content</a>
             <style>{TOPBAR_CSS}</style>
 
@@ -189,25 +186,15 @@ export default function AppLayout() {
             />
 
             {/* CONTENT AREA */}
-            <div className="min-h-dvh lg:pl-65">
+            <div className="rare-shell-content min-h-dvh">
 
                 {/* TOP HEADER */}
                 <header
-                    className={`
-            sticky top-0 z-20
-            border-b
-            bg-[#f1eadf]/85
-            backdrop-blur-xl backdrop-saturate-150
-            transition-[box-shadow,border-color] duration-300
-            ${scrolled
-                            ? "border-[#e0d6c5] shadow-[0_8px_24px_-12px_rgba(33,30,26,0.18)]"
-                            : "border-transparent"
-                        }
-          `}
+                    className="rare-topbar sticky top-0 z-20"
                 >
                     <div
                         className="
-              mx-auto flex
+              rare-topbar-inner mx-auto flex
               min-h-16
               max-w-[1600px]
               items-center justify-between
@@ -216,9 +203,13 @@ export default function AppLayout() {
               lg:px-8
             "
                     >
-                        {/* TITLE */}
-                        <div className="min-w-0">
-                            <p className="hidden text-xs font-medium text-[#716658] sm:block">
+                        {/* Real role-scoped routes, with deep links preserved. */}
+                        <PillNavigation label="Workspace shortcuts" className="rare-header-tabs">
+                            {navigation.filter((item) => ["dashboard", "projects", "tasks", isAdmin ? "approvals" : "reports"].includes(item.path.split("/").at(-1))).map((item) =>
+                                <NavLink key={item.path} to={item.path}>{item.label}</NavLink>)}
+                        </PillNavigation>
+                        <div className="rare-workspace-context min-w-0">
+                            <p className="hidden text-xs font-medium text-muted sm:block">
                                 RARE Project &amp; Site Management
                             </p>
 
@@ -229,7 +220,7 @@ export default function AppLayout() {
                   rare-title-in
                   mt-0.5 truncate
                   text-sm font-semibold
-                  tracking-tight text-[#211e1a]
+                  tracking-tight text-ink
                   sm:text-base
                 "
                             >
@@ -238,6 +229,8 @@ export default function AppLayout() {
                         </div>
 
                         <div className="flex items-center gap-2.5 sm:gap-3">
+
+                            <PersonalNotepad key={user.id} ref={notepad} />
 
                             {/* NOTIFICATIONS */}
                             <NavLink
@@ -254,18 +247,18 @@ export default function AppLayout() {
                   flex h-11 w-11
                   items-center justify-center
                   rounded-xl border
-                  border-[#e4dccd]
-                  bg-[#fffdfa]
-                  text-[#211e1a]
+                  border-border
+                  bg-surface
+                  text-ink
                   transition-all duration-200 ease-out
                   hover:-translate-y-0.5
-                  hover:border-[#cfc4b0]
+                  hover:border-border-strong
                   hover:bg-white
                   hover:shadow-[0_6px_16px_-6px_rgba(33,30,26,0.25)]
                   active:translate-y-0 active:scale-95
                   focus-visible:outline-none focus-visible:ring-2
-                  focus-visible:ring-[#211e1a] focus-visible:ring-offset-2
-                  focus-visible:ring-offset-[#f1eadf]
+                  focus-visible:ring-ink focus-visible:ring-offset-2
+                  focus-visible:ring-offset-app
                 "
                             >
                                 <Bell
@@ -275,7 +268,7 @@ export default function AppLayout() {
                                 {unreadCount > 0 && (
                                     <span
                                         aria-hidden="true"
-                                        className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-[#f1eadf]"
+                                        className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-app"
                                     >
                                         {unreadCount > 99 ? "99+" : unreadCount}
                                     </span>
@@ -295,21 +288,21 @@ export default function AppLayout() {
                   rounded-full border border-transparent
                   p-0.5 sm:py-1 sm:pl-4 sm:pr-1
                   transition-all duration-200 ease-out
-                  hover:border-[#e4dccd]
-                  hover:bg-[#fffdfa]
+                  hover:border-border
+                  hover:bg-surface
                   hover:shadow-[0_6px_16px_-8px_rgba(33,30,26,0.25)]
                   active:scale-[0.98]
                   focus-visible:outline-none focus-visible:ring-2
-                  focus-visible:ring-[#211e1a] focus-visible:ring-offset-2
-                  focus-visible:ring-offset-[#f1eadf]
+                  focus-visible:ring-ink focus-visible:ring-offset-2
+                  focus-visible:ring-offset-app
                 "
                             >
                                 <div className="hidden text-right sm:block">
-                                    <p className="max-w-40 truncate text-sm font-semibold text-[#211e1a]">
+                                    <p className="max-w-40 truncate text-sm font-semibold text-ink">
                                         {displayName}
                                     </p>
 
-                                    <p className="text-xs text-[#716658]">
+                                    <p className="text-xs text-muted">
                                         {isAdmin
                                             ? "Administrator"
                                             : "Site Supervisor"}
@@ -321,15 +314,15 @@ export default function AppLayout() {
                     flex h-11 w-11 shrink-0
                     items-center justify-center
                     rounded-full
-                    bg-[#211e1a]
+                    bg-ink
                     text-sm font-bold
                     text-white
                     ring-2 ring-transparent ring-offset-2
-                    ring-offset-[#f1eadf]
+                    ring-offset-app
                     transition-all duration-200
-                    group-hover:bg-[#39342d]
-                    group-hover:ring-[#211e1a]/20
-                    sm:group-hover:ring-offset-[#fffdfa]
+                    group-hover:bg-primary-hover
+                    group-hover:ring-ink/20
+                    sm:group-hover:ring-offset-surface
                   "
                                 >
                                     {displayName.charAt(0).toUpperCase()}

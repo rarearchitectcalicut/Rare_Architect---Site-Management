@@ -42,15 +42,15 @@ const STATUS_STYLES = {
         label: "In Progress",
     },
     CANCELLED: {
-        bar: "#A59A8C",
+        bar: "var(--color-muted)",
         label: "Cancelled",
     },
     DELAYED: {
-        bar: "#C66A57",
+        bar: "var(--color-danger)",
         label: "Delayed",
     },
     NOT_STARTED: {
-        bar: "#B99A68",
+        bar: "var(--color-muted)",
         label: "Not Started",
     },
 };
@@ -150,7 +150,7 @@ function getTaskStatus(task) {
         end < todayTimestamp()
     ) {
         return {
-            bar: "#C66A57",
+            bar: "var(--color-danger)",
             label: "Overdue",
         };
     }
@@ -269,15 +269,15 @@ function ScheduleTaskRow({
         : `/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`;
 
     return (
-        <div className="flex min-h-[78px] border-b border-[#EEE6DC] last:border-b-0">
+        <div className="flex min-h-[78px] border-b border-border last:border-b-0">
             {/* STICKY TASK LABEL */}
             <div
                 className="
           sticky left-0 z-10
           rare-schedule-label flex
           flex-col justify-center
-          gap-1 border-r border-[#EEE6DC]
-          bg-[#FFFDFA] px-4 py-3
+          gap-1 border-r border-border
+          bg-surface px-4 py-3
         "
             >
                 <Link
@@ -285,17 +285,17 @@ function ScheduleTaskRow({
                     title="Open task details and documents"
                     className="group flex items-start gap-1.5"
                 >
-                    <span className="line-clamp-2 min-w-0 text-xs font-bold leading-5 text-[#211E1A] group-hover:underline">
+                    <span className="line-clamp-2 min-w-0 text-xs font-bold leading-5 text-ink group-hover:underline">
                         {task.title || "Untitled Task"}
                     </span>
 
                     <ExternalLink
                         size={12}
-                        className="mt-1 shrink-0 text-[#716658]"
+                        className="mt-1 shrink-0 text-muted"
                     />
                 </Link>
 
-                <span className="text-xs text-[#716658]">
+                <span className="text-xs text-muted">
                     {dates
                         ? `${shortDate(dates.start)} – ${shortDate(dates.end)}`
                         : "Dates not fully scheduled"}
@@ -320,8 +320,8 @@ function ScheduleTaskRow({
               to right,
               transparent 0,
               transparent ${cellWidth - 1}px,
-              #EEE6DC ${cellWidth - 1}px,
-              #EEE6DC ${cellWidth}px
+              var(--color-border) ${cellWidth - 1}px,
+              var(--color-border) ${cellWidth}px
             )
           `,
                 }}
@@ -360,7 +360,7 @@ function ScheduleTaskRow({
 
                 {/* UNSCHEDULED TASK HINT */}
                 {!dates && (
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg bg-[#F1EADF] px-3 py-2 text-xs text-[#716658]">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg bg-app px-3 py-2 text-xs text-muted">
                         No scheduled date range
                     </span>
                 )}
@@ -438,26 +438,26 @@ export default function TimelineSchedule({
     }
 
     return (
-        <section className="rare-schedule overflow-hidden rounded-[24px] border border-[#E7DED2] bg-[#FFFDFA]">
+        <section className="rare-schedule overflow-hidden rounded-[24px] border border-border bg-surface">
             {/* HEADER */}
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#EEE6DC] p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
                 <div>
-                    <h2 className="flex items-center gap-2 text-lg font-bold text-[#211E1A]">
+                    <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
                         <CalendarDays
                             size={20}
-                            className="text-[#716658]"
+                            className="text-muted"
                         />
                         Schedule View
                     </h2>
 
-                    <p className="mt-2 text-xs leading-6 text-[#716658]">
+                    <p className="mt-2 text-xs leading-6 text-muted">
                         Visual overview of planned task dates and
                         overlapping work.
                     </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    <div className="inline-flex rounded-xl bg-[#F1EADF] p-1">
+                    <div className="inline-flex rounded-xl bg-app p-1">
                         {Object.entries(VIEWS).map(
                             ([key, viewConfig]) => (
                                 <button
@@ -469,8 +469,8 @@ export default function TimelineSchedule({
                                         setOffset(0);
                                     }}
                                     className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${scale === key
-                                            ? "bg-[#211E1A] text-white"
-                                            : "text-[#74614D] hover:bg-[#E8DCCB]"
+                                            ? "bg-ink text-white"
+                                            : "text-muted hover:bg-border"
                                         }`}
                                 >
                                     {viewConfig.label}
@@ -482,15 +482,15 @@ export default function TimelineSchedule({
             </div>
 
             {/* DATE NAVIGATION */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEE6DC] bg-[#F8F4EE] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-soft p-4">
                 <div>
-                    <p className="text-sm font-bold text-[#211E1A]">
+                    <p className="text-sm font-bold text-ink">
                         {longDate(windowStart)}
                         {" — "}
                         {longDate(windowEnd)}
                     </p>
 
-                    <p className="mt-1 text-xs text-[#716658]">
+                    <p className="mt-1 text-xs text-muted">
                         {datedTasks} of {tasks.length} tasks have valid
                         schedule ranges
                     </p>
@@ -501,7 +501,7 @@ export default function TimelineSchedule({
                         type="button"
                         onClick={() => navigateDates(-1)}
                         aria-label="Previous date range"
-                        className="rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] p-2.5 text-[#665E53] hover:bg-[#F1EADF]"
+                        className="rounded-xl border border-border bg-surface p-2.5 text-muted hover:bg-app"
                     >
                         <ChevronLeft size={18} />
                     </button>
@@ -509,7 +509,7 @@ export default function TimelineSchedule({
                     <button
                         type="button"
                         onClick={resetSchedule}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-3 py-2.5 text-xs font-bold text-[#665E53] hover:bg-[#F1EADF]"
+                        className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 text-xs font-bold text-muted hover:bg-app"
                     >
                         <RotateCcw size={15} />
                         First Task
@@ -519,7 +519,7 @@ export default function TimelineSchedule({
                         type="button"
                         onClick={() => navigateDates(1)}
                         aria-label="Next date range"
-                        className="rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] p-2.5 text-[#665E53] hover:bg-[#F1EADF]"
+                        className="rounded-xl border border-border bg-surface p-2.5 text-muted hover:bg-app"
                     >
                         <ChevronRight size={18} />
                     </button>
@@ -531,14 +531,14 @@ export default function TimelineSchedule({
                 <div className="px-6 py-14 text-center">
                     <CalendarDays
                         size={32}
-                        className="mx-auto text-[#716658]"
+                        className="mx-auto text-muted"
                     />
 
-                    <h3 className="mt-4 font-bold text-[#211E1A]">
+                    <h3 className="mt-4 font-bold text-ink">
                         No tasks to display
                     </h3>
 
-                    <p className="mt-2 text-sm text-[#716658]">
+                    <p className="mt-2 text-sm text-muted">
                         Tasks will appear here when added to the project.
                     </p>
                 </div>
@@ -559,9 +559,9 @@ export default function TimelineSchedule({
                             }}
                         >
                             {/* MONTH HEADERS */}
-                            <div className="flex border-b border-[#EEE6DC] bg-[#F8F4EE]">
-                                <div className="sticky left-0 z-20 rare-schedule-label flex items-center border-r border-[#EEE6DC] bg-[#F8F4EE] px-4 py-3">
-                                    <span className="text-xs font-bold text-[#665E53]">
+                            <div className="flex border-b border-border bg-surface-soft">
+                                <div className="sticky left-0 z-20 rare-schedule-label flex items-center border-r border-border bg-surface-soft px-4 py-3">
+                                    <span className="text-xs font-bold text-muted">
                                         Project Tasks
                                     </span>
                                 </div>
@@ -574,7 +574,7 @@ export default function TimelineSchedule({
                                         <div
                                             key={`${group.label}-${index}`}
                                             style={{ width: group.width }}
-                                            className="shrink-0 border-r border-[#E4DCCD] px-2 py-3 text-center text-xs font-bold text-[#665E53]"
+                                            className="shrink-0 border-r border-border px-2 py-3 text-center text-xs font-bold text-muted"
                                         >
                                             {group.label}
                                         </div>
@@ -583,9 +583,9 @@ export default function TimelineSchedule({
                             </div>
 
                             {/* DAY HEADERS */}
-                            <div className="flex border-b border-[#EEE6DC] bg-[#FCF9F5]">
-                                <div className="sticky left-0 z-20 rare-schedule-label flex items-center border-r border-[#EEE6DC] bg-[#FCF9F5] px-4 py-3">
-                                    <span className="text-xs text-[#716658]">
+                            <div className="flex border-b border-border bg-surface-soft">
+                                <div className="sticky left-0 z-20 rare-schedule-label flex items-center border-r border-border bg-surface-soft px-4 py-3">
+                                    <span className="text-xs text-muted">
                                         Planned start / end
                                     </span>
                                 </div>
@@ -603,15 +603,15 @@ export default function TimelineSchedule({
                                                 style={{
                                                     width: config.cellWidth,
                                                 }}
-                                                className={`flex shrink-0 flex-col items-center justify-center gap-1 border-r border-[#EEE6DC] py-2 ${current
-                                                        ? "bg-[#E9F0FC]"
+                                                className={`flex shrink-0 flex-col items-center justify-center gap-1 border-r border-border py-2 ${current
+                                                        ? "bg-pastel-sky"
                                                         : ""
                                                     }`}
                                             >
                                                 <span
                                                     className={`text-xs ${current
-                                                            ? "font-bold text-[#3565A5]"
-                                                            : "text-[#716658]"
+                                                            ? "font-bold text-info"
+                                                            : "text-muted"
                                                         }`}
                                                 >
                                                     {weekdayLabel(timestamp)}
@@ -619,8 +619,8 @@ export default function TimelineSchedule({
 
                                                 <span
                                                     className={`text-xs font-bold ${current
-                                                            ? "text-[#3565A5]"
-                                                            : "text-[#665E53]"
+                                                            ? "text-info"
+                                                            : "text-muted"
                                                         }`}
                                                 >
                                                     {new Date(timestamp).getUTCDate()}
@@ -649,7 +649,7 @@ export default function TimelineSchedule({
                                 {todayVisible && (
                                     <div
                                         aria-hidden="true"
-                                        className="pointer-events-none absolute bottom-0 top-0 z-[5] w-px bg-[#3565A5]/70"
+                                        className="pointer-events-none absolute bottom-0 top-0 z-[5] w-px bg-info/70"
                                         style={{
                                             left: `calc(var(--rare-schedule-label-width) + ${todayLeft}px)`,
                                         }}
@@ -660,12 +660,12 @@ export default function TimelineSchedule({
                     </div>
 
                     {/* LEGEND */}
-                    <div className="flex flex-wrap gap-x-5 gap-y-3 border-t border-[#EEE6DC] p-4 sm:px-6">
+                    <div className="flex flex-wrap gap-x-5 gap-y-3 border-t border-border p-4 sm:px-6">
                         {Object.values(STATUS_STYLES).map(
                             (status) => (
                                 <span
                                     key={status.label}
-                                    className="inline-flex items-center gap-2 text-xs text-[#716658]"
+                                    className="inline-flex items-center gap-2 text-xs text-muted"
                                 >
                                     <span
                                         className="h-2.5 w-2.5 rounded-full"
@@ -678,8 +678,8 @@ export default function TimelineSchedule({
                             )
                         )}
 
-                        <span className="inline-flex items-center gap-2 text-xs text-[#716658]">
-                            <span className="h-2.5 w-2.5 rounded-full bg-[#C66A57]" />
+                        <span className="inline-flex items-center gap-2 text-xs text-muted">
+                            <span className="h-2.5 w-2.5 rounded-full bg-danger" />
                             Overdue
                         </span>
                     </div>
@@ -687,13 +687,13 @@ export default function TimelineSchedule({
             )}
 
             {/* FOOTNOTE */}
-            <div className="flex items-start gap-2 border-t border-[#EEE6DC] bg-[#F8F4EE] px-5 py-4">
+            <div className="flex items-start gap-2 border-t border-border bg-surface-soft px-5 py-4">
                 <Info
                     size={16}
-                    className="mt-0.5 shrink-0 text-[#716658]"
+                    className="mt-0.5 shrink-0 text-muted"
                 />
 
-                <p className="text-xs leading-5 text-[#716658]">
+                <p className="text-xs leading-5 text-muted">
                     Bars represent planned task durations. They are
                     not editable here. Task progress and approval
                     remain controlled by the RARE workflow.

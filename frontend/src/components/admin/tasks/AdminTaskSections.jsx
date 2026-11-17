@@ -1,3 +1,4 @@
+import { isRecordId, recordEntries } from "../../../utils/recordPresentation";
 import { useEffect, useState } from "react";
 import { taskApi } from "../../../api/taskApi";
 import { ProjectSearch } from "../../daily-reports/ReportProjectPicker";
@@ -8,24 +9,25 @@ import { formatDate, formatText } from "../../approvals/approvalUtils";
 
 const taskTabs = [["overview", "Overview"], ["documents", "Documents"], ["work", "Work & Reports"], ["changes", "Changes & Delays"], ["history", "History"]];
 const tabIcons = { overview: ClipboardList, documents: FileText, work: Ruler, changes: GitPullRequest, history: History };
-const button = "task-secondary px-3 py-2.5 text-xs font-semibold text-[#74614D] disabled:opacity-50";
+const button = "task-secondary px-3 py-2.5 text-xs font-semibold text-muted disabled:opacity-50";
 
 function Resource({ name, resources, onRetry, children }) {
     const resource = resources[name];
-    if (!resource || resource.loading) return <div role="status" className="space-y-4 py-4"><span className="text-xs text-[#716658]">Loading section…</span><div aria-hidden="true" className="grid gap-4 motion-safe:animate-pulse sm:grid-cols-2">{[0, 1].map((item) => <div key={item} className="space-y-3 rounded-2xl border border-[#E7DED2] bg-[#F8F5F0] p-5"><div className="h-2.5 w-1/3 rounded-full bg-[#E7DED2]" /><div className="h-3 w-2/3 rounded-full bg-[#EDE4D7]" /></div>)}</div></div>;
+    if (!resource || resource.loading) return <div role="status" className="space-y-4 py-4"><span className="text-xs text-muted">Loading section…</span><div aria-hidden="true" className="grid gap-4 motion-safe:animate-pulse sm:grid-cols-2">{[0, 1].map((item) => <div key={item} className="space-y-3 rounded-2xl border border-border bg-surface-soft p-5"><div className="h-2.5 w-1/3 rounded-full bg-border" /><div className="h-3 w-2/3 rounded-full bg-border" /></div>)}</div></div>;
     if (resource.error) return <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700"><p>{resource.error}</p><button type="button" className={`${button} mt-3`} onClick={() => onRetry(name)}>Retry</button></div>;
     return children(resource.data);
 }
 
 function Fields({ rows }) {
-    return <dl className="admin-task-fields grid gap-3 sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="min-w-0 rounded-xl bg-[#F8F5F0] px-4 py-3"><dt className="text-xs font-medium text-[#716658]">{label}</dt><dd className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-[#3E352B]">{value == null || value === "" ? "Not available" : value}</dd></div>)}</dl>;
+    return <dl className="admin-task-fields grid gap-3 sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="min-w-0 rounded-xl bg-surface-soft px-4 py-3"><dt className="text-xs font-medium text-muted">{label}</dt><dd className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{value == null || value === "" ? "Not available" : value}</dd></div>)}</dl>;
 }
 
 function ReadableValue({ value }) {
     if (value == null || value === "") return <span>Not specified</span>;
+    if (isRecordId(value)) return <span>Linked record</span>;
     if (typeof value === "boolean") return <span>{value ? "Yes" : "No"}</span>;
     if (Array.isArray(value)) return value.length ? <ul className="space-y-2">{value.map((item, i) => <li key={i}><ReadableValue value={item} /></li>)}</ul> : <span>None</span>;
-    if (typeof value === "object") return <dl className="space-y-2">{Object.entries(value).map(([key, item]) => <div key={key} className="border-l-2 border-[#E7DED2] pl-3"><dt className="text-xs text-[#716658]">{formatText(key)}</dt><dd className="mt-1"><ReadableValue value={item} /></dd></div>)}</dl>;
+    if (typeof value === "object") return <dl className="space-y-2">{recordEntries(value).map(([key, item]) => <div key={key} className="border-l-2 border-border pl-3"><dt className="text-xs text-muted">{formatText(key)}</dt><dd className="mt-1"><ReadableValue value={item} /></dd></div>)}</dl>;
     return <span className="whitespace-pre-wrap break-words">{String(value)}</span>;
 }
 
@@ -48,34 +50,34 @@ function Documents({ taskId, resources, onRetry, onVersions, onDownload, downloa
     }, [taskId, search, page, revision, key]);
     return <div className="admin-task-documents space-y-4">
         <ProjectSearch query={search} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search task documents" placeholder="Title, description or filename" loading={!current} suggestions={documents.map((doc) => ({ id: doc.id, name: doc.title, context: doc.current_version?.original_filename }))} />
-        {!current && <p role="status" className="text-sm text-[#817669]">Updating documents...</p>}
+        {!current && <p role="status" className="text-sm text-muted">Updating documents...</p>}
         {current?.error && <div role="alert" className="text-sm text-red-700">{current.error}<button type="button" className={button} onClick={() => setRevision((value) => value + 1)}>Retry</button></div>}
-        {current?.data && <nav aria-label="Task document pages" className="rare-pagination text-sm text-[#817669]"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className={button}>Previous</button><span aria-live="polite" aria-atomic="true">Page {page} of {Math.max(1, Math.ceil(count / 8))}<span className="block text-xs">{count} documents</span></span><button type="button" disabled={page * 8 >= count} onClick={() => setPage(page + 1)} className={button}>Next</button></nav>}
+        {current?.data && <nav aria-label="Task document pages" className="rare-pagination text-sm text-muted"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className={button}>Previous</button><span aria-live="polite" aria-atomic="true">Page {page} of {Math.max(1, Math.ceil(count / 8))}<span className="block text-xs">{count} documents</span></span><button type="button" disabled={page * 8 >= count} onClick={() => setPage(page + 1)} className={button}>Next</button></nav>}
         {downloadError && <p role="alert" className="text-sm text-red-700">{downloadError}</p>}
-        {current?.data && !documents.length && <p className="text-sm text-[#716658]">No task documents.</p>}
-        {documents.map((doc) => <article key={doc.id} className="space-y-4 rounded-2xl border border-[#E7DED2] p-4">
+        {current?.data && !documents.length && <p className="text-sm text-muted">No task documents.</p>}
+        {documents.map((doc) => <article key={doc.id} className="space-y-4 rounded-2xl border border-border p-4">
             <h3 className="break-words font-bold">{doc.title}</h3><Fields rows={[["Type", formatText(doc.document_type)], ["Description", doc.description], ["Uploaded", formatDate(doc.created_at)], ["Current version", doc.current_version?.version_number], ["Original filename", doc.current_version?.original_filename]]} />
             <div className="flex flex-wrap gap-2"><button type="button" className={button} disabled={Boolean(downloading) || !doc.current_version} onClick={() => onDownload(doc.current_version)}>{downloading === doc.current_version?.id ? "Downloading…" : "Download current version"}</button><button type="button" className={button} disabled={resources[`versions:${doc.id}`]?.loading} onClick={() => onVersions(doc.id)}>View version history</button></div>
-            {resources[`versions:${doc.id}`] && <Resource name={`versions:${doc.id}`} resources={resources} onRetry={onRetry}>{(versions) => <div className="space-y-3 border-t border-[#E7DED2] pt-4">{!versions.length && <p className="text-sm text-[#716658]">No stored versions.</p>}{versions.map((version) => <div key={version.id} className="space-y-2 rounded-xl bg-[#F8F4EE] p-3"><p className="text-sm font-semibold">Version {version.version_number}{version.is_current && " · Current"}</p><Fields rows={[["Filename", version.original_filename], ["Uploaded", formatDate(version.created_at)]]} /><button type="button" className={button} disabled={Boolean(downloading)} onClick={() => onDownload(version)}>{downloading === version.id ? "Downloading…" : "Download version"}</button></div>)}</div>}</Resource>}
+            {resources[`versions:${doc.id}`] && <Resource name={`versions:${doc.id}`} resources={resources} onRetry={onRetry}>{(versions) => <div className="space-y-3 border-t border-border pt-4">{!versions.length && <p className="text-sm text-muted">No stored versions.</p>}{versions.map((version) => <div key={version.id} className="space-y-2 rounded-xl bg-surface-soft p-3"><p className="text-sm font-semibold">Version {version.version_number}{version.is_current && " · Current"}</p><Fields rows={[["Filename", version.original_filename], ["Uploaded", formatDate(version.created_at)]]} /><button type="button" className={button} disabled={Boolean(downloading)} onClick={() => onDownload(version)}>{downloading === version.id ? "Downloading…" : "Download version"}</button></div>)}</div>}</Resource>}
         </article>)}
     </div>;
 }
 
 function ChangeRecords({ records, task, timeline = false }) {
-    return <div className="admin-task-changes space-y-4">{!records.length && <p className="text-sm text-[#716658]">No related {timeline ? "timeline order requests" : "task change requests"}.</p>}{records.map((record) => {
+    return <div className="admin-task-changes space-y-4">{!records.length && <p className="text-sm text-muted">No related {timeline ? "timeline order requests" : "task change requests"}.</p>}{records.map((record) => {
         const oldOrder = record.old_values?.timeline?.find((item) => item.task_id === task.id)?.display_order;
         const newOrder = record.new_values?.timeline?.find((item) => item.task_id === task.id)?.display_order;
-        return <article key={record.id} className="space-y-4 rounded-2xl border border-[#E7DED2] p-4"><Fields rows={[["Status", formatText(record.status)], ["Requested by", record.requested_by_name], ["Reason", record.reason], ["Requested", formatDate(record.created_at)], ["Admin comment", record.admin_comment], ["Reviewed by", record.reviewed_by_name], ["Reviewed", formatDate(record.reviewed_at)]]} />
+        return <article key={record.id} className="space-y-4 rounded-2xl border border-border p-4"><Fields rows={[["Status", formatText(record.status)], ["Requested by", record.requested_by_name], ["Reason", record.reason], ["Requested", formatDate(record.created_at)], ["Admin comment", record.admin_comment], ["Reviewed by", record.reviewed_by_name], ["Reviewed", formatDate(record.reviewed_at)]]} />
             {timeline ? <Fields rows={[["Previous task order", oldOrder], ["Proposed task order", newOrder], ["Current task order", task.display_order]]} /> : <div className="grid gap-4 sm:grid-cols-2"><div><h4 className="mb-2 text-xs font-bold">Previous values</h4><div className="text-sm"><ReadableValue value={record.old_values} /></div></div><div><h4 className="mb-2 text-xs font-bold">Proposed values</h4><div className="text-sm"><ReadableValue value={record.new_values} /></div></div></div>}
-            {record.status === "PENDING" && <Link className="inline-block text-sm font-semibold text-[#3565A5] hover:underline" to={`/admin/approvals?tab=${timeline ? "timeline" : "changes"}&request=${record.id}&type=${timeline ? "timeline" : "changes"}`}>Open in Approval Center</Link>}
+            {record.status === "PENDING" && <Link className="inline-block text-sm font-semibold text-info hover:underline" to={`/admin/approvals?tab=${timeline ? "timeline" : "changes"}&request=${record.id}&type=${timeline ? "timeline" : "changes"}`}>Open in Approval Center</Link>}
         </article>;
     })}</div>;
 }
 
 function WorkEntries({ entries }) {
-    if (!entries.length) return <p className="text-sm text-[#716658]">No submitted work entries for this task.</p>;
+    if (!entries.length) return <p className="text-sm text-muted">No submitted work entries for this task.</p>;
     return <div className="admin-task-work-entries space-y-4">{entries.map((entry) => (
-        <article key={entry.id} className="rounded-2xl border border-[#E7DED2] p-4">
+        <article key={entry.id} className="rounded-2xl border border-border p-4">
             <Fields rows={[
                 ["Report date", formatDate(entry.report_date)], ["Reported by", entry.reported_by_name],
                 ["Work", entry.work_description], ["Location", entry.location_detail],
@@ -97,14 +99,14 @@ function VerifiedProgress({ data }) {
             ["Verified completion", completion],
             ["Progress", data.progress_percentage == null ? "Verified progress unavailable" : `${data.progress_percentage}%`],
         ]} />
-        <p className="text-xs text-[#716658]">Calculated by the server from verified daily work. Work status is tracked separately.</p>
+        <p className="text-xs text-muted">Calculated by the server from verified daily work. Work status is tracked separately.</p>
     </div>;
 }
 
 function DelayRecords({ records }) {
-    if (!records.length) return <p className="text-sm text-[#716658]">No delay reports.</p>;
+    if (!records.length) return <p className="text-sm text-muted">No delay reports.</p>;
     return <div className="admin-task-delays space-y-4">{records.map((record) => (
-        <article key={record.id} className="rounded-2xl border border-[#E7DED2] p-4">
+        <article key={record.id} className="rounded-2xl border border-border p-4">
             <Fields rows={[
                 ["Type", formatText(record.delay_type)], ["Reason", record.reason], ["Description", record.description],
                 ["Status", formatText(record.status)], ["Reported by", record.reported_by_name], ["Reported", formatDate(record.reported_at)],
@@ -120,12 +122,12 @@ function DelayRecords({ records }) {
 }
 
 function TaskHistory({ events }) {
-    if (!events.length) return <p className="text-sm text-[#716658]">No history events.</p>;
+    if (!events.length) return <p className="text-sm text-muted">No history events.</p>;
     return <ol className="space-y-5">{events.map((event) => (
-        <li key={event.id} className="relative ml-2 space-y-3 rounded-r-2xl border-l border-[#D7C8B4] bg-[#F8F5F0] p-5 pl-6">
-            <span aria-hidden="true" className="absolute -left-1.5 top-6 h-3 w-3 rounded-full border-[3px] border-[#FFFDFA] bg-[#A38D72] ring-1 ring-[#D7C8B4]" />
+        <li key={event.id} className="relative ml-2 space-y-3 rounded-r-2xl border-l border-border-strong bg-surface-soft p-5 pl-6">
+            <span aria-hidden="true" className="absolute -left-1.5 top-6 h-3 w-3 rounded-full border-[3px] border-surface bg-subtle ring-1 ring-border-strong" />
             <h3 className="text-sm font-semibold">{event.action_display || formatText(event.action)}</h3>
-            <p className="text-xs text-[#716658]">
+            <p className="text-xs text-muted">
                 {event.actor_name || "Actor unavailable"} · {event.created_at ? new Date(event.created_at).toLocaleString("en-IN") : "Date unavailable"}
             </p>
             <div className="text-sm"><ReadableValue value={event.details} /></div>
@@ -136,10 +138,10 @@ function TaskHistory({ events }) {
 export default function AdminTaskSections({ task, tab, onTabChange, resources, onRetry, onVersions, onDownload, downloading, downloadError }) {
     const resourceProps = { resources, onRetry };
     return <section className="task-panel task-enter min-w-0" style={{ "--task-delay": "100ms" }}>
-        <nav aria-label="Task detail sections" className="flex gap-1 overflow-x-auto border-b border-[#E7DED2] bg-[#F8F5F0] p-3 sm:px-5">{taskTabs.map(([id, label]) => {
+        <nav aria-label="Task detail sections" className="flex gap-1 overflow-x-auto border-b border-border bg-surface-soft p-3 sm:px-5">{taskTabs.map(([id, label]) => {
             const Icon = tabIcons[id];
             return <button key={id} type="button" aria-pressed={tab === id} aria-controls="task-section" onClick={() => onTabChange(id)}
-                className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-3 text-xs font-semibold ${tab === id ? "bg-[#211E1A] text-[#FFFDFA] shadow-[0_4px_10px_#211E1A15]" : "text-[#716658] hover:bg-[#EDE5D9] hover:text-[#211E1A]"}`}>
+                className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-3 text-xs font-semibold ${tab === id ? "bg-ink text-surface shadow-[0_4px_10px_#211E1A15]" : "text-muted hover:bg-border hover:text-ink"}`}>
                 <Icon size={16} aria-hidden="true" />{label}
             </button>;
         })}</nav>
@@ -162,7 +164,7 @@ export default function AdminTaskSections({ task, tab, onTabChange, resources, o
                 <div>
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <h3 className="font-bold">Delay reports</h3>
-                        <Link to="/admin/delays" className="text-sm text-[#3565A5] hover:underline">Open Admin Delays</Link>
+                        <Link to="/admin/delays" className="text-sm text-info hover:underline">Open Admin Delays</Link>
                     </div>
                     <Resource name="delays" {...resourceProps}>{(records) => <DelayRecords records={records} />}</Resource>
                 </div>

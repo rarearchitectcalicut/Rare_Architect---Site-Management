@@ -1,0 +1,53 @@
+/* RARE's light design contract. These tokens also feed Tailwind v4 utilities. */
+@theme static {
+  --color-app: #f8f9fc;
+  --color-surface: #ffffff;
+  --color-surface-soft: #fbfcfe;
+  --color-ink: #20262d;
+  --color-muted: #5b687b;
+  --color-subtle: #5f6b7d;
+  --color-border: #e7ebf2;
+  --color-border-strong: #cbd3e0;
+  --color-pastel-sky: #e7f3ff;
+  --color-pastel-lavender: #ebe9ff;
+  --color-pastel-mint: #e4f5ea;
+  --color-pastel-blush: #fff0e8;
+  --color-pastel-butter: #fff5d9;
+  --color-primary: #252a31;
+  --color-primary-hover: #3b424d;
+  --color-focus: #5967d8;
+  --color-success: #216a4d;
+  --color-warning: #865d12;
+  --color-danger: #b4423c;
+  --color-info: #305c90;
+  --color-violet: #67509a;
+  --color-brand-yellow: #efc447;
+  --color-brand-red: #c74e48;
+  --font-sans: "Manrope", "Plus Jakarta Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --shadow-float: 0 8px 30px rgb(49 64 91 / .045);
+  --radius-card: 1.5rem;
+}
+
+@layer base {
+  :root {
+    --rare-canvas-background: radial-gradient(ellipse at 0 0, #fff0ec 0, transparent 42rem),
+      radial-gradient(ellipse at 100% 4rem, #e5f4ff 0, transparent 60rem),
+      radial-gradient(ellipse at 40% 25rem, #f0edff80 0, transparent 50rem), var(--color-app);
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background: var(--color-app);
+    --rare-muted-readable: var(--color-muted);
+    --rare-success: var(--color-success);
+    --rare-danger: var(--color-danger);
+  }
+  body {
+    background: var(--rare-canvas-background);
+    background-attachment: fixed;
+  }
+  ::selection { background: var(--color-pastel-lavender); color: var(--color-ink); }
+  :focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+  input, select, textarea { accent-color: var(--color-focus); }
+  input::placeholder, textarea::placeholder { color: var(--color-muted); }
+  dialog { color: var(--color-ink); }
+  dialog::backdrop { background: rgb(32 38 45 / .35); }
+}

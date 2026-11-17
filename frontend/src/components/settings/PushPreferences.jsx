@@ -45,11 +45,11 @@ export default function PushPreferences() {
         }
     }
 
-    return <section aria-labelledby="device-notifications-title" aria-busy={busy} className="rounded-3xl border border-[#E7DED2] bg-[#FFFDFA] p-5 sm:p-7">
-        <div className="flex items-start gap-3"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F1EADF] text-[#716658]"><Bell size={23} aria-hidden="true" /></span><div className="min-w-0"><h2 id="device-notifications-title" className="text-lg font-bold text-[#211E1A]">Device notifications</h2><p className="mt-1 text-sm text-[#716658]">Receive a private, generic alert when a new RARE notification is created. This setting applies to this device; your in-app notifications are always available.</p></div></div>
-        {unsupported ? <p role="status" className="mt-5 rounded-xl bg-[#F8F4EE] p-4 text-sm text-[#716658]">{unsupported}</p> : <>
-            <p role="status" className="mt-5 text-sm font-semibold text-[#514538]">{busy ? "Checking or updating device notifications…" : error ? "Device notification status could not be confirmed." : enabled ? "Enabled for this account on this device" : "Not enabled for this account on this device"}</p>
-            {typeof Notification !== "undefined" && Notification.permission === "denied" && <p className="mt-2 text-sm text-[#94651D]">Notifications are blocked. Allow RARE notifications in your browser or device settings before enabling them here.</p>}
+    return <section aria-labelledby="device-notifications-title" aria-busy={busy} className="rounded-3xl border border-border bg-surface p-5 sm:p-7">
+        <div className="flex items-start gap-3"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-app text-muted"><Bell size={23} aria-hidden="true" /></span><div className="min-w-0"><h2 id="device-notifications-title" className="text-lg font-bold text-ink">Device notifications</h2><p className="mt-1 text-sm text-muted">Receive a private, generic alert when a new RARE notification is created. This setting applies to this device; your in-app notifications are always available.</p></div></div>
+        {unsupported ? <p role="status" className="mt-5 rounded-xl bg-surface-soft p-4 text-sm text-muted">{unsupported}</p> : <>
+            <p role="status" className="mt-5 text-sm font-semibold text-muted">{busy ? "Checking or updating device notifications…" : error ? "Device notification status could not be confirmed." : enabled ? "Enabled for this account on this device" : "Not enabled for this account on this device"}</p>
+            {typeof Notification !== "undefined" && Notification.permission === "denied" && <p className="mt-2 text-sm text-warning">Notifications are blocked. Allow RARE notifications in your browser or device settings before enabling them here.</p>}
             <div className="mt-4 flex flex-wrap gap-3">
                 {!enabled && <button type="button" disabled={busy || Notification.permission === "denied"} onClick={() => change(true)} className="rare-button rare-button-primary"><Bell size={18} aria-hidden="true" />Enable Notifications</button>}
                 {(enabled || hasSubscription || error) && <button type="button" disabled={busy} onClick={() => change(false)} className="rare-button rare-button-secondary"><BellOff size={18} aria-hidden="true" />Disable Notifications</button>}
@@ -57,6 +57,6 @@ export default function PushPreferences() {
             </div>
         </>}
         {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
-        {notice && <p role="status" className="mt-4 rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
+        {notice && <p role="status" className="mt-4 rounded-xl bg-pastel-mint p-4 text-sm text-success">{notice}</p>}
     </section>;
 }

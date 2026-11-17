@@ -9,7 +9,7 @@ import { delayApi } from "../../api/delayApi";
 import { projectApi } from "../../api/projectApi";
 import { taskApi } from "../../api/taskApi";
 
-const input = "w-full rounded-xl border border-[#E4DCCD] bg-[#FFFDFA] px-4 py-3 text-sm text-[#211E1A] outline-none transition-all focus:border-[#B7A58E] focus:ring-4 focus:ring-[#E8DDD0]/50";
+const input = "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-ink outline-none transition-all focus:border-border-strong focus:ring-4 focus:ring-pastel-lavender/50";
 const initial = { task: "", delay_type: "MATERIAL_DELAY", reason: "", description: "", expected_completion_date: "", extension_requested: false, requested_end_date: "" };
 const LAST_PROJECT_KEY = "rare.delayReport.lastProject";
 const PAGE_SIZE = 20;
@@ -281,7 +281,7 @@ export default function DelayReportForm({ projectId, taskId, onClose, onSaved })
 
     function formField(name, label, control) {
         return <div className="space-y-2">
-            <label htmlFor={`delay-${name}`} className="block text-xs font-bold uppercase tracking-wide text-[#716658]">{label}</label>
+            <label htmlFor={`delay-${name}`} className="block text-xs font-bold uppercase tracking-wide text-muted">{label}</label>
             {control}
             <FieldError errors={errors} name={name} />
         </div>;
@@ -302,18 +302,18 @@ export default function DelayReportForm({ projectId, taskId, onClose, onSaved })
         onMouseDown={(event) => {
             if (event.target === event.currentTarget) close();
         }}
-        className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-[#211E1A]/55 p-0 text-[#211E1A] backdrop-blur-sm backdrop:bg-transparent sm:p-6"
+        className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-ink/55 p-0 text-ink backdrop-blur-sm backdrop:bg-transparent sm:p-6"
     >
         {saving && <LoadingScreen portalTarget={dialog || undefined} message="Submitting delay report..." />}
-        <section className="rare-mobile-sheet flex max-h-[92dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-[26px] border border-[#E7DED2] bg-[#FFFDFA] shadow-2xl">
-            <header className="rare-page-header flex items-start justify-between gap-3 border-b border-[#EEE6DC] px-5 py-5 sm:px-7">
-                <h2 id="delay-report-title" className="text-xl font-bold text-[#211E1A]">Report a task delay</h2>
+        <section className="rare-mobile-sheet flex max-h-[92dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-[26px] border border-border bg-surface shadow-2xl">
+            <header className="rare-page-header flex items-start justify-between gap-3 border-b border-border px-5 py-5 sm:px-7">
+                <h2 id="delay-report-title" className="text-xl font-bold text-ink">Report a task delay</h2>
                 <button
                     type="button"
                     disabled={saving}
                     onClick={close}
                     aria-label="Close delay form"
-                    className="rounded-full bg-[#F1EADF] p-2.5 text-[#211E1A]"
+                    className="rounded-full bg-app p-2.5 text-ink"
                 >
                     <X size={19} />
                 </button>
@@ -353,10 +353,10 @@ export default function DelayReportForm({ projectId, taskId, onClose, onSaved })
                         </div>
                         {projectsState.error && <p role="status" aria-live="polite" className="text-xs text-red-700">{projectsState.error} <button type="button" onClick={() => setProjectRevision((value) => value + 1)} className="underline">Retry</button></p>}
                         {taskError && <p role="status" aria-live="polite" className="text-xs text-red-700">{taskError} <button type="button" onClick={() => setTaskRevision((value) => value + 1)} className="underline">Retry</button></p>}
-                        {!taskLoading && !taskError && selectedProjectId && !taskOptions.length && <p role="status" className="text-xs text-[#716658]">No approved tasks available for this project.</p>}
+                        {!taskLoading && !taskError && selectedProjectId && !taskOptions.length && <p role="status" className="text-xs text-muted">No approved tasks available for this project.</p>}
                         {(taskPage > 1 || taskState.next && tasksCurrent) && <div className="flex items-center justify-between">
                             <button type="button" disabled={taskPage <= 1} onClick={() => setTaskPage((value) => Math.max(1, value - 1))} className="min-h-11 px-2 text-xs font-semibold disabled:opacity-40">Previous</button>
-                            <span aria-live="polite" className="text-xs text-[#716658]">{taskCount} eligible tasks</span>
+                            <span aria-live="polite" className="text-xs text-muted">{taskCount} eligible tasks</span>
                             <button type="button" disabled={!taskState.next || !tasksCurrent} onClick={() => setTaskPage((value) => value + 1)} className="min-h-11 px-2 text-xs font-semibold disabled:opacity-40">More</button>
                         </div>}
                         {formField("delay_type", "Delay type *", <select
@@ -395,7 +395,7 @@ export default function DelayReportForm({ projectId, taskId, onClose, onSaved })
                             className={input}
                         />)}
                         <div className="space-y-2">
-                            <label htmlFor="delay-extension_requested" className="flex items-center gap-3 text-sm text-[#211E1A]">
+                            <label htmlFor="delay-extension_requested" className="flex items-center gap-3 text-sm text-ink">
                                 <input
                                     {...fieldProps("extension_requested")}
                                     ref={(element) => { fieldRefs.current.extension_requested = element; }}
@@ -403,12 +403,12 @@ export default function DelayReportForm({ projectId, taskId, onClose, onSaved })
                                     disabled={Boolean(task?.has_pending_extension)}
                                     checked={form.extension_requested}
                                     onChange={(event) => update("extension_requested", event.target.checked)}
-                                    className="h-4 w-4 accent-[#211E1A]"
+                                    className="h-4 w-4 accent-ink"
                                 />
                                 Request a deadline extension
                             </label>
                             <FieldError errors={errors} name="extension_requested" />
-                            {task?.has_pending_extension && <p role="status" className="text-xs text-[#716658]">An extension request is already pending for this task.</p>}
+                            {task?.has_pending_extension && <p role="status" className="text-xs text-muted">An extension request is already pending for this task.</p>}
                         </div>
                         {form.extension_requested && formField("requested_end_date", "New deadline *", <input
                             {...fieldProps("requested_end_date")}
@@ -419,13 +419,13 @@ export default function DelayReportForm({ projectId, taskId, onClose, onSaved })
                             onChange={(event) => update("requested_end_date", event.target.value)}
                             className={input}
                         />)}
-                        <p id="delay-forecast-help" className="flex items-start gap-2 text-sm leading-5 text-[#716658]"><Info size={16} aria-hidden="true" className="mt-0.5 shrink-0" /><span>Submitting this report records the delay. The approved deadline stays unchanged.</span></p>
+                        <p id="delay-forecast-help" className="flex items-start gap-2 text-sm leading-5 text-muted"><Info size={16} aria-hidden="true" className="mt-0.5 shrink-0" /><span>Submitting this report records the delay. The approved deadline stays unchanged.</span></p>
                     </fieldset>
                     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
                 </div>
                 <footer className="rare-action-footer flex shrink-0 flex-wrap justify-end gap-3 px-5 sm:px-7">
-                    <button type="button" onClick={close} disabled={saving} className="rounded-xl border border-[#E4DCCD] px-5 py-3 text-sm font-semibold text-[#211E1A]">Cancel</button>
-                    <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[#211E1A] px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#39332B] disabled:opacity-50">{saving ? "Submitting..." : "Submit delay report"}</button>
+                    <button type="button" onClick={close} disabled={saving} className="rounded-xl border border-border px-5 py-3 text-sm font-semibold text-ink">Cancel</button>
+                    <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:opacity-50">{saving ? "Submitting..." : "Submit delay report"}</button>
                 </footer>
             </form>
         </section>

@@ -57,3 +57,10 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.phone})"
+
+
+class PersonalNotepad(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="personal_notepad", primary_key=True)
+    content = models.TextField(blank=True, default="")
+    revision = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)

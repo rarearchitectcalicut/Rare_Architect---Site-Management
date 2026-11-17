@@ -103,24 +103,24 @@ const modalCss = `
 
 // Icon tile tones (literal class strings so Tailwind can detect them)
 const tones = {
-    blue: "bg-[#E8F0FE] text-[#2563EB]",
-    orange: "bg-[#FFF3E0] text-[#EA8A12]",
-    green: "bg-[#E6F4EA] text-[#16A34A]",
+    blue: "bg-pastel-sky text-info",
+    orange: "bg-pastel-blush text-warning",
+    green: "bg-pastel-mint text-success",
 };
 
 const inputStyle = `
   h-12 w-full rounded-xl
-  border border-[#E4DCCD]
-  bg-[#FFFDFA] px-4
-  text-sm text-[#211E1A]
+  border border-border
+  bg-surface px-4
+  text-sm text-ink
   outline-none transition-all duration-200
-  placeholder:text-[#AAA196]
-  hover:border-[#CFC4B5]
-  focus:border-[#211E1A]
-  focus:ring-4 focus:ring-[#211E1A]/10
+  placeholder:text-muted
+  hover:border-border-strong
+  focus:border-ink
+  focus:ring-4 focus:ring-ink/10
   disabled:cursor-not-allowed
   disabled:opacity-50
-  disabled:hover:border-[#E4DCCD]
+  disabled:hover:border-border
   aria-invalid:border-red-600
   aria-invalid:ring-4 aria-invalid:ring-red-600/10
 `;
@@ -136,7 +136,7 @@ function Field({
         <div className="min-w-0 space-y-2">
             <label
                 htmlFor={htmlFor}
-                className="block text-[13px] font-semibold text-[#665E53]"
+                className="block text-[13px] font-semibold text-muted"
             >
                 {label}
                 {required && (
@@ -172,12 +172,12 @@ function SectionTitle({ icon: Icon, tone, title, description }) {
             </span>
 
             <div className="min-w-0">
-                <h3 className="text-[15px] font-bold leading-tight text-[#211E1A]">
+                <h3 className="text-[15px] font-bold leading-tight text-ink">
                     {title}
                 </h3>
 
                 {description && (
-                    <p className="mt-0.5 text-xs text-[#716658]">
+                    <p className="mt-0.5 text-xs text-muted">
                         {description}
                     </p>
                 )}
@@ -504,7 +504,7 @@ export default function AddProject({
 
             if (!createdProject?.id) {
                 throw new Error(
-                    "Project created, but the response did not include its ID."
+                    "Project created, but its details could not be opened. Refresh the project list."
                 );
             }
 
@@ -580,7 +580,7 @@ export default function AddProject({
                     onClick={() => {
                         if (!isBusy) onClose();
                     }}
-                    className="rare-backdrop absolute inset-0 bg-[#211E1A]/50 backdrop-blur-sm"
+                    className="rare-backdrop absolute inset-0 bg-ink/50 backdrop-blur-sm"
                 />
 
                 {/* MODAL */}
@@ -592,10 +592,10 @@ export default function AddProject({
                     className="
                         rare-mobile-sheet rare-modal relative flex max-h-[94dvh]
                         w-full max-w-190 flex-col overflow-hidden
-                        rounded-t-[28px] bg-[#FFFDFA]
+                        rounded-t-[28px] bg-surface
                         shadow-[0_-12px_50px_rgba(33,30,26,0.22)]
                         sm:max-h-[90dvh] sm:rounded-[28px]
-                        sm:border sm:border-[#E9E1D7]
+                        sm:border sm:border-border
                         sm:shadow-[0_28px_80px_rgba(33,30,26,0.28)]
                     "
                 >
@@ -604,29 +604,29 @@ export default function AddProject({
                         aria-hidden="true"
                         className="flex shrink-0 justify-center pt-2.5 sm:hidden"
                     >
-                        <span className="h-1 w-10 rounded-full bg-[#E4DCCD]" />
+                        <span className="h-1 w-10 rounded-full bg-border" />
                     </div>
 
                     {/* HEADER */}
-                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] bg-linear-to-b from-[#FFFDFA] to-[#FAF5ED] px-5 pb-4 pt-3 sm:px-8 sm:py-6">
+                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-4 border-b border-border bg-linear-to-b from-surface to-surface-soft px-5 pb-4 pt-3 sm:px-8 sm:py-6">
                         <div className="flex min-w-0 items-start gap-3.5 sm:gap-4">
-                            <span className="hidden shrink-0 rounded-2xl bg-[#E8F0FE] p-3 text-[#2563EB] min-[400px]:block">
+                            <span className="hidden shrink-0 rounded-2xl bg-pastel-sky p-3 text-info min-[400px]:block">
                                 <FolderPlus size={24} strokeWidth={1.7} />
                             </span>
 
                             <div className="min-w-0">
-                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#716658]">
+                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
                                     Project Management
                                 </p>
 
                                 <h2
                                     id="add-project-title"
-                                    className="mt-1 text-xl font-bold tracking-tight text-[#211E1A] sm:text-2xl"
+                                    className="mt-1 text-xl font-bold tracking-tight text-ink sm:text-2xl"
                                 >
                                     Create New Project
                                 </h2>
 
-                                <p className="mt-1 text-xs text-[#716658] sm:text-sm">
+                                <p className="mt-1 text-xs text-muted sm:text-sm">
                                     Enter the details to create a new RARE project.
                                 </p>
                             </div>
@@ -639,12 +639,12 @@ export default function AddProject({
                             disabled={isBusy}
                             aria-label="Close modal"
                             className="
-                                group shrink-0 rounded-full bg-[#F1EADF] p-2.5 text-[#211E1A]
+                                group shrink-0 rounded-full bg-app p-2.5 text-ink
                                 transition-all duration-200 ease-out
-                                hover:bg-[#E7DDCE]
+                                hover:bg-border
                                 active:scale-95
                                 focus-visible:outline-none focus-visible:ring-2
-                                focus-visible:ring-[#211E1A]/30
+                                focus-visible:ring-ink/30
                                 disabled:opacity-50
                             "
                         >
@@ -672,11 +672,11 @@ export default function AddProject({
                             {/* COVER IMAGE */}
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between gap-3">
-                                    <h3 className="text-[15px] font-bold text-[#211E1A]">
+                                    <h3 className="text-[15px] font-bold text-ink">
                                         Project Cover
                                     </h3>
 
-                                    <span className="rounded-full bg-[#F1EADF] px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-[#716658]">
+                                    <span className="rounded-full bg-app px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-muted">
                                         Optional
                                     </span>
                                 </div>
@@ -691,10 +691,10 @@ export default function AddProject({
                                     className={`
                                         relative overflow-hidden rounded-2xl border border-dashed
                                         transition-all duration-200
-                                        focus-within:ring-4 focus-within:ring-[#211E1A]/10
+                                        focus-within:ring-4 focus-within:ring-ink/10
                                         ${dragging
-                                            ? "border-[#2563EB] bg-[#E8F0FE]/60"
-                                            : "border-[#D7CBBC] bg-[#F5EFE7]"
+                                            ? "border-info bg-pastel-sky/60"
+                                            : "border-border-strong bg-surface-soft"
                                         }
                                     `}
                                 >
@@ -726,8 +726,8 @@ export default function AddProject({
                                                 <label
                                                     htmlFor="project-cover-upload"
                                                     className="
-                                                        cursor-pointer rounded-full bg-[#FFFDFA] px-3.5 py-2
-                                                        text-xs font-semibold text-[#211E1A] shadow
+                                                        cursor-pointer rounded-full bg-surface px-3.5 py-2
+                                                        text-xs font-semibold text-ink shadow
                                                         transition-all duration-200
                                                         hover:bg-white hover:shadow-md
                                                         active:scale-95
@@ -742,12 +742,12 @@ export default function AddProject({
                                                     onClick={removeCover}
                                                     disabled={isBusy}
                                                     className="
-                                                        rounded-full bg-[#FFFDFA] p-2 text-[#211E1A] shadow
+                                                        rounded-full bg-surface p-2 text-ink shadow
                                                         transition-all duration-200
                                                         hover:bg-white hover:text-red-700 hover:shadow-md
                                                         active:scale-95
                                                         focus-visible:outline-none focus-visible:ring-2
-                                                        focus-visible:ring-[#211E1A]/40
+                                                        focus-visible:ring-ink/40
                                                     "
                                                 >
                                                     <X size={18} />
@@ -761,9 +761,9 @@ export default function AddProject({
                                         >
                                             <span
                                                 className="
-                                                    rounded-2xl bg-[#E8F0FE] p-3.5 text-[#2563EB]
+                                                    rounded-2xl bg-pastel-sky p-3.5 text-info
                                                     transition-all duration-300 ease-out
-                                                    group-hover:scale-110 group-hover:bg-[#2563EB] group-hover:text-white
+                                                    group-hover:scale-110 group-hover:bg-info group-hover:text-white
                                                     motion-reduce:transition-none
                                                     motion-reduce:group-hover:transform-none
                                                 "
@@ -771,17 +771,17 @@ export default function AddProject({
                                                 <ImagePlus size={27} strokeWidth={1.6} />
                                             </span>
 
-                                            <span className="text-sm font-semibold text-[#211E1A]">
+                                            <span className="text-sm font-semibold text-ink">
                                                 {dragging
                                                     ? "Drop the image here"
                                                     : "Select a project cover image"}
                                             </span>
 
-                                            <span className="text-xs text-[#716658]">
+                                            <span className="text-xs text-muted">
                                                 JPG, JPEG, PNG or WEBP
                                             </span>
 
-                                            <span className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#FFFDFA] px-4 py-2 text-xs font-semibold text-[#211E1A] shadow-sm ring-1 ring-[#E4DCCD] transition-all duration-200 group-hover:ring-[#211E1A]">
+                                            <span className="mt-1 inline-flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-xs font-semibold text-ink shadow-sm ring-1 ring-border transition-all duration-200 group-hover:ring-ink">
                                                 <Upload size={15} />
                                                 Browse files
                                             </span>
@@ -790,7 +790,7 @@ export default function AddProject({
                                 </div>
                             </div>
 
-                            <hr className="border-[#F0E9DF]" />
+                            <hr className="border-surface-soft" />
 
                             {/* BASIC INFORMATION */}
                             <section className="space-y-5">
@@ -851,28 +851,28 @@ export default function AddProject({
 
                                             <ChevronDown
                                                 size={17}
-                                                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
+                                                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted"
                                             />
                                         </div>
                                     </Field>
 
                                     {/* STATUS (segmented control) */}
                                     <fieldset className="min-w-0 space-y-2">
-                                        <legend className="mb-2 block text-[13px] font-semibold text-[#665E53]">
+                                        <legend className="mb-2 block text-[13px] font-semibold text-muted">
                                             Project Status
                                         </legend>
 
-                                        <div className="grid h-12 grid-cols-2 gap-1 rounded-xl border border-[#E4DCCD] bg-[#F5EFE7] p-1">
+                                        <div className="grid h-12 grid-cols-2 gap-1 rounded-xl border border-border bg-surface-soft p-1">
                                             {[
                                                 {
                                                     value: "ACTIVE",
                                                     label: "Active",
-                                                    dot: "bg-[#16A34A]",
+                                                    dot: "bg-success",
                                                 },
                                                 {
                                                     value: "MAINTENANCE",
                                                     label: "Maintenance",
-                                                    dot: "bg-[#EA8A12]",
+                                                    dot: "bg-warning",
                                                 },
                                             ].map((option) => (
                                                 <label
@@ -890,12 +890,12 @@ export default function AddProject({
                                                     <span
                                                         className="
                                                             flex h-full items-center justify-center gap-2 rounded-lg
-                                                            px-2 text-sm font-semibold text-[#716658]
+                                                            px-2 text-sm font-semibold text-muted
                                                             transition-all duration-200
-                                                            hover:text-[#211E1A]
-                                                            peer-checked:bg-[#FFFDFA] peer-checked:text-[#211E1A]
+                                                            hover:text-ink
+                                                            peer-checked:bg-surface peer-checked:text-ink
                                                             peer-checked:shadow-[0_2px_8px_rgba(33,30,26,0.10)]
-                                                            peer-focus-visible:ring-2 peer-focus-visible:ring-[#211E1A]/40
+                                                            peer-focus-visible:ring-2 peer-focus-visible:ring-ink/40
                                                             peer-disabled:cursor-not-allowed peer-disabled:opacity-50
                                                         "
                                                     >
@@ -948,7 +948,7 @@ export default function AddProject({
                                         <div className="relative">
                                             <MapPin
                                                 size={17}
-                                                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#716658]"
+                                                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"
                                             />
 
                                             <input
@@ -975,21 +975,21 @@ export default function AddProject({
                                         placeholder="Describe the project scope and key details..."
                                         className="
                                             w-full resize-y rounded-xl
-                                            border border-[#E4DCCD]
-                                            bg-[#FFFDFA] px-4 py-3
-                                            text-sm text-[#211E1A]
+                                            border border-border
+                                            bg-surface px-4 py-3
+                                            text-sm text-ink
                                             outline-none transition-all duration-200
-                                            placeholder:text-[#AAA196]
-                                            hover:border-[#CFC4B5]
-                                            focus:border-[#211E1A]
-                                            focus:ring-4 focus:ring-[#211E1A]/10
+                                            placeholder:text-muted
+                                            hover:border-border-strong
+                                            focus:border-ink
+                                            focus:ring-4 focus:ring-ink/10
                                             disabled:cursor-not-allowed disabled:opacity-50
                                         "
                                     />
                                 </Field>
                             </section>
 
-                            <hr className="border-[#F0E9DF]" />
+                            <hr className="border-surface-soft" />
 
                             {/* SCHEDULE */}
                             <section className="space-y-5">
@@ -1031,13 +1031,13 @@ export default function AddProject({
                                     </Field>
                                 </div>
 
-                                <div className="flex items-start gap-3 rounded-xl bg-[#E8F0FE]/60 p-3.5">
+                                <div className="flex items-start gap-3 rounded-xl bg-pastel-sky/60 p-3.5">
                                     <Info
                                         size={17}
-                                        className="mt-0.5 shrink-0 text-[#2563EB]"
+                                        className="mt-0.5 shrink-0 text-info"
                                     />
 
-                                    <p className="text-xs leading-5 text-[#665E53]">
+                                    <p className="text-xs leading-5 text-muted">
                                         Both dates are optional. If provided, the
                                         expected end date must not be earlier than
                                         the start date.
@@ -1066,13 +1066,13 @@ export default function AddProject({
                         <footer
                             className="
                                 flex shrink-0 flex-col-reverse items-stretch gap-2.5
-                                border-t border-[#EEE6DC] bg-[#FFFDFA]
+                                border-t border-border bg-surface
                                 px-5 pt-4
                                 pb-[max(1rem,env(safe-area-inset-bottom))]
                                 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-8
                             "
                         >
-                            <p className="hidden text-xs text-[#716658] sm:mr-auto sm:block">
+                            <p className="hidden text-xs text-muted sm:mr-auto sm:block">
                                 <span className="text-red-600">*</span> Required fields
                             </p>
 
@@ -1081,13 +1081,13 @@ export default function AddProject({
                                 onClick={onClose}
                                 disabled={isBusy}
                                 className="
-                                    rounded-xl border border-[#E4DCCD] px-5 py-3
-                                    text-sm font-semibold text-[#211E1A]
+                                    rounded-xl border border-border px-5 py-3
+                                    text-sm font-semibold text-ink
                                     transition-all duration-200 ease-out
-                                    hover:border-[#CFC4B5] hover:bg-[#F1EADF]
+                                    hover:border-border-strong hover:bg-app
                                     active:scale-[0.98]
                                     focus-visible:outline-none focus-visible:ring-2
-                                    focus-visible:ring-[#211E1A]/30
+                                    focus-visible:ring-ink/30
                                     disabled:opacity-50
                                 "
                             >
@@ -1099,14 +1099,14 @@ export default function AddProject({
                                 disabled={isBusy || !categories.length}
                                 className="
                                     group inline-flex items-center justify-center gap-2
-                                    rounded-xl bg-[#211E1A] px-6 py-3
+                                    rounded-xl bg-ink px-6 py-3
                                     text-sm font-semibold text-white
                                     transition-all duration-200 ease-out
-                                    hover:-translate-y-0.5 hover:bg-[#38332C]
+                                    hover:-translate-y-0.5 hover:bg-primary-hover
                                     hover:shadow-[0_10px_24px_rgba(33,30,26,0.24)]
                                     active:translate-y-0 active:scale-[0.98]
                                     focus-visible:outline-none focus-visible:ring-2
-                                    focus-visible:ring-[#211E1A]/40 focus-visible:ring-offset-2
+                                    focus-visible:ring-ink/40 focus-visible:ring-offset-2
                                     disabled:pointer-events-none disabled:opacity-50
                                     motion-reduce:hover:translate-y-0
                                 "

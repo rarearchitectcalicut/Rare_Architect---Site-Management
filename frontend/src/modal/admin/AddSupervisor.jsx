@@ -83,10 +83,10 @@ const modalCss = `
 
 // Icon tile tones (literal class strings so Tailwind can detect them)
 const tones = {
-    blue: "bg-[#E8F0FE] text-[#2563EB]",
-    green: "bg-[#E6F4EA] text-[#16A34A]",
-    orange: "bg-[#FFF3E0] text-[#EA8A12]",
-    violet: "bg-[#F1ECFE] text-[#7C3AED]",
+    blue: "bg-pastel-sky text-info",
+    green: "bg-pastel-mint text-success",
+    orange: "bg-pastel-blush text-warning",
+    violet: "bg-pastel-lavender text-violet",
 };
 
 const initialForm = {
@@ -99,16 +99,16 @@ const initialForm = {
 
 const inputClass = `
   h-12 w-full rounded-xl
-  border border-[#E4DCCD] bg-[#FFFDFA]
-  px-4 text-sm text-[#211E1A]
+  border border-border bg-surface
+  px-4 text-sm text-ink
   outline-none transition-all duration-200
-  placeholder:text-[#AAA196]
-  hover:border-[#CFC4B5]
-  focus:border-[#211E1A]
-  focus:ring-4 focus:ring-[#211E1A]/10
+  placeholder:text-muted
+  hover:border-border-strong
+  focus:border-ink
+  focus:ring-4 focus:ring-ink/10
   disabled:cursor-not-allowed
   disabled:opacity-50
-  disabled:hover:border-[#E4DCCD]
+  disabled:hover:border-border
   aria-invalid:border-red-600
   aria-invalid:ring-4 aria-invalid:ring-red-600/10
 `;
@@ -134,7 +134,7 @@ function FormField({
         <div className="min-w-0 space-y-2">
             <label
                 htmlFor={id}
-                className="block text-[13px] font-semibold text-[#665E53]"
+                className="block text-[13px] font-semibold text-muted"
             >
                 {label} <span className="text-red-600">*</span>
             </label>
@@ -144,8 +144,8 @@ function FormField({
                     size={17}
                     className="
                         pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2
-                        text-[#716658] transition-colors duration-200
-                        group-focus-within:text-[#211E1A]
+                        text-muted transition-colors duration-200
+                        group-focus-within:text-ink
                     "
                 />
 
@@ -405,7 +405,7 @@ export default function AddSupervisor({
                     onMouseDown={() => {
                         if (!submittingRef.current) onClose();
                     }}
-                    className="rare-backdrop absolute inset-0 bg-[#211E1A]/50 backdrop-blur-sm"
+                    className="rare-backdrop absolute inset-0 bg-ink/50 backdrop-blur-sm"
                 />
 
                 {/* MODAL */}
@@ -417,10 +417,10 @@ export default function AddSupervisor({
                     className="
                         rare-mobile-sheet rare-modal relative flex max-h-[94dvh]
                         w-full max-w-162.5 flex-col overflow-hidden
-                        rounded-t-[28px] bg-[#FFFDFA]
+                        rounded-t-[28px] bg-surface
                         shadow-[0_-12px_50px_rgba(33,30,26,0.22)]
                         sm:max-h-[90dvh] sm:rounded-[28px]
-                        sm:border sm:border-[#E9E1D7]
+                        sm:border sm:border-border
                         sm:shadow-[0_28px_80px_rgba(33,30,26,0.28)]
                     "
                 >
@@ -429,11 +429,11 @@ export default function AddSupervisor({
                         aria-hidden="true"
                         className="flex shrink-0 justify-center pt-2.5 sm:hidden"
                     >
-                        <span className="h-1 w-10 rounded-full bg-[#E4DCCD]" />
+                        <span className="h-1 w-10 rounded-full bg-border" />
                     </div>
 
                     {/* HEADER */}
-                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-4 border-b border-[#EEE6DC] bg-linear-to-b from-[#FFFDFA] to-[#FAF5ED] px-5 pb-4 pt-3 sm:px-8 sm:py-6">
+                    <header className="rare-page-header flex shrink-0 items-start justify-between gap-4 border-b border-border bg-linear-to-b from-surface to-surface-soft px-5 pb-4 pt-3 sm:px-8 sm:py-6">
                         <div className="flex min-w-0 items-start gap-3.5 sm:gap-4">
                             <span
                                 className={`hidden shrink-0 rounded-2xl p-3 min-[400px]:block ${createdSupervisor ? tones.green : tones.violet
@@ -447,20 +447,20 @@ export default function AddSupervisor({
                             </span>
 
                             <div className="min-w-0">
-                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#716658]">
+                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
                                     RARE Team Management
                                 </p>
 
                                 <h2
                                     id="add-supervisor-title"
-                                    className="mt-1 text-xl font-bold tracking-tight text-[#211E1A] sm:text-2xl"
+                                    className="mt-1 text-xl font-bold tracking-tight text-ink sm:text-2xl"
                                 >
                                     {createdSupervisor
                                         ? "Supervisor Created"
                                         : "Add New Supervisor"}
                                 </h2>
 
-                                <p className="mt-1 text-xs text-[#716658] sm:text-sm">
+                                <p className="mt-1 text-xs text-muted sm:text-sm">
                                     {createdSupervisor
                                         ? "The account has been created successfully."
                                         : "Enter the new supervisor's account details."}
@@ -475,12 +475,12 @@ export default function AddSupervisor({
                             disabled={submitting}
                             aria-label="Close modal"
                             className="
-                                group shrink-0 rounded-full bg-[#F1EADF] p-2.5 text-[#211E1A]
+                                group shrink-0 rounded-full bg-app p-2.5 text-ink
                                 transition-all duration-200 ease-out
-                                hover:bg-[#E7DDCE]
+                                hover:bg-border
                                 active:scale-95
                                 focus-visible:outline-none focus-visible:ring-2
-                                focus-visible:ring-[#211E1A]/30
+                                focus-visible:ring-ink/30
                                 disabled:opacity-50
                             "
                         >
@@ -500,21 +500,21 @@ export default function AddSupervisor({
                         /* SUCCESS VIEW */
                         <div className="overflow-y-auto overscroll-contain p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-8">
                             <div className="text-center">
-                                <span className="rare-badge mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#E6F4EA] text-[#16A34A] shadow-[0_8px_24px_rgba(22,163,74,0.18)]">
+                                <span className="rare-badge mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-pastel-mint text-success shadow-[0_8px_24px_rgba(22,163,74,0.18)]">
                                     <CheckCircle2 size={34} />
                                 </span>
 
-                                <h3 className="rare-rise mt-4 text-lg font-bold text-[#211E1A]" style={{ "--d": "120ms" }}>
+                                <h3 className="rare-rise mt-4 text-lg font-bold text-ink" style={{ "--d": "120ms" }}>
                                     Supervisor added successfully
                                 </h3>
 
-                                <p className="rare-rise mt-2 text-sm text-[#716658]" style={{ "--d": "180ms" }}>
+                                <p className="rare-rise mt-2 text-sm text-muted" style={{ "--d": "180ms" }}>
                                     This account can now be assigned to projects.
                                 </p>
                             </div>
 
                             <div
-                                className="rare-rise mt-6 grid gap-x-4 gap-y-5 rounded-2xl bg-[#F8F4EE] p-4 sm:grid-cols-2 sm:p-5"
+                                className="rare-rise mt-6 grid gap-x-4 gap-y-5 rounded-2xl bg-surface-soft p-4 sm:grid-cols-2 sm:p-5"
                                 style={{ "--d": "240ms" }}
                             >
                                 {[
@@ -529,11 +529,11 @@ export default function AddSupervisor({
                                         </span>
 
                                         <div className="min-w-0">
-                                            <p className="text-xs font-bold uppercase tracking-widest text-[#716658]">
+                                            <p className="text-xs font-bold uppercase tracking-widest text-muted">
                                                 {label}
                                             </p>
 
-                                            <p className="mt-1 break-all text-sm font-semibold text-[#211E1A]">
+                                            <p className="mt-1 break-all text-sm font-semibold text-ink">
                                                 {value || "Not provided"}
                                             </p>
                                         </div>
@@ -542,14 +542,14 @@ export default function AddSupervisor({
                             </div>
 
                             <div
-                                className="rare-rise mt-5 flex gap-3 rounded-xl bg-[#FFF3E0]/60 p-4"
+                                className="rare-rise mt-5 flex gap-3 rounded-xl bg-pastel-blush/60 p-4"
                                 style={{ "--d": "300ms" }}
                             >
                                 <span className={`h-fit shrink-0 rounded-lg p-2 ${tones.orange}`}>
                                     <LockKeyhole size={17} />
                                 </span>
 
-                                <p className="text-xs leading-6 text-[#665E53]">
+                                <p className="text-xs leading-6 text-muted">
                                     The Password Will Generate Automatically
                                 </p>
                             </div>
@@ -558,14 +558,14 @@ export default function AddSupervisor({
                                 type="button"
                                 onClick={onClose}
                                 className="
-                                    mt-6 w-full rounded-xl bg-[#211E1A] px-5 py-3.5
+                                    mt-6 w-full rounded-xl bg-ink px-5 py-3.5
                                     text-sm font-semibold text-white
                                     transition-all duration-200 ease-out
-                                    hover:-translate-y-0.5 hover:bg-[#38332C]
+                                    hover:-translate-y-0.5 hover:bg-primary-hover
                                     hover:shadow-[0_10px_24px_rgba(33,30,26,0.24)]
                                     active:translate-y-0 active:scale-[0.98]
                                     focus-visible:outline-none focus-visible:ring-2
-                                    focus-visible:ring-[#211E1A]/40 focus-visible:ring-offset-2
+                                    focus-visible:ring-ink/40 focus-visible:ring-offset-2
                                     motion-reduce:hover:translate-y-0
                                 "
                             >
@@ -580,19 +580,19 @@ export default function AddSupervisor({
                             className="flex min-h-0 flex-1 flex-col"
                         >
                             <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-6 sm:px-8 sm:py-7">
-                                <div className="flex items-start gap-3.5 rounded-2xl bg-[#E8F0FE]/60 p-4">
+                                <div className="flex items-start gap-3.5 rounded-2xl bg-pastel-sky/60 p-4">
                                     <span className={`shrink-0 rounded-xl p-2.5 ${tones.blue}`}>
                                         <Info size={20} strokeWidth={1.8} />
                                     </span>
 
                                     <div className="min-w-0">
-                                        <p className="text-sm font-bold text-[#211E1A]">
+                                        <p className="text-sm font-bold text-ink">
                                             Supervisor Information
                                         </p>
 
-                                        <p className="mt-1 text-xs leading-5 text-[#665E53]">
-                                            All five fields are required. Django
-                                            will configure the password automatically.
+                                        <p className="mt-1 text-xs leading-5 text-muted">
+                                            All five fields are required. The initial
+                                            password is generated automatically.
                                         </p>
                                     </div>
                                 </div>
@@ -687,15 +687,14 @@ export default function AddSupervisor({
                                     }
                                 />
 
-                                <div className="flex items-start gap-3 rounded-xl border border-[#E7DED2] p-4">
+                                <div className="flex items-start gap-3 rounded-xl border border-border p-4">
                                     <span className={`shrink-0 rounded-lg p-2 ${tones.orange}`}>
                                         <LockKeyhole size={17} />
                                     </span>
 
-                                    <p className="text-xs leading-6 text-[#716658]">
-                                        No password entry is needed.
-                                        The existing Django account-creation
-                                        logic handles the initial password.
+                                    <p className="text-xs leading-6 text-muted">
+                                        You do not need to enter a password
+                                        to create this account.
                                     </p>
                                 </div>
 
@@ -719,13 +718,13 @@ export default function AddSupervisor({
                             <footer
                                 className="
                                     flex shrink-0 flex-col-reverse items-stretch gap-2.5
-                                    border-t border-[#EEE6DC] bg-[#FFFDFA]
+                                    border-t border-border bg-surface
                                     px-5 pt-4
                                     pb-[max(1rem,env(safe-area-inset-bottom))]
                                     sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-8
                                 "
                             >
-                                <p className="hidden text-xs text-[#716658] sm:mr-auto sm:block">
+                                <p className="hidden text-xs text-muted sm:mr-auto sm:block">
                                     <span className="text-red-600">*</span> Required fields
                                 </p>
 
@@ -734,13 +733,13 @@ export default function AddSupervisor({
                                     onClick={onClose}
                                     disabled={submitting}
                                     className="
-                                        rounded-xl border border-[#E4DCCD] px-5 py-3
-                                        text-sm font-semibold text-[#211E1A]
+                                        rounded-xl border border-border px-5 py-3
+                                        text-sm font-semibold text-ink
                                         transition-all duration-200 ease-out
-                                        hover:border-[#CFC4B5] hover:bg-[#F1EADF]
+                                        hover:border-border-strong hover:bg-app
                                         active:scale-[0.98]
                                         focus-visible:outline-none focus-visible:ring-2
-                                        focus-visible:ring-[#211E1A]/30
+                                        focus-visible:ring-ink/30
                                         disabled:opacity-50
                                     "
                                 >
@@ -752,14 +751,14 @@ export default function AddSupervisor({
                                     disabled={submitting}
                                     className="
                                         group inline-flex items-center justify-center gap-2
-                                        rounded-xl bg-[#211E1A] px-6 py-3
+                                        rounded-xl bg-ink px-6 py-3
                                         text-sm font-semibold text-white
                                         transition-all duration-200 ease-out
-                                        hover:-translate-y-0.5 hover:bg-[#38332C]
+                                        hover:-translate-y-0.5 hover:bg-primary-hover
                                         hover:shadow-[0_10px_24px_rgba(33,30,26,0.24)]
                                         active:translate-y-0 active:scale-[0.98]
                                         focus-visible:outline-none focus-visible:ring-2
-                                        focus-visible:ring-[#211E1A]/40 focus-visible:ring-offset-2
+                                        focus-visible:ring-ink/40 focus-visible:ring-offset-2
                                         disabled:pointer-events-none disabled:opacity-50
                                         motion-reduce:hover:translate-y-0
                                     "

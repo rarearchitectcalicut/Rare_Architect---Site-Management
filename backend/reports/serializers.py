@@ -160,6 +160,7 @@ class DailyReportDetailSerializer(serializers.ModelSerializer):
 
 
 class DailyReportQuerySerializer(serializers.Serializer):
+    project = serializers.UUIDField(required=False)
     search = serializers.CharField(required=False, allow_blank=True, max_length=200)
     status = serializers.ChoiceField(choices=DailyReport.Status.choices, required=False)
     date_from = serializers.DateField(required=False)

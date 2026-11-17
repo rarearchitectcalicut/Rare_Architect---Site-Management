@@ -2,6 +2,8 @@ from django.urls import path
 
 from .views import (
     ProjectDailyReportListCreateView,
+    AdminDailyReportListView,
+    SupervisorDailyReportListView,
     DailyReportDetailView,
     DailyReportSubmitView,
     DailyTaskWorkListCreateView,
@@ -30,6 +32,8 @@ from .views import (
 app_name = "reports"
 
 urlpatterns = [
+    path("my-daily-reports/", SupervisorDailyReportListView.as_view(), name="supervisor-daily-report-list"),
+    path("daily-reports/", AdminDailyReportListView.as_view(), name="admin-daily-report-list"),
     path("daily-task-work/", DailyWorkQueueView.as_view(), name="daily-work-queue"),
     path(
         "projects/<uuid:project_id>/daily-reports/",
