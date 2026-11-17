@@ -60,7 +60,7 @@ test("valid lookup navigates using response.project rather than an invented proj
     const duplicate = ui.button().props.onClick(); assert.equal(ui.requests.length, 1);
     ui.requests[0].resolve({ id: taskId, project: projectId, project_name: "Site" });
     await pending; await duplicate; ui.draw();
-    assert.deepEqual(ui.navigations, [`/supervisor/projects/${projectId}/tasks?task=${taskId}`]);
+    assert.deepEqual(ui.navigations, [`/supervisor/projects/${projectId}/tasks/${taskId}`]);
     assert.equal(ui.button().props.disabled, false);
     ui.cleanup();
 });

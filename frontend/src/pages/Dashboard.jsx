@@ -314,7 +314,7 @@ function buildSupervisorAttentionItems(actionItems, now) {
       title: task.title,
       description: `${task.project_name} · Waiting for approval`,
       status: "PENDING",
-      to: `/supervisor/projects/${encodeURIComponent(task.project_id)}/tasks?task=${encodeURIComponent(task.id)}`,
+      to: `/supervisor/projects/${encodeURIComponent(task.project_id)}/tasks/${encodeURIComponent(task.id)}`,
     });
   }
   for (const task of actionItems.overdue_tasks?.items || []) {
@@ -323,7 +323,7 @@ function buildSupervisorAttentionItems(actionItems, now) {
       title: task.title,
       description: `${task.project_name} · Due ${formatAttentionDate(task.end_date)}`,
       status: "DELAYED",
-      to: `/supervisor/projects/${encodeURIComponent(task.project_id)}/tasks?task=${encodeURIComponent(task.id)}`,
+      to: `/supervisor/projects/${encodeURIComponent(task.project_id)}/tasks/${encodeURIComponent(task.id)}`,
       reportDelay: { projectId: task.project_id, taskId: task.id },
     });
   }
@@ -333,7 +333,7 @@ function buildSupervisorAttentionItems(actionItems, now) {
       title: task.title,
       description: `${task.project_name} · Rejected task`,
       status: "REJECTED",
-      to: `/supervisor/projects/${encodeURIComponent(task.project_id)}/tasks?task=${encodeURIComponent(task.id)}`,
+      to: `/supervisor/projects/${encodeURIComponent(task.project_id)}/tasks/${encodeURIComponent(task.id)}`,
     });
   }
   for (const work of actionItems.rejected_work_to_correct?.items || []) {
@@ -390,7 +390,7 @@ function PendingChangeTaskLink({ taskId, children }) {
       if (typeof task?.project !== "string" || !isTaskId(task.project) || String(task.id).toLowerCase() !== taskId.toLowerCase()) {
         throw new Error("The task's project could not be resolved. Refresh the dashboard or try again.");
       }
-      navigate(`/supervisor/projects/${encodeURIComponent(task.project)}/tasks?task=${encodeURIComponent(taskId)}`);
+      navigate(`/supervisor/projects/${encodeURIComponent(task.project)}/tasks/${encodeURIComponent(taskId)}`);
     } catch (failure) {
       if (!controller.signal.aborted) setError(validationMessage(failure, failure.response ? "Unable to open this task. Please try again." : failure.message || "Unable to open this task. Please try again."));
     } finally {

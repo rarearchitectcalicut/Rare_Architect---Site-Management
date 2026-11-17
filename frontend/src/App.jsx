@@ -27,6 +27,7 @@ import CreateRecord from "./pages/admin/CreateRecord";
 import AdminProjectOverview from "./pages/admin/ProjectOverview";
 import AdminProjectTasks, { GlobalTaskRegister, AdminProjectTimeline } from "./pages/admin/ProjectTasks";
 import AdminTaskDetails from "./pages/admin/TaskDetails";
+import SupervisorTaskDetails from "./pages/supervisor/TaskDetails";
 import Supervisors from "./pages/admin/Supervisors";
 import SupervisorDetails from "./pages/admin/SupervisorDetails";
 import AdminProjects, { ProjectDirectory } from "./pages/admin/Projects";
@@ -398,6 +399,7 @@ export default function App() {
             element={<SupervisorProjectTasks />}
           />
 
+          <Route path="/supervisor/projects/:projectId/tasks/:taskId" element={<SupervisorTaskDetails />} />
           <Route
             path="/supervisor/projects/:projectId/timeline"
             element={<SupervisorProjectTimeline />}

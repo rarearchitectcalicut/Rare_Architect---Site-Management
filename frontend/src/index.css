@@ -423,73 +423,6 @@ dialog :where(input, textarea)::placeholder { color: var(--color-muted); opacity
 }
 
 @media (min-width: 1024px) {
-    .expanded-supervisor-task {
-        display: grid;
-        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-        gap: 16px;
-        border-top: 3px solid var(--color-success);
-        border-radius: 12px;
-    }
-    .expanded-supervisor-task > * { min-width: 0; margin-top: 0; }
-    .expanded-task-heading { grid-column: 1 / -1; }
-    .expanded-task-heading > div > p { display: none; }
-    .expanded-task-heading h3 { margin-top: 0; }
-    .expanded-task-statuses { grid-column: 1 / -1; padding-bottom: 16px; border-bottom: 1px solid var(--color-border); }
-    .expanded-task-statuses > div {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 14px;
-        border: 1px solid var(--color-border);
-        border-radius: 12px;
-        background: var(--color-surface-soft);
-    }
-    .expanded-task-statuses > div > p { margin: 0; }
-    .expanded-task-execution { grid-area: 3 / 1; border: 1px solid var(--color-border); border-radius: 12px; padding: 16px; }
-    .expanded-task-execution > :first-child { margin-top: 0; }
-    .expanded-task-details { grid-area: 4 / 1; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); padding: 16px; }
-    .expanded-task-description { grid-area: 5 / 1; gap: 0; border: 1px solid var(--color-border); border-radius: 12px; }
-    .expanded-task-description > div { border: 0; padding: 16px; }
-    .expanded-task-description > div + div { border-left: 1px solid var(--color-border); border-radius: 0; }
-    .expanded-task-documents { grid-area: 6 / 1; }
-    .expanded-task-review { grid-area: 3 / 2 / 7 / 3; align-self: start; }
-    .expanded-task-review > section { margin-top: 0; border-color: var(--color-border); border-radius: 12px; background: var(--color-surface); padding: 16px; }
-    .expanded-task-review > section + section { margin-top: 16px; }
-    .expanded-task-review article { border: 0; border-left: 2px solid var(--color-border); border-radius: 0; padding: 0 0 0 12px; }
-    .supervisor-project-tasks div:has(> .expanded-supervisor-task) { border: 0; }
-    .supervisor-project-tasks div:has(> [id^="task-details-"]) > a { display: none; }
-}
-
-@media (min-width: 1024px) {
-    .expanded-task-left {
-        grid-area: 3 / 1;
-        flex-direction: column;
-        gap: 16px;
-        align-self: start;
-        min-width: 0;
-    }
-    .expanded-task-left > * { margin-top: 0; min-width: 0; }
-    .expanded-task-left > .expanded-task-review { display: none; }
-    .expanded-supervisor-task > .expanded-task-review { grid-area: 3 / 2; align-self: start; }
-    .expanded-task-details { align-items: start; }
-}
-
-@media (min-width: 1024px) {
-    .supervisor-task-backdrop { position: fixed; inset: 0; z-index: 39; background: rgb(0 0 0 / 40%); }
-    .supervisor-project-tasks .supervisor-task-popup {
-        position: fixed;
-        z-index: 40;
-        inset: 5vh 4vw auto;
-        width: min(1200px, 92vw);
-        max-height: 90vh;
-        margin-inline: auto;
-        overflow-y: auto;
-        border-radius: 16px;
-        box-shadow: 0 24px 80px #0003;
-    }
-    .supervisor-project-tasks div:has(> .supervisor-task-popup) > a { display: flex; }
-}
-@media (min-width: 1024px) {
     .supervisor-timeline { --timeline-gap: 16px; }
     .supervisor-timeline > nav > :not(a:nth-of-type(2)) { display: none; }
     .supervisor-timeline > header { padding: 0; border: 0; background: transparent; }
@@ -1094,10 +1027,6 @@ dialog :where(input, textarea)::placeholder { color: var(--color-muted); opacity
     .admin-task-details-page > header > div:nth-child(2) { padding: 12px 0 16px; border-bottom: 0; }
     .admin-task-details-page > header > dl { display: none; }
     .admin-task-details-page > section.task-panel { border: 0; background: transparent; box-shadow: none; border-radius: 0; }
-    .admin-task-details-page nav[aria-label="Task detail sections"] { gap: 6px; padding: 8px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 24px; }
-    .admin-task-details-page nav[aria-label="Task detail sections"] button { border-radius: 999px; background: transparent; border: 0; box-shadow: none; padding: 12px; }
-    .admin-task-details-page nav[aria-label="Task detail sections"] button[aria-pressed="true"] { color: white; background: var(--color-primary); }
-    .admin-task-details-page nav[aria-label="Task detail sections"] button svg { display: block; }
     .admin-task-details-page #task-section { padding: 20px 0 0; }
     .admin-task-overview-desktop { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 }
@@ -1157,7 +1086,6 @@ dialog :where(input, textarea)::placeholder { color: var(--color-muted); opacity
     .admin-task-details-page #task-section[data-task-tab="history"] > ol { padding: 20px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); }
     .admin-task-details-page #task-section[data-task-tab="history"] li { background: var(--color-surface-soft); border-radius: 0 12px 12px 0; padding: 16px 16px 16px 24px; }
     .admin-task-details-page #task-section button { border-radius: 8px; }
-    .admin-task-details-page nav[aria-label="Task detail sections"] button:hover { background: var(--color-app); }
 }
 @media (min-width: 1024px) {
     .admin-project-task-page .rare-compact-stats { display: none; }
@@ -1256,14 +1184,7 @@ dialog :where(input, textarea)::placeholder { color: var(--color-muted); opacity
     .admin-task-compact-header > div > div > div > span { padding: 4px 8px; }
     .admin-task-compact-progress > span { margin-block: 0; }
     .admin-task-details-page > section.task-panel { margin-top: 0; }
-    .admin-task-details-page nav[aria-label="Task detail sections"] {
-        padding: 0 10px;
-        background: var(--color-surface-soft);
-        border: 1px solid var(--color-border);
-        border-radius: 0 0 16px 16px;
-        gap: 4px;
-    }
-    .admin-task-details-page nav[aria-label="Task detail sections"] button { padding: 12px; }
+
     .admin-task-overview-desktop { gap: 16px; }
     .admin-task-overview-desktop > div { display: flex; flex-direction: column; gap: 16px; }
     .admin-task-overview-desktop > div > section { margin: 0; }

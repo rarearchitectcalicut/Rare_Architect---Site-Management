@@ -26,7 +26,7 @@ export default function DelayReportReview({ record, role = "ADMIN" }) {
             {record.admin_comment && <p className="mt-3 whitespace-pre-wrap text-sm">{record.admin_comment}</p>}
         </div>
         <Link className="inline-block text-sm font-semibold text-info" to={`${prefix}/projects/${record.project_id}`}>View affected project</Link>
-        <Link className="ml-4 inline-block text-sm font-semibold text-info" to={role === "ADMIN" ? `/admin/projects/${record.project_id}/tasks/${record.task}` : `${prefix}/projects/${record.project_id}/tasks?task=${record.task}`}>View affected task</Link>
+        <Link className="ml-4 inline-block text-sm font-semibold text-info" to={role === "ADMIN" ? `/admin/projects/${record.project_id}/tasks/${record.task}` : `${prefix}/projects/${record.project_id}/tasks/${record.task}`}>View affected task</Link>
         {role === "SUPERVISOR" && <Link className="block text-sm font-semibold text-info" to={`/supervisor/projects/${record.project_id}/delays`}>Open project delay register</Link>}
         {record.extension_requested && <ExtensionReview record={record} />}
         <p className="rounded-xl bg-pastel-sky p-4 text-xs leading-5 text-info">{record.extension_status === "APPROVED" ? "The deadline extension was approved separately. Its recorded deadline change is shown above." : record.extension_status === "REJECTED" ? "The extension was rejected. That decision did not change the task deadline." : record.extension_requested ? "Approving this report records the delay. The pending extension requires a separate decision before the task deadline can change." : "Approving this report records the delay and does not change the task deadline."}</p>

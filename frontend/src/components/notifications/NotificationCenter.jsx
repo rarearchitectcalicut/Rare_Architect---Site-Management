@@ -235,7 +235,7 @@ async function resolveDestination(notification, role) {
     if (["TASK_CHANGE_REQUEST", "CHANGE_REQUEST"].includes(kind) && ref) {
         const request = await approvalApi.getChangeRequest(ref);
         const timeline = request.change_type === "ORDER_CHANGE";
-        if (supervisor) return `/supervisor/projects/${request.project_id}/${timeline ? "timeline" : `tasks?task=${encodeURIComponent(idOf(request.task))}`}`;
+        if (supervisor) return `/supervisor/projects/${request.project_id}/${timeline ? "timeline" : `tasks/${encodeURIComponent(idOf(request.task))}`}`;
         return `/admin/approvals?tab=${timeline ? "timeline" : "changes"}&request=${encodeURIComponent(ref)}`;
     }
     if (["DELAY_REPORT", "EXTENSION_REQUEST"].includes(type) && ref) {
@@ -280,7 +280,7 @@ async function resolveDestination(notification, role) {
             return (
                 `/supervisor/projects/${projectId}/tasks` +
                 (taskId
-                    ? `?task=${encodeURIComponent(taskId)}`
+                    ? `/${encodeURIComponent(taskId)}`
                     : "")
             );
         }

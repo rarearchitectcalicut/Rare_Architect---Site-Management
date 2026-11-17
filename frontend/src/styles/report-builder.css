@@ -60,3 +60,29 @@
   .rare-report-save-footer .rare-button { padding-inline: 10px; font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .rare-report-choice { transition: none; } }
+
+/* Report viewers keep their section controls visible on phones and computers. */
+.daily-report-detail { --report-nav-top: 5.5rem; }
+.daily-report-detail .rare-report-nav-dock { position: sticky; top: var(--report-nav-top); z-index: 10; padding: 4px 0 8px; scroll-margin-top: var(--report-nav-top); background: var(--rare-canvas-background); background-attachment: fixed; }
+.daily-report-detail .rare-report-nav-dock[hidden] { display: none; }
+.daily-report-detail .rare-report-nav-dock::after { content: ""; position: absolute; inset: auto 0 -8px; height: 8px; background: var(--rare-canvas-background); background-attachment: fixed; mask-image: linear-gradient(#000,transparent); pointer-events: none; }
+.rare-app main .daily-report-detail .report-detail-tab-row { display: flex; flex-wrap: nowrap; gap: 4px; width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding: 4px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); box-shadow: 0 3px 10px #313f5b08; }
+.daily-report-detail .report-detail-tab-row::-webkit-scrollbar { display: none; }
+.rare-app main .daily-report-detail .report-detail-tab-row > button { display: inline-flex; align-items: center; justify-content: center; flex: 1 0 auto; height: 44px; min-height: 44px; padding: 0 14px; border: 0; border-radius: 999px; white-space: nowrap; font-size: 12px; font-weight: 600; box-shadow: none; background: transparent; color: var(--color-muted); }
+.rare-app main .daily-report-detail .report-detail-tab-row > button[aria-pressed="true"] { background: var(--color-primary); color: white; }
+.rare-app main .daily-report-detail .report-detail-tab-row > button[aria-pressed="false"]:hover { background: var(--color-pastel-lavender); }
+@media (max-width: 639px) { .daily-report-detail { --report-nav-top: 4.5rem; } }
+@media (min-width: 1024px) {
+  .daily-report-detail { --report-nav-top: 6.5rem; }
+  .daily-report-workspace:has(.desktop-report-detail), .daily-report-detail.desktop-report-detail { max-width: none; }
+  .rare-app main .daily-report-detail .report-detail-tab-row { width: 100%; }
+  .rare-app main .daily-report-detail .report-detail-tab-row > button { flex: 1 1 0; min-width: 0; }
+}
+.report-tab-phone-label { display: none; }
+@media (max-width: 639px) {
+  .daily-report-detail .rare-report-nav-dock { min-width: 0; max-width: 100%; }
+  .rare-app main .daily-report-detail .report-section-tabs { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 0; overflow: visible; }
+  .rare-app main .daily-report-detail .report-section-tabs > button { width: 100%; min-width: 0; padding-inline: 2px; font-size: 11px; }
+  .report-section-tabs .report-tab-full-label, .report-section-tabs .report-tab-count { display: none; }
+  .report-section-tabs .report-tab-phone-label { display: inline; }
+}
