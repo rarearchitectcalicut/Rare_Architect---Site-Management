@@ -179,6 +179,7 @@ function InfoItem({ icon: Icon, label, value, tone = "neutral" }) {
 
 function AddSupervisorDialog({
   open,
+  projectId,
   onClose,
   assignedIds,
   onAssign,
@@ -188,11 +189,19 @@ function AddSupervisorDialog({
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
+  const lifecycle = useRef(null);
 
   useEffect(() => {
     if (!open) return;
 
     let cancelled = false;
+    const operation = { active: true, assigning: false, loading: true };
+    lifecycle.current = operation;
+    const releaseLoading = () => {
+      if (lifecycle.current !== operation || !operation.loading) return;
+      operation.loading = false;
+      setBusyMessage((message) => message === "Loading supervisors..." ? "" : message);
+    };
 
     async function loadSupervisors() {
       setError("");
@@ -202,10 +211,17 @@ function AddSupervisorDialog({
       setBusyMessage("Loading supervisors...");
 
       try {
-        const response = await supervisorApi.list();
+        const all = [];
+        for (let page = 1; page <= 500; page += 1) {
+          const response = await supervisorApi.list({ page });
+          if (cancelled) return;
+          all.push(...getListItems(response));
+          if (Array.isArray(response) || !response.next) break;
+          if (page === 500) throw new Error("Supervisor pagination limit reached.");
+        }
 
         if (!cancelled) {
-          setSupervisors(getListItems(response));
+          setSupervisors(all);
         }
       } catch (err) {
         if (!cancelled) {
@@ -216,7 +232,7 @@ function AddSupervisorDialog({
           );
         }
       } finally {
-        if (!cancelled) setBusyMessage("");
+        if (!cancelled) releaseLoading();
       }
     }
 
@@ -224,8 +240,10 @@ function AddSupervisorDialog({
 
     return () => {
       cancelled = true;
+      operation.active = false;
+      releaseLoading();
     };
-  }, [open, setBusyMessage]);
+  }, [open, projectId, setBusyMessage]);
 
   if (!open) return null;
 
@@ -254,18 +272,24 @@ function AddSupervisorDialog({
   };
 
   const handleAssign = async () => {
-    if (!selected.length) return;
+    const operation = lifecycle.current;
+    if (!open || !operation?.active || operation.assigning || !selected.length) return;
+    operation.assigning = true;
+    const current = () => operation.active && lifecycle.current === operation;
 
     setError("");
 
     try {
       await onAssign(selected);
-      onClose();
+      if (current()) onClose();
     } catch (err) {
+      if (!current()) return;
       const detail = err.response?.data?.detail;
       setError(
         typeof detail === "string" ? detail : "Unable to assign supervisors.",
       );
+    } finally {
+      operation.assigning = false;
     }
   };
 
@@ -480,7 +504,9 @@ export default function ProjectOverview() {
 
   const { projectId } = useParams();
 
-  const [project, setProject] = useState(null);
+  const [projectData, setProject] = useState(null);
+  const project = projectData?.id === projectId ? projectData : null;
+  const requestScope = useRef({ projectId, active: true, request: 0 });
   const [loadingMessage, setLoadingMessage] = useState(
     "Loading project overview...",
   );
@@ -490,21 +516,45 @@ export default function ProjectOverview() {
   const [showAssign, setShowAssign] = useState(false);
   const [removeTarget, setRemoveTarget] = useState(null);
 
+  useEffect(() => {
+    const scope = { projectId, active: true, request: 0 };
+    requestScope.current = scope;
+    setShowEditProject(false);
+    setShowAssign(false);
+    setRemoveTarget(null);
+    setShowCancelProject(false);
+    setCancelling(false);
+    setChangingStatus(false);
+    setNotice("");
+    setCancellationError("");
+    setStatusError("");
+    statusInFlight.current = false;
+    cancellationInFlight.current = false;
+    return () => { scope.active = false; };
+  }, [projectId]);
+
   const loadProject = useCallback(async () => {
+    const scope = requestScope.current;
+    if (!scope?.active || scope.projectId !== projectId) return;
+    const request = ++scope.request;
+    const current = () => scope.active && scope.request === request;
     setLoadingMessage("Loading project overview...");
     setError("");
 
     try {
       const data = await projectApi.getProjectOverview(projectId);
+      if (!current()) return;
+      if (data.id !== projectId) throw new Error("Unexpected project response.");
       setProject(data);
     } catch (err) {
+      if (!current()) return;
       setError(
         err.response?.status === 404
           ? "This project was not found."
           : "Unable to load project details.",
       );
     } finally {
-      setLoadingMessage("");
+      if (current()) setLoadingMessage("");
     }
   }, [projectId]);
 
@@ -523,6 +573,8 @@ export default function ProjectOverview() {
 
   async function cancelProject(event) {
     event.preventDefault();
+    const scope = requestScope.current;
+    if (!scope?.active || scope.projectId !== projectId) return;
     if (cancellationInFlight.current || !cancellationReason.trim()) return;
     cancellationInFlight.current = true;
     setCancelling(true);
@@ -531,66 +583,88 @@ export default function ProjectOverview() {
       const updated = await projectApi.updateProject(projectId, {
         status: "CANCELLED", cancellation_reason: cancellationReason.trim(),
       });
+      if (!scope.active) return;
       setProject((previous) => ({ ...previous, status: updated.status }));
       setShowCancelProject(false);
       setNotice("Project cancelled. All existing records have been preserved.");
       await loadProject();
     } catch (failure) {
+      if (!scope.active) return;
       setCancellationError(validationMessage(failure, "Unable to cancel this project. Please try again."));
     } finally {
-      cancellationInFlight.current = false;
-      setCancelling(false);
+      if (scope.active) {
+        cancellationInFlight.current = false;
+        setCancelling(false);
+      }
     }
   }
 
   async function changeCancelledStatus(event) {
     event.preventDefault();
+    const scope = requestScope.current;
+    if (!scope?.active || scope.projectId !== projectId) return;
     if (statusInFlight.current || project?.status !== "CANCELLED") return;
     statusInFlight.current = true;
     setChangingStatus(true);
     setStatusError("");
     try {
       const updated = await projectApi.updateProject(projectId, { status: nextStatus });
+      if (!scope.active) return;
       setProject((previous) => ({ ...previous, status: updated.status, cancellation: null }));
       setNotice(`Project status changed to ${updated.status.replaceAll("_", " ").toLowerCase()}. All existing records have been preserved.`);
     } catch (failure) {
+      if (!scope.active) return;
       setStatusError(validationMessage(failure, "Unable to change project status. Please try again."));
     } finally {
-      statusInFlight.current = false;
-      setChangingStatus(false);
+      if (scope.active) {
+        statusInFlight.current = false;
+        setChangingStatus(false);
+      }
     }
   }
 
   const assignSupervisors = async (ids) => {
+    const scope = requestScope.current;
+    if (!scope?.active || scope.projectId !== projectId) return;
+    const request = ++scope.request;
+    const current = () => scope.active && scope.request === request;
     setLoadingMessage("Assigning supervisors...");
 
     try {
       await supervisorApi.assignToProject(projectId, ids);
-
+      if (!current()) return;
       const updated = await projectApi.getProjectOverview(projectId);
+      if (!current()) return;
+      if (updated.id !== projectId) throw new Error("Unexpected project response.");
       setProject(updated);
     } finally {
-      setLoadingMessage("");
+      if (current()) setLoadingMessage("");
     }
   };
 
   const removeSupervisor = async () => {
+    const scope = requestScope.current;
+    if (!scope?.active || scope.projectId !== projectId) return;
     if (!removeTarget) return;
 
+    const request = ++scope.request;
+    const current = () => scope.active && scope.request === request;
     setLoadingMessage("Removing supervisor...");
 
     try {
       await supervisorApi.removeFromProject(projectId, removeTarget.supervisor);
-
+      if (!current()) return;
       const updated = await projectApi.getProjectOverview(projectId);
-
+      if (!current()) return;
+      if (updated.id !== projectId) throw new Error("Unexpected project response.");
       setProject(updated);
       setRemoveTarget(null);
     } catch (err) {
+      if (!current()) return;
       setError(err.response?.data?.detail || "Unable to remove supervisor.");
       setRemoveTarget(null);
     } finally {
-      setLoadingMessage("");
+      if (current()) setLoadingMessage("");
     }
   };
 
@@ -1103,6 +1177,7 @@ export default function ProjectOverview() {
 
       {/* ADD SUPERVISOR */}
       <AddSupervisorDialog
+        projectId={projectId}
         open={showAssign && project?.status !== "CANCELLED"}
         onClose={() => setShowAssign(false)}
         assignedIds={assignedIds}

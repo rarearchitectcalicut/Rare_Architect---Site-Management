@@ -21,8 +21,8 @@ export const settingsApi = {
         return data;
     },
 
-    getCategories: async () => {
-        const { data } = await api.get("project-categories/");
+    getCategories: async (params = {}) => {
+        const { data } = await api.get("project-categories/", { params });
         return data;
     },
 

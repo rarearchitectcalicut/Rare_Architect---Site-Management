@@ -185,6 +185,38 @@ function SupervisorDelayCard({ report, taskName }) {
     </div>;
 }
 
+function MobileTaskDelayDialog({ onClose, triggerRef, children }) {
+    const dialogRef = useRef(null);
+    useEffect(() => {
+        const dialog = dialogRef.current;
+        const desktop = window.matchMedia("(min-width: 1024px)");
+        if (desktop.matches) { onClose(false); return; }
+        const previousOverflow = document.body.style.overflow;
+        const trigger = triggerRef.current;
+        dialog.showModal();
+        document.body.style.overflow = "hidden";
+        function handleViewportChange(event) { if (event.matches) onClose(false); }
+        desktop.addEventListener("change", handleViewportChange);
+        return () => {
+            desktop.removeEventListener("change", handleViewportChange);
+            dialog.close();
+            document.body.style.overflow = previousOverflow;
+            if (!desktop.matches && trigger?.isConnected) trigger.focus();
+        };
+    }, [onClose, triggerRef]);
+
+    return createPortal(<dialog ref={dialogRef} aria-label="Task delay reports" aria-modal="true"
+        onCancel={(event) => { event.preventDefault(); event.stopPropagation(); onClose(false); }}
+        onClick={(event) => { if (event.target === event.currentTarget) onClose(false); }}
+        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-2xl overflow-y-auto rounded-2xl border border-[#E7DED2] bg-[#FFFDFA] p-4 text-[#211E1A] shadow-2xl backdrop:bg-[#211E1A]/45">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-[#FFFDFA] pb-3">
+            <h3 className="text-lg font-bold">Delay Reports</h3>
+            <button type="button" autoFocus aria-label="Close task delay reports" onClick={() => onClose(false)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#E7DED2]"><X size={18} /></button>
+        </div>
+        {children}
+    </dialog>, document.body);
+}
+
 function ExpandedTask({
     task,
     loading,
@@ -196,6 +228,8 @@ function ExpandedTask({
     onReportDelay,
 }) {
     const [documentsOpen, setDocumentsOpen] = useState(false);
+    const [mobileDelayOpen, setMobileDelayOpen] = useState(false);
+    const mobileDelayTriggerRef = useRef(null);
     const [delayPage, setDelayPage] = useState(1);
     const [delayRevision, setDelayRevision] = useState(0);
     const [delayReports, setDelayReports] = useState(null);
@@ -392,6 +426,12 @@ function ExpandedTask({
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!decisionState.data.next} onClick={() => setDecisionPage((page) => page + 1)}>Next decisions</button>
                 </nav>}
             </section>
+            <button ref={mobileDelayTriggerRef} type="button" aria-haspopup="dialog" aria-expanded={mobileDelayOpen}
+                onClick={() => setMobileDelayOpen(true)}
+                className="mt-5 flex min-h-11 w-full items-center justify-between gap-3 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 text-left text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#211E1A]">
+                Delay Reports<ChevronRight size={18} aria-hidden="true" />
+            </button>
+            {mobileDelayOpen && <MobileTaskDelayDialog onClose={setMobileDelayOpen} triggerRef={mobileDelayTriggerRef}>
             <section aria-label="Task delay reports" className="mt-5 space-y-4 rounded-[18px] border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <h4 className="text-sm font-bold">Delay reports for this task</h4>
@@ -411,6 +451,7 @@ function ExpandedTask({
                     <button type="button" className="rare-button rare-button-secondary min-h-11 text-xs" disabled={!delayState.data.next} onClick={() => setDelayPage((page) => page + 1)}>Next reports</button>
                 </nav>}
             </section>
+            </MobileTaskDelayDialog>}
             </aside>
             {/* DESCRIPTION AND COMPLETION CRITERIA */}
             <div className="expanded-task-description mt-5 grid gap-4 lg:grid-cols-2">
@@ -1532,6 +1573,7 @@ export default function SupervisorProjectTasks() {
                                             task={task}
                                             to={`/supervisor/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`}
                                             showProject={false}
+                                            mobilePresentation={layout === "list" ? "row" : "gallery"}
                                             expanded={expanded}
                                             onClick={(event) => {
                                                 event.preventDefault();

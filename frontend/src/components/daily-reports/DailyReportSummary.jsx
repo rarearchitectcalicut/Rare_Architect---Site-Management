@@ -1,7 +1,7 @@
 import { formatDate, formatText } from "../approvals/approvalUtils";
 import ReportEvidence from "./ReportEvidence";
 import { TaskProgress } from "../tasks/TaskExecutionActions";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays, UserRound, CloudSun, FileText, ClipboardList, MapPin, ShieldAlert, ArrowUpRight, CheckCircle2, Clock3, Plus, Search } from "lucide-react";
 
@@ -29,31 +29,52 @@ function ReportFact({ label, value }) {
     return <div className="min-w-0"><p className="text-xs font-medium text-[#716658]">{label}</p><p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[#211E1A]">{value || "Not specified"}</p></div>;
 }
 
-export function ReportDiaryForm({ report, onSave, onCancel, busy, values: controlledValues, onChange, prefill = false, guided = false }) {
+function CharacterLimitNotice({ value, maximum, codePoints = false }) {
+    const length = codePoints ? Array.from(value || "").length : (value || "").length;
+    if (length < maximum) return null;
+    return <span role="status" className="mt-2 block text-xs text-[#94651D]">Maximum {maximum} characters reached.</span>;
+}
+
+function DiaryMoreDetails({ defaultOpen, children }) {
+    const [expanded, setExpanded] = useState(defaultOpen);
+    const contentId = useId();
+    return <div className="sm:col-span-2">
+        <button type="button" className={button} aria-expanded={expanded} aria-controls={contentId} onClick={() => setExpanded((value) => !value)}>More details</button>
+        <div id={contentId} hidden={!expanded} className="mt-3 grid gap-4 sm:grid-cols-2">{children}</div>
+    </div>;
+}
+
+export function ReportDiaryForm({ report, onSave, onCancel, busy, values: controlledValues, onChange, draftRef, prefill = false, guided = false, workSummaryError = "" }) {
     const [localValues, setLocalValues] = useState(() => Object.fromEntries(diaryFields.map((key) => [key, report?.[key] || (key === "report_date" ? new Date().toLocaleDateString("en-CA") : "")])));
     const values = controlledValues ?? localValues;
     const setValues = onChange ?? setLocalValues;
-    const saveTimer = useRef(null);
+    const workSummaryErrorId = `work-summary-error-${report?.id || "new"}`;
     const diaryInputs = guided ? ["work_summary", "site_condition", "weather_condition", "site_notes", "issues", "next_day_plan"] : diaryFields;
     const renderDiaryField = (key) => <label key={key} className={`text-xs font-medium text-[#716658] ${["work_summary", "site_notes", "issues", "next_day_plan"].includes(key) ? "sm:col-span-2" : ""}`}>{key === "issues" ? "Issues and safety observations" : formatText(key)}
-        {key === "weather_condition" ? <select className={input} value={values[key]} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))}><option value="">Not specified</option>{["SUNNY", "CLOUDY", "RAINY", "HEAVY_RAIN", "WINDY", "OTHER"].map((value) => <option key={value} value={value}>{formatText(value)}</option>)}</select> : key === "site_condition" ? <input type="text" maxLength={255} className={input} value={values[key]} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))} /> : <textarea required={key === "work_summary"} rows={3} className={`${input} resize-none overflow-hidden`} value={values[key]} onInput={(event) => { event.currentTarget.style.height = "auto"; event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`; }} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))} />}
+        {key === "weather_condition" ? <select className={input} value={values[key]} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))}><option value="">Not specified</option>{["SUNNY", "CLOUDY", "RAINY", "HEAVY_RAIN", "WINDY", "OTHER"].map((value) => <option key={value} value={value}>{formatText(value)}</option>)}</select> : key === "site_condition" ? <input type="text" maxLength={255} className={input} value={values[key]} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))} /> : <textarea required={key === "work_summary"} aria-invalid={key === "work_summary" ? Boolean(workSummaryError) : undefined} aria-describedby={key === "work_summary" && workSummaryError ? workSummaryErrorId : undefined} rows={3} className={`${input} resize-none overflow-hidden`} value={values[key]} onInput={(event) => { event.currentTarget.style.height = "auto"; event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`; }} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))} />}
+        {key === "site_condition" && <CharacterLimitNotice value={values[key]} maximum={255} />}
+        {key === "work_summary" && workSummaryError && <span id={workSummaryErrorId} role="alert" className="mt-2 block text-xs text-[#B42318]">{workSummaryError}</span>}
     </label>;
-    return <form data-correction-confirmed={prefill ? "true" : undefined} onBlurCapture={() => { if (guided) { clearTimeout(saveTimer.current); saveTimer.current = setTimeout(() => onSave(values), 800); } }} onSubmit={(event) => { event.preventDefault(); onSave(values); }} className="space-y-4 rounded-2xl border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
+    return <form ref={(node) => { if (node && draftRef) draftRef.current = { payload: values, validate: () => node.reportValidity() }; }} data-correction-confirmed={prefill ? "true" : undefined} onSubmit={(event) => { event.preventDefault(); if (!busy) onSave(values); }} className="space-y-4 rounded-2xl border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
         <h3 className="font-semibold">{prefill ? "Site Diary — Prefilled" : report ? "Edit site diary" : "Create a draft report"}</h3>
         <p className="text-xs leading-5 text-[#716658]">Save each section before submitting. Drafts may have an empty work summary; submission requires an explanation of the day's work or why no work took place.</p>
-        <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">{guided ? <>{renderDiaryField("work_summary")}<details className="sm:col-span-2" open={["site_condition", "weather_condition", "site_notes", "issues", "next_day_plan"].some((field) => Boolean(values[field]?.trim()))}><summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold focus-visible:outline-2">More details</summary><div className="mt-3 grid gap-4 sm:grid-cols-2">{diaryInputs.filter((field) => field !== "work_summary").map(renderDiaryField)}</div></details></> : diaryFields.map((key) => <label key={key} className={`text-xs font-medium text-[#716658] ${["work_summary", "site_notes", "issues", "next_day_plan"].includes(key) ? "sm:col-span-2" : ""}`}>{key === "issues" ? "Issues and safety observations" : formatText(key)}
+        <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">{guided ? <>{renderDiaryField("work_summary")}<DiaryMoreDetails defaultOpen={["site_condition", "weather_condition", "site_notes", "issues", "next_day_plan"].some((field) => Boolean(values[field]?.trim()))}>{diaryInputs.filter((field) => field !== "work_summary").map(renderDiaryField)}</DiaryMoreDetails></> : diaryFields.map((key) => <label key={key} className={`text-xs font-medium text-[#716658] ${["work_summary", "site_notes", "issues", "next_day_plan"].includes(key) ? "sm:col-span-2" : ""}`}>{key === "issues" ? "Issues and safety observations" : formatText(key)}
             {key === "weather_condition" ? <select className={input} value={values[key]} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))}><option value="">Not specified</option>{["SUNNY", "CLOUDY", "RAINY", "HEAVY_RAIN", "WINDY", "OTHER"].map((value) => <option key={value} value={value}>{formatText(value)}</option>)}</select> : ["report_date", "site_condition"].includes(key) ? <input type={key === "report_date" ? "date" : "text"} required={key === "report_date"} maxLength={key === "site_condition" ? 255 : undefined} className={input} value={values[key]} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))} /> : <textarea rows={3} className={input} value={values[key]} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))} />}
+            {key === "site_condition" && <CharacterLimitNotice value={values[key]} maximum={255} />}
         </label>)}</fieldset>
-        {!prefill && !guided && <div className="flex flex-wrap gap-2"><button type="submit" disabled={busy} className={saveButton}>{busy ? "Saving..." : "Save Draft"}</button><button type="button" disabled={busy} onClick={onCancel} className={button}>Back</button></div>}
+        {!prefill && <div className={`flex flex-wrap gap-2 ${guided ? "pt-3" : ""}`}><button type="submit" disabled={busy} className={saveButton}>{busy ? "Saving..." : "Save Draft"}</button>{!guided && <button type="button" disabled={busy} onClick={onCancel} className={button}>Back</button>}</div>}
     </form>;
 }
 
-export function ReportRowForm({ section, initial, onSave, onCancel, busy, values: controlledValues, onChange, prefill = false, confirmed = false, guided = false }) {
+export function ReportRowForm({ section, initial, onSave, onCancel, busy, values: controlledValues, onChange, draftRef, prefill = false, confirmed = false, guided = false }) {
     const manpower = section === "manpower";
     const defaults = manpower ? { trade: "MASON", contractor_name: "", worker_count: "1", hours_worked: "", remarks: "" } : { material_name: "", entry_type: "RECEIVED", quantity: "", unit: "", remarks: "" };
     const [localValues, setLocalValues] = useState(() => Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, initial?.[key] ?? value])));
     const values = controlledValues ?? localValues;
     const setValues = onChange ?? setLocalValues;
+    const payload = { ...values, ...(manpower ? { worker_count: Number(values.worker_count), hours_worked: values.hours_worked === "" ? null : values.hours_worked } : { quantity: values.quantity === "" ? null : values.quantity }) };
+    const valid = manpower ? Number(values.worker_count) >= 1 && Number.isInteger(Number(values.worker_count)) && (values.hours_worked === "" || Number(values.hours_worked) >= 0 && Number(values.hours_worked) <= 24) : Boolean(values.material_name?.trim()) && (values.quantity === "" || Number(values.quantity) >= 0.001 && Boolean(values.unit?.trim()));
+    const textLimits = manpower ? { contractor_name: 200 } : { material_name: 200, unit: 30 };
     const choices = manpower ? ["MASON", "HELPER", "CARPENTER", "ELECTRICIAN", "PLUMBER", "PAINTER", "TILER", "WELDER", "SUPERVISOR", "OTHER"] : ["RECEIVED", "USED", "REQUIRED"];
     function submit(event) {
         event.preventDefault();
@@ -62,10 +83,11 @@ export function ReportRowForm({ section, initial, onSave, onCancel, busy, values
         else data.quantity = data.quantity === "" ? null : data.quantity;
         onSave(data);
     }
-    return <form data-correction-confirmed={prefill && confirmed ? "true" : undefined} onSubmit={submit} className="space-y-4 rounded-2xl border border-[#E7DED2] bg-[#F8F4EE] p-4">
+    return <form ref={(node) => { if (node && draftRef) draftRef.current = { payload, validate: () => valid && node.reportValidity() }; }} data-correction-confirmed={prefill && confirmed ? "true" : undefined} onSubmit={submit} className="space-y-4 rounded-2xl border border-[#E7DED2] bg-[#F8F4EE] p-4">
         <h3 className="text-sm font-semibold">{initial ? "Edit" : "Add"} {manpower ? "manpower record" : "material record"}</h3>
         <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">{Object.keys(defaults).map((key) => <label key={key} className="text-xs text-[#716658]">{formatText(key)}
             {["trade", "entry_type"].includes(key) ? <select className={input} value={values[key]} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))}>{choices.map((value) => <option key={value} value={value}>{formatText(value)}</option>)}</select> : <input type={["worker_count", "hours_worked", "quantity"].includes(key) ? "number" : "text"} min={key === "worker_count" ? 1 : key === "hours_worked" ? 0 : key === "quantity" ? "0.001" : undefined} max={key === "hours_worked" ? 24 : undefined} step={key === "worker_count" ? 1 : key === "hours_worked" ? "0.01" : "0.001"} required={["worker_count", "material_name"].includes(key) || key === "unit" && values.quantity !== ""} className={input} value={values[key]} onChange={(event) => setValues((v) => ({ ...v, [key]: event.target.value }))} />}
+            {textLimits[key] && <CharacterLimitNotice value={values[key]} maximum={textLimits[key]} codePoints />}
         </label>)}</fieldset>
         <p className="text-xs text-[#716658]">{manpower ? "A site manpower record; this is not attendance or payroll." : "A material observation; this does not change inventory."}</p>
         {!prefill && <div className="flex flex-wrap gap-3"><button type="submit" disabled={busy} className={saveButton}>{busy ? "Saving..." : guided && !initial ? "Add" : "Save record"}</button>{!guided && <button type="button" disabled={busy} className={button} onClick={onCancel}>Back</button>}</div>}
@@ -78,13 +100,17 @@ function quantityUnits(value) {
     return BigInt(whole) * 1000n + BigInt(fraction.padEnd(3, "0"));
 }
 
-export function ReportWorkForm({ initial, tasks, onTaskSearch, onTaskPage, drafts, onDraftPage, correction, onSave, onCancel, busy, values: controlledValues, onChange, prefill = false, guided = false }) {
-    const [taskId, setTaskId] = useState(initial?.task || "");
-    const [search, setSearch] = useState("");
+export function ReportWorkForm({ initial, tasks, onTaskSearch, onTaskPage, drafts, onDraftPage, correction, onSave, onCancel, busy, values: controlledValues, onChange, draftRef, prefill = false, guided = false }) {
+    const [localTaskId, setLocalTaskId] = useState(initial?.task || "");
+    const [localSearch, setLocalSearch] = useState("");
+    const search = controlledValues?.search ?? localSearch;
+    const setSearch = (value) => { if (onChange) onChange((v) => ({ ...v, search: value })); else setLocalSearch(value); };
+    const taskId = controlledValues?.task ?? localTaskId;
+    const setTaskId = (task) => { setLocalTaskId(task); if (onChange) onChange((v) => ({ ...v, task, selectedTask: tasks?.results?.find((item) => item.id === task) })); };
     const [localValues, setLocalValues] = useState({ work_description: initial?.work_description || "", location_detail: initial?.location_detail || "", quantity_completed_today: initial?.quantity_completed_today || "", completion_claimed: initial?.completion_claimed || false, new_daily_report: "" });
     const values = controlledValues ?? localValues;
     const setValues = onChange ?? setLocalValues;
-    const task = initial || tasks?.results?.find((item) => item.id === taskId);
+    const task = initial || tasks?.results?.find((item) => item.id === taskId) || values.selectedTask;
     const quantity = task?.measurement_method === "QUANTITY";
     const progress = task?.progress;
     const available = quantityUnits(progress?.available_quantity);
@@ -95,6 +121,7 @@ export function ReportWorkForm({ initial, tasks, onTaskSearch, onTaskPage, draft
             ? "Enter a positive quantity with up to three decimal places."
             : entered > available ? `Only ${progress.available_quantity} ${task.measurement_unit} remains available to report. Your entry of ${values.quantity_completed_today} exceeds the approved quantity after verified and pending work.` : "");
 
+    const draftPayload = { work_description: values.work_description, location_detail: values.location_detail, ...(quantity ? { quantity_completed_today: values.quantity_completed_today } : { completion_claimed: values.completion_claimed }), ...(!initial ? { task: taskId } : {}) };
     function submit(event) {
         event.preventDefault();
         if (busy || !task || quantityError) return;
@@ -103,7 +130,7 @@ export function ReportWorkForm({ initial, tasks, onTaskSearch, onTaskPage, draft
         else if (!initial) payload.task = taskId;
         onSave(payload);
     }
-    return <form data-correction-confirmed={prefill ? "true" : undefined} onSubmit={submit} className="space-y-4 rounded-2xl border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
+    return <form ref={(node) => { if (node && draftRef) draftRef.current = { payload: draftPayload, validate: () => Boolean(task && values.work_description?.trim() && !quantityError && (quantity || values.completion_claimed)) && node.reportValidity() }; }} data-correction-confirmed={prefill ? "true" : undefined} onSubmit={submit} className="space-y-4 rounded-2xl border border-[#E7DED2] bg-[#F8F4EE] p-4 sm:p-5">
         <h3 className="text-sm font-semibold">{correction ? "Create an audited correction in a draft" : initial ? "Edit task work" : "Add task work"}</h3>
         <fieldset disabled={busy} className="space-y-4">
             {!initial && <div><label className="block text-xs text-[#716658]">Find an approved task<span className="relative block"><span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center pt-2 text-[#716658]"><Search size={18} /></span><input value={search} onChange={(event) => setSearch(event.target.value)} className={`${input} pl-11`} placeholder="Task name or description" /></span></label><div className="mt-2 flex flex-wrap gap-2"><button type="button" className={button} onClick={() => { setTaskId(""); onTaskSearch(search); }}>Search tasks</button><button type="button" disabled={!tasks?.previous} className={button} onClick={() => { setTaskId(""); onTaskPage(-1); }}>Previous tasks</button><button type="button" disabled={!tasks?.next} className={button} onClick={() => { setTaskId(""); onTaskPage(1); }}>Next tasks</button></div>
@@ -118,30 +145,39 @@ export function ReportWorkForm({ initial, tasks, onTaskSearch, onTaskPage, draft
                 <p className="text-xs leading-5 text-[#817669]">Pending quantities are awaiting Admin verification and are excluded from verified progress.</p>
             </section>}
             <label className="block text-xs text-[#716658]">Work description<textarea required rows={3} className={input} value={values.work_description} onChange={(event) => setValues((v) => ({ ...v, work_description: event.target.value }))} /></label>
-            <label className="block text-xs text-[#716658]">Location detail<input maxLength={255} className={input} value={values.location_detail} onChange={(event) => setValues((v) => ({ ...v, location_detail: event.target.value }))} /></label>
+            <label className="block text-xs text-[#716658]">Location detail<input maxLength={255} className={input} value={values.location_detail} onChange={(event) => setValues((v) => ({ ...v, location_detail: event.target.value }))} /><CharacterLimitNotice value={values.location_detail} maximum={255} /></label>
             {task && (quantity ? <label className="block text-xs text-[#716658]">Quantity completed today ({task.measurement_unit})<input type="number" required min="0.001" step="0.001" inputMode="decimal" max={progress?.available_quantity ?? undefined} aria-invalid={Boolean(quantityError)} aria-describedby="work-quantity-feedback" className={input} value={values.quantity_completed_today} onChange={(event) => setValues((v) => ({ ...v, quantity_completed_today: event.target.value }))} /><span id="work-quantity-feedback" role={quantityError ? "alert" : undefined} className={`mt-2 block ${quantityError ? "text-[#B42318]" : "text-[#817669]"}`}>{quantityError || `Maximum allowed: ${progress?.available_quantity} ${task.measurement_unit}. Remaining after this entry: ${available !== null && entered !== null ? Number(available - entered) / 1000 : "Unavailable"} ${task.measurement_unit}.`}</span></label> : <div><p className="text-xs leading-5 text-[#716658]">Completion criteria: {task.completion_criteria || "Not specified"}</p><label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" required checked={values.completion_claimed} onChange={(event) => setValues((v) => ({ ...v, completion_claimed: event.target.checked }))} />Claim completion for verification</label></div>)}
         </fieldset>
         {!prefill && <div className="flex flex-wrap gap-2"><button type="submit" disabled={busy || !task || Boolean(quantityError)} className={correction ? correctionButton : saveButton}>{busy ? "Saving..." : correction ? "Save correction to draft" : guided && !initial ? "Add" : "Save work entry"}</button>{!guided && <button type="button" disabled={busy} className={button} onClick={onCancel}>Back</button>}</div>}
     </form>;
 }
 
-export function ReportAttachmentForm({ entries, onPage, onSave, onCancel, busy, onStage, prefill = false }) {
-    const [files, setFiles] = useState([]);
-    const [previews, setPreviews] = useState([]);
-    const [caption, setCaption] = useState("");
-    const [workId, setWorkId] = useState("");
+function SelectedReportImage({ file }) {
+    const [preview, setPreview] = useState(null);
     useEffect(() => {
-        const next = files.filter((file) => file.type.startsWith("image/")).map((file) => ({ file, url: URL.createObjectURL(file) }));
-        setPreviews(next);
-        return () => next.forEach(({ url }) => URL.revokeObjectURL(url));
-    }, [files]);
+        const url = URL.createObjectURL(file);
+        setPreview({ file, url });
+        return () => URL.revokeObjectURL(url);
+    }, [file]);
+    return preview?.file === file ? <img src={preview.url} alt={`Selected ${file.name}`} className="h-24 w-full rounded-lg object-cover" /> : null;
+}
+
+export function ReportAttachmentForm({ entries, onPage, onSave, onCancel, busy, onStage, values, onChange, prefill = false }) {
+    const [localFiles, setLocalFiles] = useState([]);
+
+    const [localCaption, setLocalCaption] = useState("");
+    const [localWorkId, setLocalWorkId] = useState("");
+    const files = values?.files ?? localFiles, caption = values?.caption ?? localCaption, workId = values?.task_work ?? localWorkId;
+    const setFiles = (next) => { if (onChange) onChange((v) => ({ ...v, files: typeof next === "function" ? next(v.files) : next })); else setLocalFiles(next); };
+    const setCaption = (next) => { if (onChange) onChange((v) => ({ ...v, caption: next })); else setLocalCaption(next); };
+    const setWorkId = (next) => { if (onChange) onChange((v) => ({ ...v, task_work: next })); else setLocalWorkId(next); };
     return <form onSubmit={(event) => { event.preventDefault(); onSave({ files, caption, task_work: workId }, (uploaded) => setFiles((current) => current.filter((file) => file !== uploaded))); }} className="space-y-4 rounded-2xl border border-[#E7DED2] bg-[#F8F4EE] p-4">
         <h3 className="text-sm font-semibold">Upload supporting evidence</h3>
         <fieldset disabled={busy} className="space-y-4">
             <label className="block text-xs text-[#716658]">Take photo / Choose files<input type="file" multiple capture="environment" accept=".jpg,.jpeg,.png,.webp,.pdf" className={input} onChange={(event) => { const next = Array.from(event.target.files || []); setFiles(next); onStage?.({ files: next, caption, task_work: workId }); }} /></label>
             <p className="text-xs text-[#716658]">Up to 10 MB per file. Each file is validated by the server. {prefill ? "Files upload only when you save. Successful uploads are tracked and are not repeated on retry." : "Uploaded files are removed from the pending list so retries do not upload them twice."}</p>
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">{files.map((file, index) => <li key={`${file.name}:${index}`} className="min-w-0 rounded-xl border border-[#E7DED2] p-2">{previews.find((preview) => preview.file === file) && <img src={previews.find((preview) => preview.file === file).url} alt={`Selected ${file.name}`} className="h-24 w-full rounded-lg object-cover" />}<span className="mt-1 block break-all text-xs text-[#665C50]">{file.name}</span><button type="button" className="mt-1 min-h-11 text-sm font-semibold underline focus-visible:outline-2" onClick={() => { const next = files.filter((_, itemIndex) => itemIndex !== index); setFiles(next); onStage?.({ files: next, caption, task_work: workId }); }}>Remove</button></li>)}</ul>
-            <label className="block text-xs text-[#716658]">Caption<input className={input} maxLength={1000} value={caption} onChange={(event) => { setCaption(event.target.value); onStage?.({ files, caption: event.target.value, task_work: workId }); }} /></label>
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">{files.map((file, index) => <li key={`${file.name}:${index}`} className="min-w-0 rounded-xl border border-[#E7DED2] p-2">{file.type.startsWith("image/") && <SelectedReportImage file={file} />}<span className="mt-1 block break-all text-xs text-[#665C50]">{file.name}</span><button type="button" className="mt-1 min-h-11 text-sm font-semibold underline focus-visible:outline-2" onClick={() => { const next = files.filter((_, itemIndex) => itemIndex !== index); setFiles(next); onStage?.({ files: next, caption, task_work: workId }); }}>Remove</button></li>)}</ul>
+            <label className="block text-xs text-[#716658]">Caption<input className={input} maxLength={1000} value={caption} onChange={(event) => { setCaption(event.target.value); onStage?.({ files, caption: event.target.value, task_work: workId }); }} /><CharacterLimitNotice value={caption} maximum={1000} /></label>
             <label className="block text-xs text-[#716658]">Associate with task work (optional)<select value={workId} onChange={(event) => setWorkId(event.target.value)} className={input}><option value="">General report evidence</option>{(entries?.results || []).map((entry) => <option key={entry.id} value={entry.id}>{entry.task_title}</option>)}</select></label>
             {!prefill && <div className="flex flex-wrap gap-3"><button type="button" className={button} disabled={!entries?.previous} onClick={() => onPage(-1)}>Previous work entries</button><button type="button" className={button} disabled={!entries?.next} onClick={() => onPage(1)}>Next work entries</button></div>}
         </fieldset>

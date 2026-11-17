@@ -8,7 +8,7 @@ async function createClient(adapter, { baseUrl = "https://api.test/", dev = fals
     const context = vm.createContext({
         URL,
         location: { origin: "http://localhost:5173" },
-        sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+        localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     });
     const axiosModule = new vm.SyntheticModule(["default"], function () {
         this.setExport("default", {
@@ -126,4 +126,57 @@ test("ends the session if the renewed token is also rejected, without looping", 
     assert.equal(refreshes, 1);
     assert.equal(sessionCleared, 1);
     assert.equal(client.getRefreshToken(), null);
+});
+
+for (const failure of ["network", "timeout", 429, 500, 503, 403, "malformed"]) {
+    test(`refresh ${failure} preserves tokens and an explicit retry can recover`, async () => {
+        let fail = true, cleared = 0, refreshes = 0;
+        const client = await createClient(async (config) => {
+            if (config.url === "auth/refresh/") {
+                refreshes++;
+                if (fail) {
+                    if (failure === "malformed") return response(config, {});
+                    throw new axios.AxiosError("Temporary failure", failure === "timeout" ? "ECONNABORTED" : "ERR_NETWORK", config, null,
+                        typeof failure === "number" ? { status: failure, data: {}, config } : undefined);
+                }
+                return response(config, { access: "renewed" });
+            }
+            if (config.headers.Authorization === "Bearer expired") throw unauthorized(config);
+            return response(config, { recovered: true });
+        });
+        client.setUnauthorizedHandler(() => cleared++);
+        await assert.rejects(client.api.get("projects/"));
+        assert.equal(client.getRefreshToken(), "refresh-token");
+        assert.equal(cleared, 0);
+        fail = false;
+        assert.equal((await client.api.get("projects/")).data.recovered, true);
+        assert.equal(refreshes, 2);
+    });
+}
+
+test("a definitively rejected refresh clears authentication", async () => {
+    let cleared = 0;
+    const client = await createClient(async (config) => { throw unauthorized(config); });
+    client.setUnauthorizedHandler(() => cleared++);
+    await assert.rejects(client.api.get("projects/"));
+    assert.equal(client.getRefreshToken(), null);
+    assert.equal(cleared, 1);
+});
+
+test("failed refresh from a previous session cannot clear newer credentials", async () => {
+    let rejectRefresh, started;
+    const ready = new Promise((resolve) => { started = resolve; });
+    const client = await createClient(async (config) => {
+        if (config.url === "auth/refresh/") {
+            started();
+            return new Promise((_, reject) => { rejectRefresh = () => reject(unauthorized(config)); });
+        }
+        throw unauthorized(config);
+    });
+    const pending = client.api.get("projects/");
+    await ready;
+    client.setAuthTokens({ access: "new-session", refresh: "new-refresh" });
+    rejectRefresh();
+    await assert.rejects(pending);
+    assert.equal(client.getRefreshToken(), "new-refresh");
 });

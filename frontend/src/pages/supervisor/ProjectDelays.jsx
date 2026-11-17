@@ -14,7 +14,17 @@ import DelayReportForm from "../../modal/supervisor/DelayReportForm";
 export default function ProjectDelays({ role = "SUPERVISOR" }) {
     const route = useParams();
     const [params, setParams] = useSearchParams();
-    const projectId = route.projectId || params.get("project") || undefined;
+    const queryProject = params.get("project");
+    const validQueryProject = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(queryProject || "");
+    const projectId = route.projectId || (validQueryProject ? queryProject : undefined);
+    useEffect(() => {
+        if (!params.has("project") || validQueryProject) return;
+        setParams((current) => {
+            const next = new URLSearchParams(current);
+            if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(next.get("project") || "")) next.delete("project");
+            return next;
+        }, { replace: true });
+    }, [params, setParams, validQueryProject]);
     const [formOpen, setFormOpen] = useState(false);
     const [notice, setNotice] = useState("");
     useEffect(() => {
@@ -52,7 +62,7 @@ export default function ProjectDelays({ role = "SUPERVISOR" }) {
     const selected = useMemo(() => id ? items.find((item) => item.id === id && item.requestType === type) || { id, requestType: type, queueKey: `${type}:${id}`, raw: {} } : null, [id, type, items]);
     function select(item) {
         const next = new URLSearchParams(params);
-        if (item) next.set("request", item.id); else { next.delete("request"); next.delete("type"); }
+        if (item) next.set("request", item.id); else { next.delete("request"); next.delete("type"); if (!validQueryProject) next.delete("project"); }
         setParams(next, { replace: !item });
     }
     const list = { rows: items, pageRows: items, count: data.count, page: data.page, pageCount: data.pageCount, setPage: data.setPage };
@@ -69,7 +79,7 @@ export default function ProjectDelays({ role = "SUPERVISOR" }) {
             </div>
         </header>
         <div className={compactDesktop ? "lg:hidden" : ""}><DelaySummary summary={data.summary} loading={data.loading} /></div>
-        {compactDesktop && <div className="hidden grid-cols-5 gap-3 lg:grid">{[["Delay reports", "total", ClipboardList, "bg-[#F1E6D5] text-[#8A6840]"], ["Pending reports", "pending", Clock3, "bg-[#FFF0CB] text-[#996000]"], ["Approved reports", "approved", CheckCircle2, "bg-[#DDF3EA] text-[#087D60]"], ["Rejected reports", "rejected", XCircle, "bg-[#FCE3E1] text-[#BB2525]"], ["Pending extensions", "pending_extensions", CalendarDays, "bg-[#E8F0FE] text-[#2563EB]"]].map(([label, key, Icon, tone]) => <div key={key} className="flex items-center gap-3 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ' + tone}><Icon size={18} /></span><div><p className="text-2xl font-bold">{data.loading || !Number.isInteger(data.summary?.[key]) ? "Loading" : data.summary[key]}</p><p className="text-xs text-[#716658]">{label}</p></div></div>)}</div>}
+        {compactDesktop && <div className="hidden grid-cols-5 gap-3 lg:grid">{[["Delay reports", "total", ClipboardList, "bg-[#F1E6D5] text-[#8A6840]"], ["Pending reports", "pending", Clock3, "bg-[#FFF0CB] text-[#996000]"], ["Approved reports", "approved", CheckCircle2, "bg-[#DDF3EA] text-[#087D60]"], ["Rejected reports", "rejected", XCircle, "bg-[#FCE3E1] text-[#BB2525]"], ["Pending extensions", "pending_extensions", CalendarDays, "bg-[#E8F0FE] text-[#2563EB]"]].map(([label, key, Icon, tone]) => <div key={key} className="flex items-center gap-3 rounded-xl border border-[#E7DED2] bg-[#FFFDFA] p-4"><span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ' + tone}><Icon size={18} /></span><div><p className="text-2xl font-bold">{data.loading ? "Loading" : Number.isInteger(data.summary?.[key]) ? data.summary[key] : "Unavailable"}</p><p className="text-xs text-[#716658]">{label}</p></div></div>)}</div>}
         {notice && <p role="status" className="rounded-xl bg-[#E7F2E8] p-4 text-sm text-[#296F40]">{notice}</p>}
         {createError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{createError}</p>}
         {createIneligible && <p role="alert" className="rounded-xl bg-[#FFF2D8] p-4 text-sm text-[#795016]">Delay reports can only be created for Active or Maintenance projects.</p>}

@@ -26,6 +26,7 @@ import AdminQuickActions from "../components/dashboard/AdminQuickActions";
 import ApprovalModal from "../components/approvals/ApprovalModal";
 import { ProjectSearch } from "../components/daily-reports/ReportProjectPicker";
 import { projectApi } from "../api/projectApi";
+import { isTaskId, taskApi } from "../api/taskApi";
 import { validationMessage } from "../hooks/useApprovalReview";
 import DelayReportForm from "../modal/supervisor/DelayReportForm";
 
@@ -365,9 +366,10 @@ function buildSupervisorAttentionItems(actionItems, now) {
     rows.push({
       key: `change:${change.id}`,
       title: change.task_title,
-      description: `${change.project_name} · Change request pending`,
+      description: change.project_name ? `${change.project_name} · Change request pending` : "Change request pending",
       status: "PENDING",
-      to: `/supervisor/projects/${encodeURIComponent(change.project_id)}/tasks?task=${encodeURIComponent(change.task_id)}`,
+      resolveTaskId: change.task_id,
+      pendingChange: true,
     });
   }
   return rows;
@@ -385,6 +387,42 @@ function getSupervisorAttentionCount(actionItems) {
   return sections.reduce((total, key) => total + Number(actionItems[key]?.count ?? actionItems[key]?.items?.length ?? 0), 0);
 }
 
+function PendingChangeTaskLink({ taskId, children }) {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const request = useRef(null);
+  useEffect(() => () => request.current?.abort(), []);
+
+  async function openTask() {
+    if (request.current && !request.current.signal.aborted) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setLoading(true);
+    setError("");
+    try {
+      if (typeof taskId !== "string" || !isTaskId(taskId)) throw new Error("This change request has no valid task ID. Refresh the dashboard and try again.");
+      const task = await taskApi.get(taskId, controller.signal);
+      if (controller.signal.aborted) return;
+      if (typeof task?.project !== "string" || !isTaskId(task.project) || String(task.id).toLowerCase() !== taskId.toLowerCase()) {
+        throw new Error("The task's project could not be resolved. Refresh the dashboard or try again.");
+      }
+      navigate(`/supervisor/projects/${encodeURIComponent(task.project)}/tasks?task=${encodeURIComponent(taskId)}`);
+    } catch (failure) {
+      if (!controller.signal.aborted) setError(validationMessage(failure, failure.response ? "Unable to open this task. Please try again." : failure.message || "Unable to open this task. Please try again."));
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+      if (request.current === controller) request.current = null;
+    }
+  }
+
+  return <div className="min-w-0">
+    <button type="button" onClick={openTask} disabled={loading} aria-busy={loading} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-xl border border-[#E7DED2] px-3 py-2.5 text-left transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">{children}</button>
+    {loading && <p role="status" className="mt-2 text-xs text-[#716658]">Opening task...</p>}
+    {error && <div role="alert" className="mt-2 rounded-xl bg-red-50 p-3 text-xs text-red-700">{error} <button type="button" onClick={openTask} className="min-h-11 px-2 font-semibold underline">Try Again</button></div>}
+  </div>;
+}
+
 function AttentionRow({ item, onReportDelay }) {
   const contents = <>
     <span className="min-w-0 flex-1">
@@ -393,6 +431,7 @@ function AttentionRow({ item, onReportDelay }) {
     </span>
     <span className="flex shrink-0 items-center gap-2"><StatusPill status={item.status} /><ArrowRight size={16} aria-hidden="true" className="text-[#716658] transition-transform group-hover:translate-x-0.5" /></span>
   </>;
+  if (item.pendingChange) return <PendingChangeTaskLink key={item.resolveTaskId} taskId={item.resolveTaskId}>{contents}</PendingChangeTaskLink>;
   if (!item.reportDelay) return <Link to={item.to} className="group flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[#E7DED2] px-3 py-2.5 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">{contents}</Link>;
   return <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-[#E7DED2] p-2.5">
     <Link to={item.to} className="group flex min-h-11 min-w-0 flex-1 items-center justify-between gap-4 rounded-lg px-1 transition-colors hover:bg-[#F8F4EE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#244F87]">{contents}</Link>
@@ -428,7 +467,7 @@ function mergePendingDelayItems(actionItems) {
     title: item.task_title || "Delay report",
     description: `${item.project_name || "Project"} · ${item.pendingTypes.length > 1 ? "Delay and extension pending" : item.pendingTypes[0] === "extension" ? "Extension pending" : "Pending Admin review"}`,
     status: item.status,
-    to: `/supervisor/delays?project=${encodeURIComponent(item.project_id)}&request=${encodeURIComponent(item.id)}${item.pendingTypes.includes("delay") ? "" : "&type=extension"}`,
+    to: `/supervisor/delays?${/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(item.project_id || "") ? `project=${encodeURIComponent(item.project_id)}&` : ""}request=${encodeURIComponent(item.id)}${item.pendingTypes.includes("delay") ? "" : "&type=extension"}`,
   }));
 }
 
