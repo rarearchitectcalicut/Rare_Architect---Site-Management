@@ -19,12 +19,14 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
+  X,
 } from "lucide-react";
 
 import { useAuth } from "../hooks/useAuth";
 import { dashboardApi } from "../api/dashboardApi";
 import LoadingScreen from "../components/LoadingScreen";
 import AdminQuickActions from "../components/dashboard/AdminQuickActions";
+import ApprovalModal from "../components/approvals/ApprovalModal";
 import SupervisorProjectSelector from "../components/daily-reports/SupervisorProjectSelector";
 import { isTaskId, taskApi } from "../api/taskApi";
 import { validationMessage } from "../hooks/useApprovalReview";
@@ -81,6 +83,14 @@ const dashboardCss = `
     }
   }
 
+  @media (max-width: 767px) {
+    dialog.rare-form-dialog.supervisor-attention-dialog {
+      width: calc(100% - 2rem);
+      max-height: 92dvh;
+      margin: auto;
+      border-radius: 28px;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .rare-rise,
     .rare-fade {
@@ -423,9 +433,21 @@ function AttentionRow({ item, onReportDelay }) {
 }
 
 function NeedsAttention({ items, noItemsMessage, onReportDelay }) {
-  return <Panel title="Needs your attention">
-    {items.length ? <div className="grid gap-2 sm:grid-cols-2">{items.map((item) => <AttentionRow key={item.key} item={item} onReportDelay={onReportDelay} />)}</div> : noItemsMessage ? <p className="rounded-xl border border-border px-4 py-3 text-sm text-muted">{noItemsMessage}</p> : <AllClearRow />}
-  </Panel>;
+  const [showAll, setShowAll] = useState(false);
+  return <>
+    <Panel title="Needs your attention">
+      {items.length ? <>
+        <div className="grid gap-2 lg:grid-cols-2">{items.slice(0, 4).map((item, index) => <div key={item.key} className={index >= 2 ? "hidden min-w-0 lg:block" : "min-w-0"}><AttentionRow item={item} onReportDelay={onReportDelay} /></div>)}</div>
+        {items.length > 2 && <div className={items.length > 4 ? "mt-3 flex justify-end" : "mt-3 flex justify-end lg:hidden"}><button type="button" onClick={() => setShowAll(true)} aria-haspopup="dialog" className="rare-button rare-button-secondary">Show more<span className="sr-only"> needs your attention items</span><ArrowRight size={16} aria-hidden="true" /></button></div>}
+      </> : noItemsMessage ? <p className="rounded-xl border border-border px-4 py-3 text-sm text-muted">{noItemsMessage}</p> : <AllClearRow />}
+    </Panel>
+    {showAll && <ApprovalModal className="supervisor-attention-dialog" label="All items needing your attention" onClose={() => setShowAll(false)}>
+      <div className="space-y-4 p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="text-lg font-bold">Needs your attention</h2><p className="mt-1 text-sm text-muted">All {items.length} items. Choose a card to open it.</p></div><button type="button" onClick={() => setShowAll(false)} aria-label="Close attention items" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-app focus-visible:outline-2 focus-visible:outline-ink"><X size={20} aria-hidden="true" /></button></div>
+        <div className="grid min-w-0 gap-2 lg:grid-cols-2">{items.map((item) => <AttentionRow key={item.key} item={item} onReportDelay={(report) => { setShowAll(false); onReportDelay?.(report); }} />)}</div>
+      </div>
+    </ApprovalModal>}
+  </>;
 }
 
 function mergePendingDelayItems(actionItems) {
@@ -928,11 +950,6 @@ function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
       <DashboardStyles />
       <SupervisorGreeting name={displayName} count={attentionCount} now={now} />
       {notice && <p role="status" aria-live="polite" className="rounded-xl bg-pastel-mint p-4 text-sm text-success">{notice}</p>}
-      <NeedsAttention
-        items={attentionItems}
-        noItemsMessage={hasOtherAttention ? "No immediate task items need attention." : ""}
-        onReportDelay={setDelayReport}
-      />
       <div className="supervisor-dashboard-summary grid gap-3 sm:gap-4">
       <section className="min-w-0">
         <div className="supervisor-summary-cards grid grid-cols-3 gap-2 sm:gap-3">
@@ -971,6 +988,11 @@ function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
       <SupervisorQuickActions />
       </div>
       <WorkSummary tasks={tasks} reports={reports} work={summary.project_daily_task_work || {}} />
+      <NeedsAttention
+        items={attentionItems}
+        noItemsMessage={hasOtherAttention ? "No immediate task items need attention." : ""}
+        onReportDelay={setDelayReport}
+      />
       {!!pendingDelayItems.length && <section aria-labelledby="my-action-center-heading" className="space-y-3">
         <div><h2 id="my-action-center-heading" className="text-lg font-semibold text-ink">My Action Center</h2><p className="text-xs font-medium text-muted">Delay reports awaiting Admin review.</p></div>
         <Panel title="Pending Delay Reports">

@@ -1379,6 +1379,7 @@ test("Supervisor dashboard shows one compact All clear row when action queues ar
     const now = new Date("2026-11-23T12:00:00");
     const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorDashboard, { summary: {}, actionItems: {}, now })));
     assert.equal((html.match(/All clear: no rejected tasks, corrections, change requests, delays or extensions\./g) || []).length, 1);
+    assert.ok(html.indexOf("Work summary") < html.indexOf("Needs your attention"));
     assert.ok(!html.includes("Nothing pending in this section."));
     assert.ok(!html.includes("py-10 text-center"));
     const withDraft = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorDashboard, {
@@ -1535,5 +1536,37 @@ test("selecting another task replaces work capacity and keeps completion-only in
     assert.ok(!JSON.stringify(tree).includes("60.000 SQM"));
     const bar = quickFind(tree, (node) => node.type?.name === "TaskProgress");
     assert.ok(render(bar.type, bar.props).includes('aria-valuenow="0"'));
+    state.cleanup();
+});
+
+
+test("Supervisor attention preview limits cards and opens every item in a dismissible modal", async () => {
+    const state = delayHooks();
+    const { exports } = await loadSource("pages/Dashboard.jsx", {
+        overrides: { react: { ...React, ...state.hooks }, "components/dashboard/AdminQuickActions.jsx": { default: () => null } },
+        append: "\nexport { NeedsAttention };",
+    });
+    const items = Array.from({ length: 6 }, (_, index) => ({ key: String(index), title: "Task " + index, description: "Site", status: "PENDING", to: "/supervisor/tasks/" + index }));
+    let tree;
+    const draw = (rows = items) => { tree = state.render(() => exports.NeedsAttention({ items: rows, onReportDelay() {} })); };
+    const collect = (node, predicate) => {
+        if (Array.isArray(node)) return node.flatMap((child) => collect(child, predicate));
+        if (!node || typeof node !== "object") return [];
+        return [...(predicate(node) ? [node] : []), ...collect(node.props?.children, predicate)];
+    };
+    draw();
+    assert.equal(collect(tree, (node) => node.type?.name === "AttentionRow").length, 4);
+    assert.equal(collect(tree, (node) => node.props?.className === "hidden min-w-0 lg:block").length, 2);
+    const showMore = quickFind(tree, (node) => node.type === "button" && node.props["aria-haspopup"] === "dialog");
+    assert.ok(showMore);
+    showMore.props.onClick(); draw();
+    const modal = quickFind(tree, (node) => node.type?.name === "ApprovalModal");
+    assert.equal(collect(modal, (node) => node.type?.name === "AttentionRow").length, 6);
+    quickFind(modal, (node) => node.props?.["aria-label"] === "Close attention items").props.onClick(); draw();
+    assert.ok(!quickFind(tree, (node) => node.type?.name === "ApprovalModal"));
+    draw(items.slice(0, 3));
+    assert.ok(quickFind(tree, (node) => node.props?.className === "mt-3 flex justify-end lg:hidden"));
+    draw(items.slice(0, 2));
+    assert.ok(!quickFind(tree, (node) => node.props?.["aria-haspopup"] === "dialog"));
     state.cleanup();
 });
