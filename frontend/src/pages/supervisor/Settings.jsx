@@ -3,11 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import {
     CheckCircle2,
     CalendarDays,
-    Mail,
     Pencil,
-    Phone,
     RefreshCw,
     Save,
+    Settings2,
     ShieldCheck,
     UserRound,
     X,
@@ -236,19 +235,27 @@ export default function SupervisorSettings() {
                 <LoadingScreen message={busyMessage} />
             )}
 
-            <header>
+            <header className="settings-page-heading">
                 <p className="text-xs font-bold uppercase tracking-[0.17em] text-muted">
                     Supervisor / My Account
                 </p>
 
-                <h1 className="mt-2 text-2xl font-bold text-ink sm:text-3xl">
-                    Settings
-                </h1>
-
-                <p className="mt-2 text-sm text-muted">
-                    Manage your personal information and account security.
-                </p>
+                <div className="mt-2 flex items-start gap-3">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-app text-muted"><Settings2 size={23} aria-hidden="true" /></span>
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">Settings</h1>
+                        <p className="mt-2 text-sm text-muted">Your account, preferences, and workspace. All in one place.</p>
+                    </div>
+                </div>
             </header>
+
+            <div className="settings-nav-dock">
+                <nav className="settings-section-nav" aria-label="Settings sections">
+                    <a href="#settings-profile"><Pencil size={16} aria-hidden="true" />Personal details</a>
+                    <a href="#settings-security"><ShieldCheck size={16} aria-hidden="true" />Security</a>
+                    <a href="#settings-notifications">Notifications</a>
+                </nav>
+            </div>
 
             {error && (
                 <div
@@ -286,11 +293,11 @@ export default function SupervisorSettings() {
                 <>
                     {/* PROFILE HEADER */}
                     <section className="settings-profile-sidebar overflow-hidden rounded-[26px] border border-border bg-surface">
-                        <div className="h-2 bg-linear-to-r from-border-strong via-border to-[#DDE8E1]" />
+                        <div className="settings-profile-cover" aria-hidden="true" />
 
-                        <div className="p-5 sm:p-7">
-                            <div className="flex flex-wrap items-start gap-4">
-                                <div className="flex h-17 w-17 shrink-0 items-center justify-center rounded-[22px] bg-linear-to-br from-border-strong to-app text-2xl font-bold text-ink shadow-sm">
+                        <div className="settings-profile-body p-5 sm:p-7">
+                            <div className="settings-profile-identity flex flex-wrap items-start gap-4">
+                                <div className="settings-profile-avatar flex h-17 w-17 shrink-0 items-center justify-center rounded-[22px] bg-linear-to-br from-border-strong to-app text-2xl font-bold text-ink shadow-sm">
                                     {name.charAt(0).toUpperCase()}
                                 </div>
 
@@ -316,25 +323,13 @@ export default function SupervisorSettings() {
                                 </div>
                             </div>
 
-                            <div className="mt-6 grid gap-4 border-t border-border pt-5 sm:grid-cols-3">
+                            <div className="settings-profile-summary mt-6 grid gap-4 border-t border-border pt-5 sm:grid-cols-3">
                                 {[
                                     {
                                         icon: CalendarDays,
                                         label: "Last Login",
                                         value: formatLastLogin(profile.last_login),
                                         tone: "bg-pastel-lavender text-violet",
-                                    },
-                                    {
-                                        icon: Phone,
-                                        label: "Mobile",
-                                        value: profile.phone,
-                                        tone: "bg-pastel-mint text-success",
-                                    },
-                                    {
-                                        icon: Mail,
-                                        label: "Email",
-                                        value: profile.email,
-                                        tone: "bg-pastel-sky text-info",
                                     },
                                     {
                                         icon: CalendarDays,
@@ -350,7 +345,7 @@ export default function SupervisorSettings() {
                                     return (
                                         <div
                                             key={item.label}
-                                            className="group flex min-w-0 items-start gap-3"
+                                            className="settings-profile-detail group flex min-w-0 items-start gap-3"
                                         >
                                             <span
                                                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:-rotate-3 ${item.tone}`}
@@ -374,7 +369,7 @@ export default function SupervisorSettings() {
                     </section>
 
                     {/* PERSONAL DETAILS */}
-                    <section className="settings-personal-information rounded-3xl border border-border bg-surface p-5 sm:p-7">
+                    <section id="settings-profile" className="settings-personal-information rounded-3xl border border-border bg-surface p-5 sm:p-7">
                         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-start gap-3">
                                 <span className="rounded-xl bg-pastel-sky p-3 text-info">

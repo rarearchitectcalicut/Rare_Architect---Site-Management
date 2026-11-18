@@ -185,15 +185,15 @@ export default function ChangePasswordForm() {
     };
 
     return (
-        <section className="settings-password-card overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_24px_60px_-30px_rgba(33,30,26,0.25)]">
+        <section id="settings-security" className="settings-password-card overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_24px_60px_-30px_rgba(33,30,26,0.25)]">
             {busy && (
                 <LoadingScreen message="Updating your password..." />
             )}
 
             <div className="grid lg:grid-cols-[1fr_340px]">
                 {/* Form side */}
-                <div className="p-6 sm:p-10">
-                    <div className="flex items-center gap-4">
+                <div className="settings-password-form p-6 sm:p-10">
+                    <div className="settings-password-intro flex items-center gap-4">
                         <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet text-white shadow-lg shadow-violet/30">
                             <KeyRound size={26} strokeWidth={1.8} />
                         </span>
@@ -355,7 +355,7 @@ export default function ChangePasswordForm() {
                 </div>
 
                 {/* Guidance side */}
-                <aside className="border-t border-border bg-surface-soft p-6 sm:p-10 lg:border-l lg:border-t-0">
+                <aside className="settings-password-guidance border-t border-border bg-surface-soft p-6 sm:p-10 lg:border-l lg:border-t-0">
                     <div className="flex items-center gap-2.5 text-ink">
                         <ShieldCheck size={20} className="text-violet" />
                         <h3 className="text-sm font-bold">

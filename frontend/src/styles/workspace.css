@@ -92,7 +92,7 @@ dialog :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"
   .rare-nav-rail:has(:focus-visible) .rare-rail-label { opacity: 1; }
   .rare-rail-link:focus-visible { outline-offset: -3px; }
   .rare-rail-link:disabled { opacity: .5; cursor: wait; }
-  .rare-rail-footer { display: grid; gap: .25rem; padding-top: .5rem; border-top: 1px solid var(--color-border); }
+  .rare-rail-footer { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; width: 100%; gap: .25rem; padding-top: .5rem; border-top: 1px solid var(--color-border); }
   .rare-rail-count { position: absolute; top: .125rem; left: 1.875rem; display: flex; align-items: center; justify-content: center; min-width: 1.1rem; height: 1.1rem; padding: .1rem; border-radius: 999px; background: var(--color-danger); color: white; font-size: .6rem; line-height: 1; }
 }
 @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
@@ -104,6 +104,28 @@ dialog :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"
   .rare-sidebar-brand { top: .5rem; }
   .rare-nav-rail { top: 5.75rem; bottom: .5rem; gap: .25rem; padding-block: .5rem; }
   .rare-rail-links { gap: 0; }
+}
+/* A single lift and light sweep per hover; the card itself stays anchored. */
+@keyframes rare-brand-lift {
+  0% { transform: translateY(0) rotate(0) scale(1); }
+  40% { transform: translateY(-3px) rotate(-2deg) scale(1.06); }
+  70% { transform: translateY(0) rotate(1deg) scale(1.03); }
+  100% { transform: translateY(-1px) rotate(0) scale(1.04); }
+}
+@keyframes rare-brand-sheen {
+  0% { transform: translateX(-150%) skewX(-18deg); opacity: 0; }
+  20%, 65% { opacity: 1; }
+  100% { transform: translateX(150%) skewX(-18deg); opacity: 0; }
+}
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .rare-sidebar-brand { transition: box-shadow 280ms ease; }
+  .rare-sidebar-brand::before { transition: transform 500ms ease; }
+  .rare-sidebar-brand > a { position: relative; }
+  .rare-sidebar-brand > a::after { content: ""; position: absolute; inset: -30% 0; pointer-events: none; opacity: 0; background: linear-gradient(90deg, transparent 25%, #ffffffb3 50%, transparent 75%); }
+  .rare-sidebar-brand:hover, .rare-sidebar-brand:has(a:focus-visible) { box-shadow: 0 10px 28px #31405b12, 0 0 0 3px #efc4471a; }
+  .rare-sidebar-brand:hover::before, .rare-sidebar-brand:has(a:focus-visible)::before { transform: translateX(-6px); }
+  .rare-sidebar-brand:hover img, .rare-sidebar-brand a:focus-visible img { animation: rare-brand-lift 700ms cubic-bezier(.22, 1, .36, 1) both; }
+  .rare-sidebar-brand:hover > a::after, .rare-sidebar-brand > a:focus-visible::after { animation: rare-brand-sheen 850ms ease-out both; }
 }
 @media (max-width: 639px) {
   .rare-topbar-inner { min-height: 4.5rem; }
