@@ -26,49 +26,25 @@ export default function MobileBottomNav({
     return (
         <nav
             aria-label="Mobile navigation"
-            className="
-        fixed right-2 left-2 z-40
-        lg:hidden
-      "
-            style={{
-                bottom: "calc(8px + env(safe-area-inset-bottom, 0px))",
-            }}
+            className="rare-mobile-nav"
         >
             <div
-                className="
-          grid grid-cols-5 gap-1
-          rounded-2xl
-          border border-border
-          bg-surface/95
-          p-1.5
-          shadow-[0_12px_35px_rgba(33,30,26,0.14)]
-          backdrop-blur-xl
-        "
+                className="rare-mobile-nav-grid"
             >
                 {items.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}
                         className={({ isActive }) =>
-                            `
-                flex min-h-14 flex-col
-                items-center justify-center
-                gap-1 rounded-xl
-                min-w-0 px-0.5 py-2
-                transition-colors
-                ${isActive
-                                ? "bg-ink text-white"
-                                : "text-muted hover:bg-app"
-                            }
-              `
+                            `rare-mobile-nav-item${isActive ? " is-active" : ""}`
                         }
                     >
-                        <span className="relative">
+                        <span className="rare-mobile-nav-icon">
                             <NavIcon name={item.icon} size={20} />
                             {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
                         </span>
 
-                        <span className="text-xs font-medium">
+                        <span className="rare-mobile-nav-label">
                             {item.label}
                         </span>
                     </NavLink>
@@ -79,21 +55,14 @@ export default function MobileBottomNav({
                     onClick={onOpenMore}
                     aria-expanded={moreOpen}
                     aria-controls="rare-mobile-more-sheet"
-                    className={`
-            flex min-h-14 flex-col
-            items-center justify-center
-            gap-1 rounded-xl
-            min-w-0 px-0.5 py-2
-            transition-colors
-            ${isMoreActive
-                            ? "bg-ink text-white"
-                            : "text-muted hover:bg-app"
-                        }
-          `}
+                    aria-haspopup="dialog"
+                    className={`rare-mobile-nav-item${isMoreActive ? " is-active" : ""}`}
                 >
-                    <Menu size={20} strokeWidth={1.9} />
+                    <span className="rare-mobile-nav-icon">
+                        <Menu size={20} strokeWidth={1.9} />
+                    </span>
 
-                    <span className="text-xs font-medium">
+                    <span className="rare-mobile-nav-label">
                         More
                     </span>
                 </button>
