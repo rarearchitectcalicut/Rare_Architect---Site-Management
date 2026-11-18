@@ -866,40 +866,31 @@ function AdminDashboard({ summary, reviewQueue }) {
 // SUPERVISOR DASHBOARD
 // =====================================================
 
-function SupervisorQuickActions({ draftGroup } = {}) {
+function SupervisorQuickActions() {
   const [action, setAction] = useState(null);
   const reportAction = {
     label: "Submit today's report",
-    action: "report",
     icon: FileText,
     tile: "bg-pastel-mint text-success group-hover:bg-success",
   };
   const secondaryActions = [
+    { label: "Create daily report", action: "report", icon: FileText, tile: "bg-pastel-mint text-success group-hover:bg-success" },
     { label: "My Projects", path: "/supervisor/projects", icon: FolderKanban, tile: "bg-pastel-sky text-info group-hover:bg-info" },
     { label: "My Tasks", path: "/supervisor/tasks", icon: ListTodo, tile: "bg-[#EDE9FE] text-violet group-hover:bg-violet" },
     { label: "Create Task", action: "task", icon: Plus, tile: "bg-pastel-sky text-info group-hover:bg-info" },
   ];
   const primaryClass = "group flex min-h-24 w-full items-center gap-4 rounded-2xl border border-pastel-mint bg-[#F8FCF9] px-5 py-5 text-left transition-colors hover:bg-pastel-mint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success";
   const secondaryClass = "group flex min-h-14 min-w-0 flex-col items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-2 py-3 text-center text-xs font-medium text-muted transition-colors hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:flex-row sm:px-3 sm:text-sm";
-  const draftItems = draftGroup?.items || [];
-  const draft = draftItems.find((item) => item?.id && item?.project_id);
-  const primaryLabel = draft ? "Continue today's draft" : reportAction.label;
   const PrimaryIcon = reportAction.icon;
-  const draftPath = draft
-    ? `/supervisor/projects/${encodeURIComponent(draft.project_id)}/daily-reports?report=${encodeURIComponent(draft.id)}`
-    : null;
   return <>
     <section aria-label="Supervisor Quick Actions" className="supervisor-quick-actions rounded-[22px] border border-border bg-surface px-4 py-5 sm:px-6">
       <h2 className="mb-4 text-base font-bold text-ink sm:mb-5">Quick Actions</h2>
       <div className="supervisor-quick-actions-content space-y-3">
-        {draftPath ? <Link to={draftPath} className={primaryClass}>
+        <Link to="/supervisor/reports?status=DRAFT" className={primaryClass}>
           <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${reportAction.tile}`}><PrimaryIcon size={25} strokeWidth={1.8} aria-hidden="true" /></span>
-          <span className="min-w-0"><span className="block text-base font-bold text-ink sm:text-lg">{primaryLabel}</span><span className="mt-1 block text-sm text-muted">Open your saved daily report draft</span></span>
-        </Link> : <button type="button" onClick={() => setAction("report")} className={primaryClass}>
-          <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white sm:h-16 sm:w-16 ${reportAction.tile}`}><PrimaryIcon size={25} strokeWidth={1.8} aria-hidden="true" /></span>
-          <span className="min-w-0"><span className="block text-base font-bold text-ink sm:text-lg">{primaryLabel}</span><span className="mt-1 block text-sm text-muted">Record today's site progress</span></span>
-        </button>}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">{secondaryActions.map((item) => {
+          <span className="min-w-0"><span className="block text-base font-bold text-ink sm:text-lg">{reportAction.label}</span><span className="mt-1 block text-sm text-muted">Choose from your saved daily report drafts</span></span>
+        </Link>
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">{secondaryActions.map((item) => {
         const Icon = item.icon;
         const content = <><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors group-hover:text-white ${item.tile}`}><Icon size={17} strokeWidth={1.8} aria-hidden="true" /></span><span>{item.label}</span></>;
         return item.path ? <Link key={item.label} to={item.path} className={secondaryClass}>{content}</Link> : <button key={item.label} type="button" onClick={() => setAction(item.action)} className={secondaryClass}>{content}</button>;
@@ -977,7 +968,7 @@ function SupervisorDashboard({ summary, actionItems = {}, user, now }) {
         </div>
       </section>
 
-      <SupervisorQuickActions draftGroup={actionItems.draft_daily_reports} />
+      <SupervisorQuickActions />
       </div>
       <WorkSummary tasks={tasks} reports={reports} work={summary.project_daily_task_work || {}} />
       {!!pendingDelayItems.length && <section aria-labelledby="my-action-center-heading" className="space-y-3">

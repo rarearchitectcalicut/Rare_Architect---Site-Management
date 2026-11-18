@@ -1292,11 +1292,12 @@ test("Supervisor Quick Actions omit dashboard delay shortcuts", async () => {
     const draw = () => { tree = state.render(() => exports.SupervisorQuickActions()); };
     draw();
     const contents = JSON.stringify(tree);
-    for (const text of ["Submit today's report", "My Projects", "My Tasks", "Create Task", "grid-cols-3", "flex-col", "/supervisor/projects", "/supervisor/tasks"]) assert.ok(contents.includes(text));
+    for (const text of ["Submit today's report", "My Projects", "My Tasks", "Create Task", "Create daily report", "grid-cols-2", "flex-col", "/supervisor/projects", "/supervisor/tasks"]) assert.ok(contents.includes(text));
     assert.ok(!contents.includes("Report Delay"));
     assert.ok(!contents.includes(">Delays<"));
     assert.ok(!contents.includes("/supervisor/delays"));
-    quickFind(tree, (node) => node.type === "button" && JSON.stringify(node.props.children).includes("Submit today's report")).props.onClick(); draw();
+    assert.ok(quickFind(tree, (node) => node.props?.to === "/supervisor/reports?status=DRAFT"));
+    quickFind(tree, (node) => node.type === "button" && JSON.stringify(node.props.children).includes("Create daily report")).props.onClick(); draw();
     assert.ok(quickFind(tree, (node) => node.type?.name === "SupervisorProjectSelector" && node.props.action === "report"));
     state.cleanup();
 });
@@ -1353,7 +1354,7 @@ test("Supervisor attention rows flag stale drafts and open their exact records",
     assert.ok(withRejected.includes('aria-label="Rejected tasks, 1"'));
 });
 
-test("Supervisor Quick Actions link directly to an existing daily report draft", async () => {
+test("Supervisor Quick Actions offer all drafts even when a dashboard draft exists", async () => {
     const { exports } = await loadSource("pages/Dashboard.jsx", {
         overrides: { "components/dashboard/AdminQuickActions.jsx": { default: () => null } },
         append: "\nexport { SupervisorQuickActions };",
@@ -1361,9 +1362,10 @@ test("Supervisor Quick Actions link directly to an existing daily report draft",
     const html = renderToStaticMarkup(React.createElement(MemoryRouter, null, React.createElement(exports.SupervisorQuickActions, {
         draftGroup: { count: 1, items: [{ id: "draft-id", project_id: "project-id" }] },
     })));
-    assert.ok(html.includes("Continue today"));
-    assert.ok(html.includes('href="/supervisor/projects/project-id/daily-reports?report=draft-id"'));
-    assert.ok(!html.includes("Submit today"));
+    assert.ok(html.includes("Submit today"));
+    assert.ok(html.includes('href="/supervisor/reports?status=DRAFT"'));
+    assert.ok(!html.includes('href="/supervisor/projects/project-id/daily-reports?report=draft-id"'));
+    assert.ok(html.includes("Create daily report"));
 });
 
 test("Supervisor dashboard shows one compact All clear row when action queues are empty", async () => {
