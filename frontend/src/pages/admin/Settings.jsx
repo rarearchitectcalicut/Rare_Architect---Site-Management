@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     CheckCircle2,
     FolderOpen,
@@ -880,7 +880,7 @@ export default function AdminSettings() {
           PAGE HEADER
           ===================================== */}
 
-            <header>
+            <header className="settings-page-heading">
                 <p className="text-xs font-bold uppercase tracking-[0.17em] text-muted">
                     Admin / Account & Configuration
                 </p>
@@ -896,12 +896,20 @@ export default function AdminSettings() {
                         </h1>
 
                         <p className="mt-2 text-sm text-muted">
-                            Manage your profile, account security,
-                            and project categories.
+                            Your account, preferences, and workspace. All in one place.
                         </p>
                     </div>
                 </div>
             </header>
+
+            <div className="settings-nav-dock">
+                <nav className="settings-section-nav" aria-label="Settings sections">
+                    <a href="#settings-profile"><Pencil size={16} aria-hidden="true" />Personal details</a>
+                    <a href="#settings-security"><ShieldCheck size={16} aria-hidden="true" />Security</a>
+                    <a href="#settings-notifications">Notifications</a>
+                    <a href="#settings-categories"><Layers3 size={16} aria-hidden="true" />Project categories</a>
+                </nav>
+            </div>
 
             {/* =====================================
           1. ADMIN PROFILE
@@ -920,6 +928,7 @@ export default function AdminSettings() {
           ===================================== */}
 
             <section
+                id="settings-categories"
                 className="
           settings-project-categories rounded-[24px]
           border border-border

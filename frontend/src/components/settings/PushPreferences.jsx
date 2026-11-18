@@ -45,7 +45,7 @@ export default function PushPreferences() {
         }
     }
 
-    return <section aria-labelledby="device-notifications-title" aria-busy={busy} className="rounded-3xl border border-border bg-surface p-5 sm:p-7">
+    return <section id="settings-notifications" aria-labelledby="device-notifications-title" aria-busy={busy} className="rounded-3xl border border-border bg-surface p-5 sm:p-7">
         <div className="flex items-start gap-3"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-app text-muted"><Bell size={23} aria-hidden="true" /></span><div className="min-w-0"><h2 id="device-notifications-title" className="text-lg font-bold text-ink">Device notifications</h2><p className="mt-1 text-sm text-muted">Receive a private, generic alert when a new RARE notification is created. This setting applies to this device; your in-app notifications are always available.</p></div></div>
         {unsupported ? <p role="status" className="mt-5 rounded-xl bg-surface-soft p-4 text-sm text-muted">{unsupported}</p> : <>
             <p role="status" className="mt-5 text-sm font-semibold text-muted">{busy ? "Checking or updating device notifications…" : error ? "Device notification status could not be confirmed." : enabled ? "Enabled for this account on this device" : "Not enabled for this account on this device"}</p>

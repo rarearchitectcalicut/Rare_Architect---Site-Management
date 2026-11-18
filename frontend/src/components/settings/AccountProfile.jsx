@@ -153,7 +153,7 @@ function readError(value) {
 
 function ProfileInfo({ icon: Icon, label, value, tone }) {
     return (
-        <div className="group flex min-w-0 items-start gap-3">
+        <div className="settings-profile-detail group flex min-w-0 items-start gap-3">
             <span
                 className={`
           flex h-11 w-11 shrink-0 items-center
@@ -373,11 +373,11 @@ export default function AccountProfile({ role = "ADMIN" }) {
                 <>
                     {/* PROFILE HEADER */}
                     <section className="settings-profile-sidebar overflow-hidden rounded-[26px] border border-border bg-surface">
-                        <div className="h-2 bg-linear-to-r from-border-strong via-border to-[#DCE8EE]" />
+                        <div className="settings-profile-cover" aria-hidden="true" />
 
-                        <div className="p-5 sm:p-7">
-                            <div className="flex flex-wrap items-start gap-4">
-                                <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-[23px] bg-linear-to-br from-border-strong to-app text-3xl font-bold text-ink shadow-[0_8px_22px_rgba(33,30,26,0.08)]">
+                        <div className="settings-profile-body p-5 sm:p-7">
+                            <div className="settings-profile-identity flex flex-wrap items-start gap-4">
+                                <div className="settings-profile-avatar flex h-18 w-18 shrink-0 items-center justify-center rounded-[23px] bg-linear-to-br from-border-strong to-app text-3xl font-bold text-ink shadow-[0_8px_22px_rgba(33,30,26,0.08)]">
                                     {name.charAt(0).toUpperCase()}
                                 </div>
 
@@ -414,27 +414,13 @@ export default function AccountProfile({ role = "ADMIN" }) {
                             </div>
 
                             {/* QUICK INFORMATION */}
-                            <div className="mt-6 grid gap-5 border-t border-border pt-6 sm:grid-cols-2 xl:grid-cols-3">
+                            <div className="settings-profile-summary mt-6 grid gap-5 border-t border-border pt-6 sm:grid-cols-2 xl:grid-cols-3">
                                 <ProfileInfo
                                     icon={CalendarDays}
                                     label="Last Login"
                                     value={formatLastLogin(profile.last_login)}
                                     tone="bg-pastel-lavender text-violet"
                                 />
-                                <ProfileInfo
-                                    icon={Phone}
-                                    label="Phone"
-                                    value={profile.phone}
-                                    tone="bg-pastel-mint text-success"
-                                />
-
-                                <ProfileInfo
-                                    icon={Mail}
-                                    label="Email"
-                                    value={profile.email}
-                                    tone="bg-pastel-sky text-info"
-                                />
-
                                 <ProfileInfo
                                     icon={CalendarDays}
                                     label="Member Since"
@@ -448,7 +434,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                     </section>
 
                     {/* EDIT ACCOUNT INFORMATION */}
-                    <section className="settings-personal-information rounded-3xl border border-border bg-surface p-5 sm:p-7">
+                    <section id="settings-profile" className="settings-personal-information rounded-3xl border border-border bg-surface p-5 sm:p-7">
                         <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
                             <div className="flex items-start gap-3">
                                 <span className="rounded-2xl bg-pastel-sky p-3 text-info">
