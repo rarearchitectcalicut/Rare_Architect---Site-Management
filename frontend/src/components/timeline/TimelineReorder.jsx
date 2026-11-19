@@ -269,9 +269,9 @@ export default function TimelineReorder({
                 transition-all duration-200
                 sm:gap-4 sm:p-4
                 ${dropTarget && !dragging
-                                    ? "border-info bg-[#EFF5FF]"
+                                    ? "border-info bg-pastel-sky"
                                     : moved
-                                        ? "border-[#E2C78F] bg-[#FFF9EB]"
+                                        ? "border-border-strong bg-pastel-butter"
                                         : "border-border bg-surface"
                                 }
                 ${dragging
@@ -296,7 +296,7 @@ export default function TimelineReorder({
                   items-center justify-center
                   rounded-xl text-sm font-bold
                   ${moved
-                                        ? "bg-[#FFF0CC] text-warning"
+                                        ? "bg-pastel-butter text-warning"
                                         : "bg-app text-muted"
                                     }
                 `}
@@ -391,7 +391,7 @@ export default function TimelineReorder({
                         // Pass the entire ordered task array, not a filtered subset.
                         onReview?.([...proposedTasks]);
                     }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-action px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     <Send size={17} />
                     Review Proposed Order

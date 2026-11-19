@@ -100,7 +100,7 @@ function PasswordInput({
             placeholder:text-subtle
             focus:border-ink
             focus:ring-2 focus:ring-ink/15
-            aria-invalid:border-red-600
+            aria-invalid:border-danger
             disabled:cursor-not-allowed
             disabled:opacity-60
           "
@@ -139,7 +139,7 @@ function PasswordInput({
                 <p
                     id={`${field}-error`}
                     role="alert"
-                    className="text-xs text-red-700"
+                    className="text-xs text-danger"
                 >
                     {error.message}
                 </p>
@@ -403,7 +403,7 @@ export default function ChangePassword() {
                             src={rareLogo}
                             alt="RARE - Rifath Associates LLP"
                             className="
-                mb-5 h-auto
+                rare-auth-logo rare-theme-logo mb-5 h-auto
                 w-44 object-contain
                 sm:w-48
               "
@@ -518,10 +518,10 @@ export default function ChangePassword() {
                                 role="alert"
                                 className="
                   rounded-xl
-                  border border-red-200
-                  bg-red-50
+                  border border-danger/30
+                  bg-pastel-blush
                   px-4 py-3
-                  text-sm text-red-700
+                  text-sm text-danger
                 "
                             >
                                 {serverError}
@@ -539,7 +539,7 @@ export default function ChangePassword() {
                 mt-2 flex h-12
                 items-center justify-center
                 rounded-xl
-                bg-ink
+                bg-action
                 px-4
                 text-[15px] font-semibold
                 text-white

@@ -17,7 +17,7 @@ export function DesktopProjectStatusTabs({ filters, onChange, revision }) {
         return () => controller.abort();
     }, [filters.search, filters.category, revision, countKey]);
     return <div className="hidden flex-wrap gap-2 lg:flex" aria-label="Project status filters">
-        {statuses.filter(([status]) => !status || counts?.[status] > 0 || filters.status === status).map(([status, label]) => <button key={status} type="button" aria-pressed={filters.status === status} onClick={() => onChange({ status })} className={`rounded-full border border-border px-3 py-1 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning ${filters.status === status ? "bg-ink text-white" : "bg-surface text-ink"}`}>{label}{counts?.[status] != null ? ` ${counts[status]}` : ""}</button>)}
+        {statuses.filter(([status]) => !status || counts?.[status] > 0 || filters.status === status).map(([status, label]) => <button key={status} type="button" aria-pressed={filters.status === status} onClick={() => onChange({ status })} className={`rounded-full border border-border px-3 py-1 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning ${filters.status === status ? "bg-action text-white" : "bg-surface text-ink"}`}>{label}{counts?.[status] != null ? ` ${counts[status]}` : ""}</button>)}
     </div>;
 }
 

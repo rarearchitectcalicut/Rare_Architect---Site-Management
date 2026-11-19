@@ -73,7 +73,7 @@ const rowClass = (isActive) => `
   focus-visible:ring-ink/30
   motion-reduce:transition-none
   ${isActive
-        ? "bg-ink text-white shadow-[0_8px_20px_rgba(33,30,26,0.18)]"
+        ? "bg-action text-white shadow-[0_8px_20px_rgba(33,30,26,0.18)]"
         : "text-muted hover:bg-app"
     }
 `;
@@ -175,7 +175,7 @@ export default function MobileMoreSheet({
                 aria-modal="true"
                 aria-label="More navigation options"
                 className="
-                    rare-sheet fixed inset-x-2 bottom-2 top-auto m-0 w-[calc(100%-1rem)] max-w-none p-0 backdrop:bg-ink/45
+                    rare-sheet fixed inset-x-2 bottom-2 top-auto m-0 w-[calc(100%-1rem)] max-w-none p-0 backdrop:bg-overlay/45
                     flex max-h-[85dvh] flex-col
                     overflow-hidden rounded-2xl
                     md:inset-x-5 md:bottom-5 md:w-[calc(100%-2.5rem)] md:rounded-2xl
@@ -238,7 +238,7 @@ export default function MobileMoreSheet({
                         className="rare-sheet-row flex items-center gap-3.5 rounded-2xl bg-surface-soft p-3.5"
                         style={{ "--d": "60ms" }}
                     >
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-lg font-bold text-white">
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-action text-lg font-bold text-white">
                             {displayName.charAt(0).toUpperCase()}
                         </span>
 
@@ -290,7 +290,7 @@ export default function MobileMoreSheet({
                                                     {item.label}
                                                 </span>
 
-                                                {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-danger px-1.5 text-xs font-bold text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+                                                {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-danger-solid px-1.5 text-xs font-bold text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
                                                 <ChevronRight
                                                     size={18}
                                                     className={chevronClass(isActive)}
@@ -353,7 +353,7 @@ export default function MobileMoreSheet({
                         disabled={loading}
                         className="
                             group flex w-full items-center justify-center gap-2
-                            rounded-2xl bg-ink px-4 py-3.5
+                            rounded-2xl bg-action px-4 py-3.5
                             text-sm font-semibold text-white
                             transition-all duration-200 ease-out
                             hover:bg-primary-hover

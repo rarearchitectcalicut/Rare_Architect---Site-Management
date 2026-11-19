@@ -20,8 +20,8 @@ export function TaskPageStyles() {
         .rare-tasks button:disabled { cursor: not-allowed; }
         .rare-tasks .task-secondary { min-height: 44px; border: 1px solid var(--color-subtle); border-radius: 14px; background: var(--color-surface); box-shadow: 0 2px 4px #211E1A03; }
         .rare-tasks .task-secondary:hover:not(:disabled) { border-color: var(--color-border-strong); background: var(--color-surface-soft); box-shadow: 0 5px 14px #211E1A08; }
-        .rare-tasks .task-primary { min-height: 48px; border: 1px solid var(--color-ink); background: var(--color-ink); color: var(--color-surface); box-shadow: 0 4px 12px #211E1A12; }
-        .rare-tasks .task-primary:hover { background: var(--color-ink); box-shadow: 0 6px 18px #211E1A20; }
+        .rare-tasks .task-primary { min-height: 48px; border: 1px solid var(--color-action); background: var(--color-action); color: white; box-shadow: 0 4px 12px #211E1A12; }
+        .rare-tasks .task-primary:hover { background: var(--color-primary-hover); box-shadow: 0 6px 18px #211E1A20; }
         @media (hover:hover) and (prefers-reduced-motion:no-preference) {
             .rare-tasks .task-lift:hover { transform: translateY(-3px); box-shadow: 0 14px 30px #422F160C; }
             .rare-tasks button:active:not(:disabled) { transform: scale(.98); }
@@ -44,7 +44,7 @@ export function TaskBadges({ task }) {
     return <div className="rare-task-badges flex flex-wrap gap-2 text-xs font-semibold">
         {[["Priority", task.priority], ["Approval", task.approval_status], ["Work", task.work_status]].map(([label, value]) =>
             <span key={label} className={`rounded-full border border-current/5 px-3 py-1.5 ${tones[value] || "bg-app text-muted"}`}>{label}: {formatText(value)}</span>)}
-        {(typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task)) && <span className="rounded-full bg-red-50 px-3 py-1.5 text-red-700">Overdue</span>}
+        {(typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task)) && <span className="rounded-full bg-pastel-blush px-3 py-1.5 text-danger">Overdue</span>}
     </div>;
 }
 
@@ -62,10 +62,10 @@ export function MobileTaskCard({
 }) {
     const overdue = typeof task.is_overdue === "boolean" ? task.is_overdue : isTaskOverdue(task);
     const priorityTone = {
-        URGENT: "bg-danger",
-        HIGH: "bg-warning",
+        URGENT: "bg-danger-solid",
+        HIGH: "bg-warning-solid",
         MEDIUM: "bg-muted",
-        LOW: "bg-info",
+        LOW: "bg-info-solid",
     };
 
     const rawWorker = task.worker_name?.trim();
@@ -143,7 +143,7 @@ export function MobileTaskCard({
                 <span key={label} className={`max-w-full truncate rounded-full px-2.5 py-1 text-[12px] font-semibold leading-4 ${statusClass(value)}`}>{label}: {formatText(value)}</span>)}
         </span>
         {(overdue || assignee || datesText) && <span className="rare-task-summary-meta flex min-w-0 items-center gap-1 truncate text-[12px] font-medium leading-4 text-muted">
-            {overdue && <span className="shrink-0 font-semibold text-red-700">Overdue{assignee || datesText ? " · " : ""}</span>}
+            {overdue && <span className="shrink-0 font-semibold text-danger">Overdue{assignee || datesText ? " · " : ""}</span>}
             {assignee && <span className="truncate">{assignee}</span>}
             {assignee && datesText && <span className="shrink-0"> · </span>}
             {datesText && <span className="shrink-0">{datesText}</span>}
@@ -152,7 +152,7 @@ export function MobileTaskCard({
             <span className="rare-task-summary-progress">
             <span className="flex justify-between gap-3 text-xs text-muted"><span>Verified progress</span><strong className="text-ink">{progress}%</strong></span>
             <span role="progressbar" aria-label={`${task.title || "Task"} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(progress, 100)} className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-border">
-                <span className="block h-full rounded-full bg-ink" style={{ width: `${Math.min(progress, 100)}%` }} />
+                <span className="block h-full rounded-full bg-action" style={{ width: `${Math.min(progress, 100)}%` }} />
             </span>
             </span>
         ) : awaitingVerification ? (

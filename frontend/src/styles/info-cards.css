@@ -25,13 +25,13 @@
 .rare-report-project-picker-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: .875rem; color: var(--color-info); background: var(--color-pastel-lavender); }
 .rare-report-project-caption { font-size: .625rem; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); margin-bottom: .375rem; }
 .rare-app main h2.rare-report-project-name { font-size: clamp(1rem, 1.4vw, 1.125rem); font-weight: 700; line-height: 1.5; letter-spacing: -.025em; }
-.rare-report-project-name > span { padding: .125rem .4rem; margin-left: -.4rem; border-radius: .375rem; background: #ebe9ff80; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.rare-report-project-name > span { padding: .125rem .4rem; margin-left: -.4rem; border-radius: .375rem; background: var(--color-pastel-lavender); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 @media (min-width: 768px) { .rare-report-controls { grid-template-columns: minmax(13rem, 1fr) minmax(0, 2fr); gap: 1.5rem; } }
 .rare-info-card { min-width: 0; padding: 1rem; border: 1px solid var(--color-border); border-radius: 1.25rem; background: var(--color-surface); box-shadow: var(--shadow-float); }
 .rare-info-card-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding-bottom: .875rem; }
 .rare-info-card-heading-copy { display: flex; align-items: center; gap: .75rem; min-width: 0; }
 .rare-info-card-heading-copy > div { min-width: 0; }
-.rare-info-card-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.75rem; height: 2.75rem; border: 1px solid #e0e7f9; border-radius: 1rem; background: linear-gradient(135deg, var(--color-pastel-lavender), var(--color-pastel-sky)); color: var(--color-info); }
+.rare-info-card-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.75rem; height: 2.75rem; border: 1px solid var(--color-border-strong); border-radius: 1rem; background: linear-gradient(135deg, var(--color-pastel-lavender), var(--color-pastel-sky)); color: var(--color-info); }
 .rare-info-eyebrow { margin: 0 0 .25rem; color: var(--color-muted); font-size: .6875rem; line-height: 1.5; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
 .rare-app main .rare-info-card-heading h2 { margin: 0; font-size: 1.0625rem; font-weight: 650; letter-spacing: -.025em; }
 .rare-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .875rem 1rem; margin: 0; }
@@ -47,7 +47,7 @@
 .rare-project-mobile-open { display: none; }
 .rare-project-card-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 200ms; }
 .rare-project-card-cover .rare-project-cover { position: absolute; inset: 0; display: grid; place-items: center; }
-.rare-project-card-cover .rare-project-cover > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 1.2rem; background: rgb(255 255 255 / .6); border: 1px solid rgb(255 255 255 / .8); color: var(--color-info); }
+.rare-project-card-cover .rare-project-cover > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 1.2rem; background: color-mix(in srgb, var(--color-surface) 60%, transparent); border: 1px solid var(--color-border); color: var(--color-info); }
 .rare-project-card-body { display: flex; flex: 1; flex-direction: column; min-width: 0; padding: 1.25rem; }
 .rare-project-card-context { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem; }
 .rare-project-card-context > p { color: var(--color-muted); font-size: .6875rem; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; }

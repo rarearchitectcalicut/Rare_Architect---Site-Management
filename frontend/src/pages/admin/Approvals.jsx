@@ -68,8 +68,8 @@ export default function AdminApprovals() {
         <ApprovalOverview loading={loading} count={pendingCount} onRefresh={refresh} />
         <ApprovalQueueTabs counts={counts} queues={queues} tab={tab} onChange={changeTab} loading={loading} />
         {notice && <p role="status" className="rounded-2xl bg-pastel-mint p-4 text-sm text-success">{notice}</p>}
-        {list.error && ["history", "delays"].includes(tab) && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{list.error}</p>}
-        {!!Object.keys(errors).length && <div role="alert" className="space-y-1 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{Object.entries(errors).map(([name, text]) => <p key={name}>{text}</p>)}</div>}
+        {list.error && ["history", "delays"].includes(tab) && <p role="alert" className="rounded-xl bg-pastel-blush p-4 text-sm text-danger">{list.error}</p>}
+        {!!Object.keys(errors).length && <div role="alert" className="space-y-1 rounded-2xl bg-pastel-blush p-4 text-sm text-danger">{Object.entries(errors).map(([name, text]) => <p key={name}>{text}</p>)}</div>}
         <section data-approval-queue={tab} className="admin-approval-queue rounded-[26px] border border-border bg-surface">
             <header className="rare-page-header flex flex-wrap items-center justify-between gap-3 px-6 pt-6">
                 <h2 className="text-lg font-bold">{queueLabels[tab]} <span className="ml-2 text-sm font-medium text-muted">{visibleLoading ? "..." : list.count ?? list.rows.length}</span></h2>

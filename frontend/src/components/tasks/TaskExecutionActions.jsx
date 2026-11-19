@@ -108,11 +108,11 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
                 {canReopen && <button type="button" disabled={Boolean(busy)} onClick={() => openDialog("reopen")} className={`${secondary} inline-flex items-center gap-2`}><RotateCcw size={16} aria-hidden="true" />Reopen Task</button>}
             </div>
         </div>
-        {error && !dialogAction && <p role="alert" className="mt-3 flex items-start gap-2 text-xs leading-5 text-red-700"><AlertCircle size={16} className="shrink-0" aria-hidden="true" />{error}</p>}
+        {error && !dialogAction && <p role="alert" className="mt-3 flex items-start gap-2 text-xs leading-5 text-danger"><AlertCircle size={16} className="shrink-0" aria-hidden="true" />{error}</p>}
         {dialogAction && createPortal(<dialog ref={dialogRef} aria-labelledby={titleId} aria-describedby={requiresReason ? descriptionId : undefined} aria-modal="true"
             onCancel={(event) => { event.preventDefault(); event.stopPropagation(); closeDialog(); }}
             onKeyDown={(event) => { if (event.key === "Escape") event.stopPropagation(); }}
-            className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-3xl border border-border bg-surface p-6 text-ink shadow-2xl backdrop:bg-ink/55 backdrop:backdrop-blur-sm">
+            className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-3xl border border-border bg-surface p-6 text-ink shadow-2xl backdrop:bg-overlay/55 backdrop:backdrop-blur-sm">
             <form onSubmit={(event) => { event.preventDefault(); run(dialogAction); }}>
                 <h2 id={titleId} className="text-xl font-bold">{dialogTitle}</h2>
                 {requiresReason && <>
@@ -120,7 +120,7 @@ export default function TaskExecutionActions({ task, onSuccess, role = "SUPERVIS
                     <label htmlFor={reasonId} className="mt-5 block text-xs font-semibold text-muted">Required explanation</label>
                     <textarea id={reasonId} autoFocus required maxLength={1000} rows={4} value={reason} disabled={Boolean(busy)} onChange={(event) => { setReason(event.target.value); setError(""); }} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} className="mt-2 w-full rounded-xl border border-border bg-surface-soft px-4 py-3 text-sm outline-none focus:border-subtle focus:ring-2 focus:ring-pastel-lavender" />
                 </>}
-                {error && <p id={errorId} role="alert" className="mt-3 text-xs leading-5 text-red-700">{error}</p>}
+                {error && <p id={errorId} role="alert" className="mt-3 text-xs leading-5 text-danger">{error}</p>}
                 <div className="rare-action-footer mt-6 flex flex-wrap justify-end gap-3"><button type="button" autoFocus={!requiresReason} disabled={Boolean(busy)} onClick={closeDialog} className={secondary}>Back</button><button type="submit" disabled={Boolean(busy) || (requiresReason && !reason.trim())} className={`rare-button ${dialogAction === "cancel" ? "rare-button-danger" : dialogAction === "complete" ? "rare-button-success" : "rare-button-primary"}`}>{busy ? "Saving..." : confirmLabel}</button></div>
             </form>
         </dialog>, document.body)}
@@ -140,12 +140,12 @@ export function TaskProgress({ progress, compact = false }) {
     const width = Math.min(100, Math.max(0, percent));
     if (compact) return <span className="rare-compact-verified-progress">
         <span className="flex flex-wrap items-center justify-between gap-1 text-xs"><span className="text-muted">Verified progress</span><strong className="text-success">{quantity ? `${progress.verified_quantity} / ${progress.planned_quantity} ${progress.measurement_unit} · ` : ""}{percent}%</strong></span>
-        <span role="progressbar" aria-label="Admin-verified task progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={width} className="block h-1.5 overflow-hidden rounded-full bg-pastel-mint"><span className="block h-full rounded-full bg-success" style={{ width: `${width}%` }} /></span>
+        <span role="progressbar" aria-label="Admin-verified task progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={width} className="block h-1.5 overflow-hidden rounded-full bg-pastel-mint"><span className="block h-full rounded-full bg-success-solid" style={{ width: `${width}%` }} /></span>
         {!quantity && <span className="sr-only">{percent === 100 ? "Completion verified" : "Completion not yet verified"}</span>}
     </span>;
     return <span className="my-3 block min-w-0 space-y-2 text-xs text-ink">
         <span className="flex flex-wrap justify-between gap-2"><span>Admin-verified progress</span><strong className="text-success">{percent}%</strong></span>
-        <span role="progressbar" aria-label="Admin-verified task progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={width} className="block h-2.5 overflow-hidden rounded-full bg-[#DCECE0]">
+        <span role="progressbar" aria-label="Admin-verified task progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={width} className="block h-2.5 overflow-hidden rounded-full bg-pastel-mint">
             <span className="block h-full rounded-full bg-[#15803D]" style={{ width: `${width}%` }} />
         </span>
         <span className="block break-words leading-5 text-muted">{quantity

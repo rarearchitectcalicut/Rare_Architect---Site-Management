@@ -599,7 +599,7 @@ export default function SupervisorProjectTimeline() {
                                 pendingOrderRequest ||
                                 tasks.length < 2
                             }
-                            className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
+                            className="inline-flex items-center gap-2 rounded-xl bg-action px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <GripVertical size={18} />
                             Reorder Tasks
@@ -631,17 +631,17 @@ export default function SupervisorProjectTimeline() {
 
             {/* TIMELINE ERROR */}
             {!loading && error && (
-                <div className="rounded-2xl border border-red-200 bg-surface p-6">
+                <div className="rounded-2xl border border-danger/30 bg-surface p-6">
                     <div className="flex items-start gap-3">
                         <AlertCircle
                             size={20}
-                            className="shrink-0 text-red-700"
+                            className="shrink-0 text-danger"
                         />
 
                         <div>
                             <p
                                 role="alert"
-                                className="text-sm text-red-700"
+                                className="text-sm text-danger"
                             >
                                 {error}
                             </p>
@@ -666,7 +666,7 @@ export default function SupervisorProjectTimeline() {
 
                     {/* ORDER CHANGE STATUS */}
                     {pendingOrderRequest && (
-                        <div className="flex items-start gap-3 rounded-2xl border border-pastel-butter bg-[#FFF7E4] p-4">
+                        <div className="flex items-start gap-3 rounded-2xl border border-pastel-butter bg-pastel-butter p-4">
                             <Clock3
                                 size={20}
                                 className="mt-0.5 shrink-0 text-warning"
@@ -741,7 +741,7 @@ export default function SupervisorProjectTimeline() {
 
                             <div className="timeline-desktop-view-heading hidden items-center justify-between gap-4 lg:flex">
                                 <div><h2 className="text-lg font-bold text-ink">{view === "sequence" ? "Task Sequence" : "Schedule View"}</h2>{view === "sequence" && <p className="mt-2 text-xs leading-5 text-muted">Tasks arranged in their current timeline order.</p>}</div>
-                                <div className="inline-flex shrink-0 rounded-xl bg-app p-1">{[["sequence", "Sequence", ClipboardList], ["schedule", "Schedule", CalendarRange]].map(([value, label, Icon]) => <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)} className={"inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold " + (view === value ? "bg-ink text-white shadow-sm" : "text-muted")}><Icon size={16} />{label}</button>)}</div>
+                                <div className="inline-flex shrink-0 rounded-xl bg-app p-1">{[["sequence", "Sequence", ClipboardList], ["schedule", "Schedule", CalendarRange]].map(([value, label, Icon]) => <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)} className={"inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold " + (view === value ? "bg-action text-white shadow-sm" : "text-muted")}><Icon size={16} />{label}</button>)}</div>
                             </div>
                             {/* VIEW SWITCH */}
                             {view === "sequence" ? (

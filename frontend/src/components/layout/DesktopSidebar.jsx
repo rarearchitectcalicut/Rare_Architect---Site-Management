@@ -9,7 +9,7 @@ export default function DesktopSidebar({ user, onLogout, loading, unreadCount })
     return <>
         <div className="rare-sidebar-brand">
             <NavLink to={`${prefix}/dashboard`} aria-label="RARE home">
-                <img src={rareLogo} alt="RARE" />
+                <img src={rareLogo} alt="RARE" className="rare-theme-logo" />
             </NavLink>
         </div>
         <aside className="rare-nav-rail" aria-label="RARE workspace">

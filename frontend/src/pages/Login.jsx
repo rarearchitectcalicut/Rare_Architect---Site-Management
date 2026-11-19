@@ -74,8 +74,8 @@ const inputClass = `
   focus:border-ink
   focus:ring-4 focus:ring-ink/10
   disabled:cursor-not-allowed disabled:opacity-60
-  aria-invalid:border-red-600
-  aria-invalid:ring-4 aria-invalid:ring-red-600/10
+  aria-invalid:border-danger
+  aria-invalid:ring-4 aria-invalid:ring-danger/10
 `;
 
 const highlights = [
@@ -133,7 +133,7 @@ function FieldError({ id, message }) {
     <p
       id={id}
       role="alert"
-      className="flex items-start gap-1.5 text-xs text-red-700"
+      className="flex items-start gap-1.5 text-xs text-danger"
     >
       <AlertCircle size={14} className="mt-px shrink-0" />
       <span>{message}</span>
@@ -197,7 +197,7 @@ export default function Login() {
         {/* ============================================= */}
         {/* LEFT: ARCHITECTURAL PANEL                      */}
         {/* ============================================= */}
-        <section className="rare-auth-art relative hidden overflow-hidden bg-ink lg:flex">
+        <section className="rare-auth-art relative hidden overflow-hidden bg-action lg:flex">
           {/* Background image */}
           <img
             src={loginBg}
@@ -208,11 +208,11 @@ export default function Login() {
           {/* Legibility overlays */}
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-linear-to-t from-ink/90 via-ink/35 to-ink/10"
+            className="absolute inset-0 bg-linear-to-t from-overlay/90 via-overlay/35 to-overlay/10"
           />
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-linear-to-r from-ink/30 to-transparent"
+            className="absolute inset-0 bg-linear-to-r from-overlay/30 to-transparent"
           />
 
           {/* Top badge */}
@@ -299,7 +299,7 @@ export default function Login() {
               <img
                 src={rareLogo}
                 alt="RARE - Rifath Associates LLP"
-                className="mb-3 h-auto w-32 object-contain sm:w-36"
+                className="rare-auth-logo rare-theme-logo mb-3 h-auto w-32 object-contain sm:w-36"
               />
 
               <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
@@ -429,7 +429,7 @@ export default function Login() {
                 {serverError && (
                   <div
                     role="alert"
-                    className="rare-fade flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                    className="rare-fade flex items-start gap-3 rounded-xl border border-danger/30 bg-pastel-blush px-4 py-3 text-sm text-danger"
                   >
                     <AlertCircle
                       size={18}
@@ -447,7 +447,7 @@ export default function Login() {
                   disabled={loading}
                   className="
                     group mt-1 flex h-12 items-center justify-center gap-2
-                    rounded-xl bg-ink px-4
+                    rounded-xl bg-action px-4
                     text-[15px] font-semibold text-white
                     shadow-[0_8px_20px_rgba(33,30,26,0.18)]
                     transition-all duration-200 ease-out

@@ -131,7 +131,7 @@ export default function TaskApprovalReview({ record, item }) {
                 </p>
             </div>
 
-            <div className="rounded-2xl border border-[#C9DFC9] bg-pastel-mint p-4">
+            <div className="rounded-2xl border border-border-strong bg-pastel-mint p-4">
                 <h4 className="flex items-center gap-2 text-sm font-bold text-success">
                     <ShieldCheck size={18} />
                     Completion Criteria
@@ -181,7 +181,7 @@ export default function TaskApprovalReview({ record, item }) {
                         )}
 
                         {docsError && (
-                            <p role="alert" className="text-xs text-red-700">
+                            <p role="alert" className="text-xs text-danger">
                                 {docsError}
                             </p>
                         )}

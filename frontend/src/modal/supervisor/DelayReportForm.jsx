@@ -71,7 +71,7 @@ function taskIsEligible(task, projectId) {
 function FieldError({ errors, name }) {
     const values = errors[name];
     const text = Array.isArray(values) ? values.filter((value) => typeof value === "string").join(" ") : typeof values === "string" ? values : "";
-    return text ? <span id={`delay-${name}-error`} role="status" aria-live="polite" className="mt-1 block text-xs text-red-700">{text}</span> : null;
+    return text ? <span id={`delay-${name}-error`} role="status" aria-live="polite" className="mt-1 block text-xs text-danger">{text}</span> : null;
 }
 
 export default function DelayReportForm({ projectId, taskId, onClose, onSaved }) {
@@ -302,7 +302,7 @@ export default function DelayReportForm({ projectId, taskId, onClose, onSaved })
         onMouseDown={(event) => {
             if (event.target === event.currentTarget) close();
         }}
-        className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-ink/55 p-0 text-ink backdrop-blur-sm backdrop:bg-transparent sm:p-6"
+        className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-overlay/55 p-0 text-ink backdrop-blur-sm backdrop:bg-transparent sm:p-6"
     >
         {saving && <LoadingScreen portalTarget={dialog || undefined} message="Submitting delay report..." />}
         <section className="rare-mobile-sheet flex max-h-[92dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-[26px] border border-border bg-surface shadow-2xl">
@@ -351,8 +351,8 @@ export default function DelayReportForm({ projectId, taskId, onClose, onSaved })
                                 {taskOptions.map((option) => <option key={option.id} value={option.id}>{option.title}</option>)}
                             </select>)}
                         </div>
-                        {projectsState.error && <p role="status" aria-live="polite" className="text-xs text-red-700">{projectsState.error} <button type="button" onClick={() => setProjectRevision((value) => value + 1)} className="underline">Retry</button></p>}
-                        {taskError && <p role="status" aria-live="polite" className="text-xs text-red-700">{taskError} <button type="button" onClick={() => setTaskRevision((value) => value + 1)} className="underline">Retry</button></p>}
+                        {projectsState.error && <p role="status" aria-live="polite" className="text-xs text-danger">{projectsState.error} <button type="button" onClick={() => setProjectRevision((value) => value + 1)} className="underline">Retry</button></p>}
+                        {taskError && <p role="status" aria-live="polite" className="text-xs text-danger">{taskError} <button type="button" onClick={() => setTaskRevision((value) => value + 1)} className="underline">Retry</button></p>}
                         {!taskLoading && !taskError && selectedProjectId && !taskOptions.length && <p role="status" className="text-xs text-muted">No approved tasks available for this project.</p>}
                         {(taskPage > 1 || taskState.next && tasksCurrent) && <div className="flex items-center justify-between">
                             <button type="button" disabled={taskPage <= 1} onClick={() => setTaskPage((value) => Math.max(1, value - 1))} className="min-h-11 px-2 text-xs font-semibold disabled:opacity-40">Previous</button>
@@ -421,11 +421,11 @@ export default function DelayReportForm({ projectId, taskId, onClose, onSaved })
                         />)}
                         <p id="delay-forecast-help" className="flex items-start gap-2 text-sm leading-5 text-muted"><Info size={16} aria-hidden="true" className="mt-0.5 shrink-0" /><span>Submitting this report records the delay. The approved deadline stays unchanged.</span></p>
                     </fieldset>
-                    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+                    {error && <p role="alert" className="rounded-xl border border-danger/30 bg-pastel-blush p-4 text-sm text-danger">{error}</p>}
                 </div>
                 <footer className="rare-action-footer flex shrink-0 flex-wrap justify-end gap-3 px-5 sm:px-7">
                     <button type="button" onClick={close} disabled={saving} className="rounded-xl border border-border px-5 py-3 text-sm font-semibold text-ink">Cancel</button>
-                    <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:opacity-50">{saving ? "Submitting..." : "Submit delay report"}</button>
+                    <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-action px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:opacity-50">{saving ? "Submitting..." : "Submit delay report"}</button>
                 </footer>
             </form>
         </section>

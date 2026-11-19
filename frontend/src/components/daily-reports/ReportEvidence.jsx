@@ -89,8 +89,8 @@ function EvidenceFile({ file, onRemove, busy, fileApi = dailyReportApi }) {
             <p className="break-all text-sm font-semibold leading-6 text-ink">{file.original_filename}</p>
             {preview?.type.startsWith("image/") && <button type="button" onClick={view} aria-label={`Enlarge ${file.original_filename}`} className="mt-4 flex min-h-32 items-center sm:min-h-44 justify-center rounded-xl border border-border bg-surface-soft p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info"><img src={preview.url} alt={file.caption || file.original_filename} className="max-h-40 max-w-full rounded-lg sm:max-h-48 object-contain" /></button>}
             {file.caption && <p className="mt-1 text-xs text-muted">{file.caption}</p>}
-            {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
-            <div className="mt-3 flex flex-wrap gap-2">{previewable && <button type="button" disabled={loading} onClick={view} className={`${button} !border-ink !bg-ink !text-surface hover:!bg-primary-hover`}>{loading ? "Loading…" : "Preview"}</button>}<button type="button" disabled={loading} onClick={download} className={button}>Download</button></div>
+            {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+            <div className="mt-3 flex flex-wrap gap-2">{previewable && <button type="button" disabled={loading} onClick={view} className={`${button} !border-ink !bg-action !text-white hover:!bg-primary-hover`}>{loading ? "Loading…" : "Preview"}</button>}<button type="button" disabled={loading} onClick={download} className={button}>Download</button></div>
             {!previewable && <p className="mt-2 text-xs text-muted">Download to open with a compatible application on your device.</p>}
             {onRemove && <button type="button" disabled={busy} onClick={() => onRemove(file)} className="rare-button rare-button-danger-outline mt-3">Remove attachment</button>}
             {open && <EvidencePreview file={file} preview={preview} onClose={() => setOpen(false)} onDownload={download} loading={loading} button={button} />}

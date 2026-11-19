@@ -16,6 +16,7 @@ import DesktopSidebar from "../components/layout/DesktopSidebar";
 import MobileBottomNav from "../components/layout/MobileBottomNav";
 import MobileMoreSheet from "../components/layout/MobileMoreSheet";
 import PersonalNotepad from "../components/notes/PersonalNotepad";
+import AppearancePreference from "../components/settings/AppearancePreference";
 
 import {
     getNavigation,
@@ -230,6 +231,7 @@ export default function AppLayout() {
 
                         <div className="flex items-center gap-2.5 sm:gap-3">
 
+                            <AppearancePreference compact />
                             <PersonalNotepad key={user.id} ref={notepad} />
 
                             {/* NOTIFICATIONS */}
@@ -253,7 +255,7 @@ export default function AppLayout() {
                   transition-all duration-200 ease-out
                   hover:-translate-y-0.5
                   hover:border-border-strong
-                  hover:bg-white
+                  hover:bg-surface
                   hover:shadow-[0_6px_16px_-6px_rgba(33,30,26,0.25)]
                   active:translate-y-0 active:scale-95
                   focus-visible:outline-none focus-visible:ring-2
@@ -314,7 +316,7 @@ export default function AppLayout() {
                     flex h-11 w-11 shrink-0
                     items-center justify-center
                     rounded-full
-                    bg-ink
+                    bg-action
                     text-sm font-bold
                     text-white
                     ring-2 ring-transparent ring-offset-2

@@ -39,10 +39,10 @@ const fields = [
 
 const strengthLevels = [
     { label: "Too short", bar: "bg-border", text: "text-muted" },
-    { label: "Weak", bar: "bg-[#D9534F]", text: "text-[#B3342F]" },
-    { label: "Fair", bar: "bg-[#E8A23A]", text: "text-[#9A6410]" },
-    { label: "Good", bar: "bg-violet", text: "text-violet" },
-    { label: "Strong", bar: "bg-success", text: "text-success" },
+    { label: "Weak", bar: "bg-danger-solid", text: "text-danger" },
+    { label: "Fair", bar: "bg-warning-solid", text: "text-warning" },
+    { label: "Good", bar: "bg-violet-solid", text: "text-violet" },
+    { label: "Strong", bar: "bg-success-solid", text: "text-success" },
 ];
 
 function passwordError(value) {
@@ -194,7 +194,7 @@ export default function ChangePasswordForm() {
                 {/* Form side */}
                 <div className="settings-password-form p-6 sm:p-10">
                     <div className="settings-password-intro flex items-center gap-4">
-                        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet text-white shadow-lg shadow-violet/30">
+                        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-solid text-white shadow-lg shadow-violet/30">
                             <KeyRound size={26} strokeWidth={1.8} />
                         </span>
 
@@ -231,7 +231,7 @@ export default function ChangePasswordForm() {
                                         <LockKeyhole
                                             size={18}
                                             className={`pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${hasError
-                                                    ? "text-red-500"
+                                                    ? "text-danger"
                                                     : "text-muted"
                                                 }`}
                                         />
@@ -251,9 +251,9 @@ export default function ChangePasswordForm() {
                                             disabled={busy}
                                             placeholder={field.placeholder}
                                             aria-invalid={hasError}
-                                            className={`h-13 w-full rounded-xl border bg-white py-4 pl-12 text-sm text-ink outline-none transition-all placeholder:text-border-strong disabled:bg-surface-soft ${isConfirm && passwordsMatch ? "pr-20" : "pr-12"
+                                            className={`h-13 w-full rounded-xl border bg-surface py-4 pl-12 text-sm text-ink outline-none transition-all placeholder:text-border-strong disabled:bg-surface-soft ${isConfirm && passwordsMatch ? "pr-20" : "pr-12"
                                                 } ${hasError
-                                                    ? "border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-100"
+                                                    ? "border-danger/30 focus:border-danger/30 focus:ring-4 focus:ring-danger/15"
                                                     : "border-border hover:border-border-strong focus:border-violet focus:ring-4 focus:ring-violet/15"
                                                 }`}
                                         />
@@ -314,7 +314,7 @@ export default function ChangePasswordForm() {
                                     {hasError && (
                                         <p
                                             role="alert"
-                                            className="flex items-center gap-1.5 text-xs font-medium text-red-700"
+                                            className="flex items-center gap-1.5 text-xs font-medium text-danger"
                                         >
                                             <AlertCircle size={14} className="shrink-0" />
                                             {errors[field.key]}
@@ -327,7 +327,7 @@ export default function ChangePasswordForm() {
                         {errors.general && (
                             <p
                                 role="alert"
-                                className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-700"
+                                className="flex items-start gap-2 rounded-xl border border-danger/30 bg-pastel-blush p-3.5 text-sm text-danger"
                             >
                                 <AlertCircle size={18} className="mt-0.5 shrink-0" />
                                 {errors.general}
@@ -337,7 +337,7 @@ export default function ChangePasswordForm() {
                         {success && (
                             <p
                                 role="status"
-                                className="flex items-start gap-2 rounded-xl border border-[#CFE6D3] bg-pastel-mint p-3.5 text-sm font-medium text-success"
+                                className="flex items-start gap-2 rounded-xl border border-border-strong bg-pastel-mint p-3.5 text-sm font-medium text-success"
                             >
                                 <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
                                 {success}
@@ -347,7 +347,7 @@ export default function ChangePasswordForm() {
                         <button
                             type="submit"
                             disabled={busy}
-                            className="h-12 w-full rounded-xl bg-ink px-6 text-sm font-semibold text-white shadow-lg shadow-ink/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-violet hover:shadow-violet/30 focus:outline-none focus-visible:ring-4 focus-visible:ring-violet/30 disabled:translate-y-0 disabled:opacity-50 sm:w-auto sm:min-w-52"
+                            className="h-12 w-full rounded-xl bg-action px-6 text-sm font-semibold text-white shadow-lg shadow-ink/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-violet-solid hover:shadow-violet/30 focus:outline-none focus-visible:ring-4 focus-visible:ring-violet/30 disabled:translate-y-0 disabled:opacity-50 sm:w-auto sm:min-w-52"
                         >
                             Update password
                         </button>
@@ -374,7 +374,7 @@ export default function ChangePasswordForm() {
                             >
                                 <span
                                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${check.met
-                                            ? "scale-110 border-success bg-success text-white"
+                                            ? "scale-110 border-success bg-success-solid text-white"
                                             : "border-border-strong bg-transparent text-transparent"
                                         }`}
                                 >

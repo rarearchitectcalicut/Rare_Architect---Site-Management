@@ -66,7 +66,7 @@ export default function TimelineToolbar({
               text-xs font-semibold
               transition-all duration-200
               ${view === "sequence"
-                                ? "bg-ink text-white shadow-sm"
+                                ? "bg-action text-white shadow-sm"
                                 : "text-muted hover:text-ink"
                             }
             `}
@@ -85,7 +85,7 @@ export default function TimelineToolbar({
               text-xs font-semibold
               transition-all duration-200
               ${view === "schedule"
-                                ? "bg-ink text-white shadow-sm"
+                                ? "bg-action text-white shadow-sm"
                                 : "text-muted hover:text-ink"
                             }
             `}

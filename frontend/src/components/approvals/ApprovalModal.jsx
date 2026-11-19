@@ -33,10 +33,10 @@ export default function ApprovalModal({ onClose, busy, error, children, label = 
                 if (event.clientX < bounds.left || event.clientX > bounds.right ||
                     event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
             }}
-            className={`${compact ? "max-w-md" : "rare-form-dialog max-w-3xl"} fixed inset-0 m-auto ${heightLimit} w-[calc(100%-2rem)] overflow-y-auto overscroll-contain rounded-[28px] border border-border bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/65 backdrop:backdrop-blur-sm ${className}`}
+            className={`${compact ? "max-w-md" : "rare-form-dialog max-w-3xl"} fixed inset-0 m-auto ${heightLimit} w-[calc(100%-2rem)] overflow-y-auto overscroll-contain rounded-[28px] border border-border bg-surface p-0 text-ink shadow-2xl backdrop:bg-overlay/65 backdrop:backdrop-blur-sm ${className}`}
         >
             {busy && <LoadingScreen message={busy} portalTarget={dialog || undefined} />}
-            {error && <p role="alert" className="m-5 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+            {error && <p role="alert" className="m-5 rounded-xl bg-pastel-blush p-4 text-sm text-danger">{error}</p>}
             {children}
         </dialog>,
         document.body,

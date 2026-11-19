@@ -17,6 +17,7 @@ import { formatLastLogin } from "../../utils/lastLogin";
 import { useAuth } from "../../hooks/useAuth";
 import ChangePasswordForm from "../../components/settings/ChangePasswordForm";
 import PushPreferences from "../../components/settings/PushPreferences";
+import AppearancePreference from "../../components/settings/AppearancePreference";
 import LoadingScreen from "../../components/LoadingScreen";
 
 const fields = [
@@ -260,7 +261,7 @@ export default function SupervisorSettings() {
             {error && (
                 <div
                     role="alert"
-                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                    className="rounded-xl border border-danger/30 bg-pastel-blush p-4 text-sm text-danger"
                 >
                     {error}
 
@@ -393,7 +394,7 @@ export default function SupervisorSettings() {
                                         setErrors({});
                                         setEditing(true);
                                     }}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white hover:bg-primary-hover"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-semibold text-white hover:bg-primary-hover"
                                 >
                                     <Pencil size={16} />
                                     Edit Profile
@@ -432,7 +433,7 @@ export default function SupervisorSettings() {
                                                 {errors[field.key] && (
                                                     <p
                                                         role="alert"
-                                                        className="mt-2 text-xs text-red-700"
+                                                        className="mt-2 text-xs text-danger"
                                                     >
                                                         {errors[field.key]}
                                                     </p>
@@ -465,7 +466,7 @@ export default function SupervisorSettings() {
                                     <button
                                         type="submit"
                                         disabled={Boolean(busyMessage)}
-                                        className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50"
+                                        className="inline-flex items-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50"
                                     >
                                         <Save size={17} />
                                         Save Changes
@@ -477,6 +478,7 @@ export default function SupervisorSettings() {
                 </>
             )}
 
+            <AppearancePreference />
             <div className="settings-security-grid contents"><ChangePasswordForm /><PushPreferences /></div>
         </div>
     );

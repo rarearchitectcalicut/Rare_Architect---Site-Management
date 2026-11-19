@@ -21,7 +21,7 @@ function ApprovalChart({ tasks, isAdmin }) {
     <div className="rare-work-donut-layout">
       <div className="rare-work-donut" role="img" aria-label={`Task approval distribution. ${description}.${!available ? " Distribution unavailable until all counts are available." : !total ? " No tasks yet." : ""}`}>
         <svg viewBox="0 0 120 120" aria-hidden="true">
-          <circle cx="60" cy="60" r="35" fill="white" stroke="#eef0f6" strokeWidth="1" />
+          <circle cx="60" cy="60" r="35" fill="var(--color-surface)" stroke="var(--color-border)" strokeWidth="1" />
           <circle className="rare-work-ring-track" cx="60" cy="60" r="48" fill="none" strokeWidth="18" />
           {available && total > 0 && series.map((item) => {
             const portion = item.value / total * 100;

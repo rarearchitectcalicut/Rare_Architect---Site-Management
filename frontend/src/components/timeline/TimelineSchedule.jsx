@@ -469,7 +469,7 @@ export default function TimelineSchedule({
                                         setOffset(0);
                                     }}
                                     className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${scale === key
-                                            ? "bg-ink text-white"
+                                            ? "bg-action text-white"
                                             : "text-muted hover:bg-border"
                                         }`}
                                 >
@@ -649,7 +649,7 @@ export default function TimelineSchedule({
                                 {todayVisible && (
                                     <div
                                         aria-hidden="true"
-                                        className="pointer-events-none absolute bottom-0 top-0 z-[5] w-px bg-info/70"
+                                        className="pointer-events-none absolute bottom-0 top-0 z-[5] w-px bg-info-solid/70"
                                         style={{
                                             left: `calc(var(--rare-schedule-label-width) + ${todayLeft}px)`,
                                         }}
@@ -679,7 +679,7 @@ export default function TimelineSchedule({
                         )}
 
                         <span className="inline-flex items-center gap-2 text-xs text-muted">
-                            <span className="h-2.5 w-2.5 rounded-full bg-danger" />
+                            <span className="h-2.5 w-2.5 rounded-full bg-danger-solid" />
                             Overdue
                         </span>
                     </div>

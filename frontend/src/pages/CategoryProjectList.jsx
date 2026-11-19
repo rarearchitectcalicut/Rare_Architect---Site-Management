@@ -194,14 +194,14 @@ export default function CategoryProjectList() {
       {/* ERROR */}
       {error ? (
         <div className="rounded-3xl border border-border bg-surface px-6 py-14 text-center">
-          <p role="alert" className="text-sm text-[#A44837]">
+          <p role="alert" className="text-sm text-danger">
             {error}
           </p>
 
           <button
             type="button"
             onClick={() => setRetryKey((previous) => previous + 1)}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-action px-5 py-3 text-sm font-semibold text-white"
           >
             <RefreshCw size={17} />
             Try Again
@@ -293,7 +293,7 @@ export default function CategoryProjectList() {
                 onClick={() => setShowAddProject(true)}
                 className="
                         inline-flex items-center justify-center gap-2
-                        rounded-xl bg-ink
+                        rounded-xl bg-action
                         px-4 py-3
                         text-xs font-semibold text-white
                         transition-all duration-200

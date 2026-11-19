@@ -21,28 +21,28 @@ const quickActions = [
         label: "Add Project",
         action: "add-project",
         icon: FolderPlus,
-        tile: "bg-pastel-sky text-info group-hover:bg-info",
+        tile: "bg-pastel-sky text-info group-hover:bg-info-solid",
         ring: "focus-visible:ring-info/40",
     },
     {
         label: "Add Supervisor",
         action: "add-supervisor",
         icon: UserRoundPlus,
-        tile: "bg-pastel-mint text-success group-hover:bg-success",
+        tile: "bg-pastel-mint text-success group-hover:bg-success-solid",
         ring: "focus-visible:ring-success/40",
     },
     {
         label: "Approvals",
         path: "/admin/approvals",
         icon: ClipboardCheck,
-        tile: "bg-pastel-blush text-warning group-hover:bg-warning",
+        tile: "bg-pastel-blush text-warning group-hover:bg-warning-solid",
         ring: "focus-visible:ring-warning/40",
     },
     {
         label: "Delay Reports",
         path: "/admin/delays",
         icon: Clock3,
-        tile: "bg-pastel-blush text-danger group-hover:bg-danger",
+        tile: "bg-pastel-blush text-danger group-hover:bg-danger-solid",
         ring: "focus-visible:ring-danger/40",
     },
 ];
@@ -91,7 +91,7 @@ export default function AdminQuickActions() {
                     Quick Actions
                 </h2>
 
-                <Link to="/admin/approvals" className="admin-primary-approval hidden items-center gap-3 rounded-xl border border-[#CDE5D9] bg-[#EFF9F3] p-4 lg:flex"><span className="rounded-full bg-white p-2 text-[#16845B]"><ClipboardCheck size={18} /></span><span className="min-w-0 flex-1"><span className="block text-sm font-bold">Open approvals</span><span className="mt-1 block text-xs text-muted">Recent items waiting for an Admin decision.</span></span><span aria-hidden="true">&rarr;</span></Link>
+                <Link to="/admin/approvals" className="admin-primary-approval hidden items-center gap-3 rounded-xl border border-border-strong bg-pastel-mint p-4 lg:flex"><span className="rounded-full bg-surface p-2 text-success"><ClipboardCheck size={18} /></span><span className="min-w-0 flex-1"><span className="block text-sm font-bold">Open approvals</span><span className="mt-1 block text-xs text-muted">Recent items waiting for an Admin decision.</span></span><span aria-hidden="true">&rarr;</span></Link>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
                     {quickActions.map((action) => {
                         const Icon = action.icon;

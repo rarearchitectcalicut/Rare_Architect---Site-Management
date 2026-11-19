@@ -141,7 +141,7 @@ export default function SupervisorProjectOverview() {
                             <button
                                 type="button"
                                 onClick={() => setRefreshKey((n) => n + 1)}
-                                className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white"
+                                className="inline-flex items-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-semibold text-white"
                             >
                                 <RefreshCw size={17} />
                                 Retry

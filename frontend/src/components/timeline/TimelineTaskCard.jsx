@@ -146,7 +146,7 @@ export default function TimelineTaskCard({
                 aria-expanded={expanded}
                 aria-controls={`timeline-details-${task.id}`}
                 onClick={() => setExpanded((value) => !value)}
-                className="flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-[#FCF9F4] sm:gap-4 sm:p-5"
+                className="flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-pastel-butter sm:gap-4 sm:p-5"
             >
                 {/* FUTURE DRAG HANDLE PLACEHOLDER */}
                 <span
@@ -310,7 +310,7 @@ export default function TimelineTaskCard({
 
                         <Link
                             to={taskLink}
-                            className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-xs font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover"
+                            className="inline-flex items-center gap-2 rounded-xl bg-action px-4 py-3 text-xs font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover"
                         >
                             Open Task
                             <ExternalLink size={15} />

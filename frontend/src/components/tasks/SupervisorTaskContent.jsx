@@ -122,7 +122,7 @@ export default function SupervisorTaskContent({
     if (error) {
         return (
             <div className="border-t border-border p-5">
-                <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+                <div className="rounded-xl bg-pastel-blush p-4 text-sm text-danger">
                     <p role="alert">{error}</p>
 
                     <button
@@ -250,7 +250,7 @@ export default function SupervisorTaskContent({
             {tab === "decisions" && <div className="supervisor-task-decisions">            <section aria-label="Admin decision history" className="mt-5 space-y-3 rounded-[18px] border border-border bg-surface-soft p-4 sm:p-5">
                 <h4 className="text-sm font-bold text-ink">Admin decisions and comments</h4>
                 {!decisionState && <p role="status" className="text-xs text-muted">Loading decision history...</p>}
-                {decisionState?.error && <p role="alert" className="text-xs text-red-700">{decisionState.error} <button type="button" className="underline" onClick={() => setDecisionRevision((value) => value + 1)}>Retry</button></p>}
+                {decisionState?.error && <p role="alert" className="text-xs text-danger">{decisionState.error} <button type="button" className="underline" onClick={() => setDecisionRevision((value) => value + 1)}>Retry</button></p>}
                 {decisionState?.data?.results.map((decision) => <article key={decision.id} className="rounded-xl border border-border bg-surface p-4">
                     <p className={`text-sm font-semibold ${decision.action.endsWith("REJECTED") ? "text-danger" : "text-success"}`}>{readable(decision.action)}</p>
                     <p className="mt-1 text-xs text-muted">{decision.actor_name || "Reviewer unavailable"} / {formatDateTime(decision.created_at)}</p>
@@ -274,7 +274,7 @@ export default function SupervisorTaskContent({
                 </div>
                 <p className="text-xs text-muted">Current approved deadline: {formatDate(task.end_date)}. Reporting a delay does not change this deadline; an extension needs separate approval.</p>
                 {!delayState && <p role="status" className="text-xs text-muted">Loading task delay reports...</p>}
-                {delayState?.error && <p role="alert" className="text-xs text-red-700">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
+                {delayState?.error && <p role="alert" className="text-xs text-danger">{delayState.error} <button type="button" className="underline" onClick={() => setDelayRevision((value) => value + 1)}>Retry</button></p>}
                 {delayState?.data?.count === 0 && <p className="text-xs text-muted">No delays have been reported for this task.</p>}
                 {delayState?.data?.results.map((report) => <article key={report.id} className="rounded-xl border border-border bg-surface p-4"><DelayReportReview record={report} role="SUPERVISOR" /></article>)}
                 {delayState?.data && (delayState.data.next || delayState.data.previous) && <nav aria-label="Task delay report pages" className="rare-pagination">

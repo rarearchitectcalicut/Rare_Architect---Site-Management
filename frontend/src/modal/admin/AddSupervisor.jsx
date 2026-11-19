@@ -109,8 +109,8 @@ const inputClass = `
   disabled:cursor-not-allowed
   disabled:opacity-50
   disabled:hover:border-border
-  aria-invalid:border-red-600
-  aria-invalid:ring-4 aria-invalid:ring-red-600/10
+  aria-invalid:border-danger
+  aria-invalid:ring-4 aria-invalid:ring-danger/10
 `;
 
 function getError(value) {
@@ -136,7 +136,7 @@ function FormField({
                 htmlFor={id}
                 className="block text-[13px] font-semibold text-muted"
             >
-                {label} <span className="text-red-600">*</span>
+                {label} <span className="text-danger">*</span>
             </label>
 
             <div className="group relative">
@@ -162,7 +162,7 @@ function FormField({
                 <p
                     id={`${id}-error`}
                     role="alert"
-                    className="flex items-start gap-1.5 text-xs text-red-700"
+                    className="flex items-start gap-1.5 text-xs text-danger"
                 >
                     <AlertCircle
                         size={14}
@@ -405,7 +405,7 @@ export default function AddSupervisor({
                     onMouseDown={() => {
                         if (!submittingRef.current) onClose();
                     }}
-                    className="rare-backdrop absolute inset-0 bg-ink/50 backdrop-blur-sm"
+                    className="rare-backdrop absolute inset-0 bg-overlay/50 backdrop-blur-sm"
                 />
 
                 {/* MODAL */}
@@ -558,7 +558,7 @@ export default function AddSupervisor({
                                 type="button"
                                 onClick={onClose}
                                 className="
-                                    mt-6 w-full rounded-xl bg-ink px-5 py-3.5
+                                    mt-6 w-full rounded-xl bg-action px-5 py-3.5
                                     text-sm font-semibold text-white
                                     transition-all duration-200 ease-out
                                     hover:-translate-y-0.5 hover:bg-primary-hover
@@ -701,7 +701,7 @@ export default function AddSupervisor({
                                 {errors.general && (
                                     <div
                                         role="alert"
-                                        className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                                        className="flex items-start gap-3 rounded-xl border border-danger/30 bg-pastel-blush px-4 py-3 text-sm text-danger"
                                     >
                                         <AlertCircle
                                             size={18}
@@ -725,7 +725,7 @@ export default function AddSupervisor({
                                 "
                             >
                                 <p className="hidden text-xs text-muted sm:mr-auto sm:block">
-                                    <span className="text-red-600">*</span> Required fields
+                                    <span className="text-danger">*</span> Required fields
                                 </p>
 
                                 <button
@@ -751,7 +751,7 @@ export default function AddSupervisor({
                                     disabled={submitting}
                                     className="
                                         group inline-flex items-center justify-center gap-2
-                                        rounded-xl bg-ink px-6 py-3
+                                        rounded-xl bg-action px-6 py-3
                                         text-sm font-semibold text-white
                                         transition-all duration-200 ease-out
                                         hover:-translate-y-0.5 hover:bg-primary-hover

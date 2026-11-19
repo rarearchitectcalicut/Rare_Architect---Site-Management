@@ -148,17 +148,17 @@ function ActionLink({ to, children }) {
 // Icon tile tones. Literal class strings so Tailwind can detect them.
 const iconTones = {
   neutral:
-    "bg-app text-ink group-hover:bg-ink group-hover:text-white",
+    "bg-app text-ink group-hover:bg-action group-hover:text-white",
   blue:
-    "bg-pastel-sky text-info group-hover:bg-info group-hover:text-white",
+    "bg-pastel-sky text-info group-hover:bg-info-solid group-hover:text-white",
   green:
-    "bg-pastel-mint text-success group-hover:bg-success group-hover:text-white",
+    "bg-pastel-mint text-success group-hover:bg-success-solid group-hover:text-white",
   orange:
-    "bg-pastel-blush text-warning group-hover:bg-warning group-hover:text-white",
+    "bg-pastel-blush text-warning group-hover:bg-warning-solid group-hover:text-white",
   red:
-    "bg-pastel-blush text-danger group-hover:bg-danger group-hover:text-white",
+    "bg-pastel-blush text-danger group-hover:bg-danger-solid group-hover:text-white",
   violet:
-    "bg-pastel-lavender text-violet group-hover:bg-violet group-hover:text-white",
+    "bg-pastel-lavender text-violet group-hover:bg-violet-solid group-hover:text-white",
   slate:
     "bg-pastel-lavender text-muted group-hover:bg-muted group-hover:text-white",
 };
@@ -237,10 +237,10 @@ function StatusPill({ status }) {
     VERIFIED: "bg-pastel-mint text-success",
     COMPLETED: "bg-pastel-mint text-success",
     REJECTED: "bg-pastel-blush text-danger",
-    PENDING: "bg-[#fff1cc] text-[#8d640f]",
+    PENDING: "bg-pastel-butter text-warning",
     DELAYED: "bg-pastel-blush text-danger",
     DRAFT: "bg-pastel-lavender text-muted",
-    SUBMITTED: "bg-[#e6ebfa] text-[#415eaa]",
+    SUBMITTED: "bg-pastel-sky text-info",
   };
 
   return (
@@ -412,7 +412,7 @@ function PendingChangeTaskLink({ taskId, children }) {
   return <div className="min-w-0">
     <button type="button" onClick={openTask} disabled={loading} aria-busy={loading} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-xl border border-border px-3 py-2.5 text-left transition-colors hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info">{children}</button>
     {loading && <p role="status" className="mt-2 text-xs text-muted">Opening task...</p>}
-    {error && <div role="alert" className="mt-2 rounded-xl bg-red-50 p-3 text-xs text-red-700">{error} <button type="button" onClick={openTask} className="min-h-11 px-2 font-semibold underline">Try Again</button></div>}
+    {error && <div role="alert" className="mt-2 rounded-xl bg-pastel-blush p-3 text-xs text-danger">{error} <button type="button" onClick={openTask} className="min-h-11 px-2 font-semibold underline">Try Again</button></div>}
   </div>;
 }
 
@@ -893,15 +893,15 @@ function SupervisorQuickActions() {
   const reportAction = {
     label: "Submit today's report",
     icon: FileText,
-    tile: "bg-pastel-mint text-success group-hover:bg-success",
+    tile: "bg-pastel-mint text-success group-hover:bg-success-solid",
   };
   const secondaryActions = [
-    { label: "Create daily report", action: "report", icon: FileText, tile: "bg-pastel-mint text-success group-hover:bg-success" },
-    { label: "My Projects", path: "/supervisor/projects", icon: FolderKanban, tile: "bg-pastel-sky text-info group-hover:bg-info" },
-    { label: "My Tasks", path: "/supervisor/tasks", icon: ListTodo, tile: "bg-[#EDE9FE] text-violet group-hover:bg-violet" },
-    { label: "Create Task", action: "task", icon: Plus, tile: "bg-pastel-sky text-info group-hover:bg-info" },
+    { label: "Create daily report", action: "report", icon: FileText, tile: "bg-pastel-mint text-success group-hover:bg-success-solid" },
+    { label: "My Projects", path: "/supervisor/projects", icon: FolderKanban, tile: "bg-pastel-sky text-info group-hover:bg-info-solid" },
+    { label: "My Tasks", path: "/supervisor/tasks", icon: ListTodo, tile: "bg-pastel-sky text-violet group-hover:bg-violet-solid" },
+    { label: "Create Task", action: "task", icon: Plus, tile: "bg-pastel-sky text-info group-hover:bg-info-solid" },
   ];
-  const primaryClass = "group flex min-h-24 w-full items-center gap-4 rounded-2xl border border-pastel-mint bg-[#F8FCF9] px-5 py-5 text-left transition-colors hover:bg-pastel-mint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success";
+  const primaryClass = "group flex min-h-24 w-full items-center gap-4 rounded-2xl border border-pastel-mint bg-surface-soft px-5 py-5 text-left transition-colors hover:bg-pastel-mint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success";
   const secondaryClass = "group flex min-h-14 min-w-0 flex-col items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-2 py-3 text-center text-xs font-medium text-muted transition-colors hover:bg-surface-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:flex-row sm:px-3 sm:text-sm";
   const PrimaryIcon = reportAction.icon;
   return <>
@@ -1120,7 +1120,7 @@ export default function Dashboard() {
           onClick={fetchDashboard}
           className="
             group mx-auto mt-6 inline-flex items-center gap-2
-            rounded-xl bg-ink px-5 py-3
+            rounded-xl bg-action px-5 py-3
             text-sm font-semibold text-white
             shadow-[0_6px_18px_rgba(33,30,26,0.18)]
             transition-all duration-200 ease-out

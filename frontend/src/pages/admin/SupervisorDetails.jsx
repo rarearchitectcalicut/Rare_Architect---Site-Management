@@ -222,10 +222,10 @@ async function loadAssignedProjects(supervisorId) {
 function IconTile({ icon: Icon, tone = "sand" }) {
     const tones = {
         sand: "bg-app text-muted group-hover:bg-border",
-        blue: "bg-pastel-sky text-info group-hover:bg-[#D9E7FA]",
-        green: "bg-[#E8F3E9] text-success group-hover:bg-[#D8EBDC]",
-        violet: "bg-pastel-lavender text-violet group-hover:bg-[#E7DCF5]",
-        rose: "bg-[#FAEBE8] text-danger group-hover:bg-[#F5DED9]",
+        blue: "bg-pastel-sky text-info group-hover:bg-pastel-sky",
+        green: "bg-pastel-mint text-success group-hover:bg-pastel-mint",
+        violet: "bg-pastel-lavender text-violet group-hover:bg-pastel-lavender",
+        rose: "bg-pastel-blush text-danger group-hover:bg-pastel-blush",
     };
 
     return (
@@ -293,7 +293,7 @@ function ConfirmModal({
                         onClick={onConfirm}
                         className={
                             danger
-                                ? "rounded-xl bg-danger px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#97382F]"
+                                ? "rounded-xl bg-danger-solid px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#97382F]"
                                 : darkButton
                         }
                     >
@@ -461,7 +461,7 @@ function ChangePasswordModal({
             )}
 
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 p-3 backdrop-blur-sm sm:p-6"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/55 p-3 backdrop-blur-sm sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -528,7 +528,7 @@ function ChangePasswordModal({
                                     className="text-sm font-semibold text-muted"
                                 >
                                     New Password
-                                    <span className="ml-1 text-red-600">*</span>
+                                    <span className="ml-1 text-danger">*</span>
                                 </label>
 
                                 <div className="relative mt-2">
@@ -563,7 +563,7 @@ function ChangePasswordModal({
                                 </div>
 
                                 {errors.new_password && (
-                                    <p role="alert" className="mt-2 text-xs text-red-700">
+                                    <p role="alert" className="mt-2 text-xs text-danger">
                                         {errors.new_password}
                                     </p>
                                 )}
@@ -575,7 +575,7 @@ function ChangePasswordModal({
                                     className="text-sm font-semibold text-muted"
                                 >
                                     Confirm New Password
-                                    <span className="ml-1 text-red-600">*</span>
+                                    <span className="ml-1 text-danger">*</span>
                                 </label>
 
                                 <div className="relative mt-2">
@@ -614,7 +614,7 @@ function ChangePasswordModal({
                                 </div>
 
                                 {errors.confirm_password && (
-                                    <p role="alert" className="mt-2 text-xs text-red-700">
+                                    <p role="alert" className="mt-2 text-xs text-danger">
                                         {errors.confirm_password}
                                     </p>
                                 )}
@@ -623,7 +623,7 @@ function ChangePasswordModal({
                             {errors.general && (
                                 <p
                                     role="alert"
-                                    className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                                    className="rounded-xl border border-danger/30 bg-pastel-blush p-3 text-sm text-danger"
                                 >
                                     {errors.general}
                                 </p>
@@ -715,7 +715,7 @@ function AssignedProjectCard({ project }) {
                         {statusLabel(project.status)}
                     </span>
 
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-app text-ink transition-colors group-hover:bg-ink group-hover:text-white">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-app text-ink transition-colors group-hover:bg-action group-hover:text-white">
                         <ArrowUpRight size={18} />
                     </span>
                 </div>
@@ -984,7 +984,7 @@ export default function SupervisorDetails() {
             {error && (
                 <div
                     role="alert"
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/30 bg-pastel-blush p-4 text-sm text-danger"
                 >
                     <span>{error}</span>
 
@@ -1003,7 +1003,7 @@ export default function SupervisorDetails() {
             {notice && (
                 <div
                     role="status"
-                    className="flex items-center gap-2 rounded-xl border border-[#D4E7D8] bg-[#EBF5ED] p-4 text-sm font-medium text-[#286F43]"
+                    className="flex items-center gap-2 rounded-xl border border-border-strong bg-pastel-mint p-4 text-sm font-medium text-success"
                 >
                     <CheckCircle2 size={19} />
                     {notice}
@@ -1017,7 +1017,7 @@ export default function SupervisorDetails() {
               ====================================== */}
 
                     <section className="supervisor-detail-profile overflow-hidden rounded-[26px] border border-border bg-surface">
-                        <div className="h-2 bg-linear-to-r from-border-strong via-border to-[#E3E8EE]" />
+                        <div className="h-2 bg-linear-to-r from-border-strong via-border to-pastel-sky" />
 
                         <div className="p-5 sm:p-7">
                             <Link
@@ -1148,7 +1148,7 @@ export default function SupervisorDetails() {
                                                     <p
                                                         id={`supervisor-${field.key}-error`}
                                                         role="alert"
-                                                        className="mt-2 text-xs text-red-700"
+                                                        className="mt-2 text-xs text-danger"
                                                     >
                                                         {fieldErrors[field.key]}
                                                     </p>
@@ -1236,7 +1236,7 @@ export default function SupervisorDetails() {
 
                         <div className="mt-6 grid gap-4 lg:grid-cols-2">
                             {/* PASSWORD */}
-                            <article className="group flex flex-col justify-between gap-5 rounded-[20px] border border-border bg-surface p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#D8C8E7] hover:shadow-[0_12px_26px_rgba(33,30,26,0.06)]">
+                            <article className="group flex flex-col justify-between gap-5 rounded-[20px] border border-border bg-surface p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-border-strong hover:shadow-[0_12px_26px_rgba(33,30,26,0.06)]">
                                 <div className="flex items-start gap-3">
                                     <IconTile icon={KeyRound} tone="violet" />
 
@@ -1298,7 +1298,7 @@ export default function SupervisorDetails() {
                                     }
                                     className={
                                         supervisor.is_active
-                                            ? "inline-flex items-center justify-center gap-2 rounded-xl border border-[#EDC9C4] bg-[#FFF8F7] px-4 py-3 text-sm font-semibold text-danger transition-colors hover:bg-[#FBE9E6]"
+                                            ? "inline-flex items-center justify-center gap-2 rounded-xl border border-border-strong bg-pastel-blush px-4 py-3 text-sm font-semibold text-danger transition-colors hover:bg-pastel-blush"
                                             : darkButton
                                     }
                                 >
@@ -1338,15 +1338,15 @@ export default function SupervisorDetails() {
                         </div>
 
                         {projectsError && (
-                            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4">
-                                <p role="alert" className="text-sm text-red-700">
+                            <div className="mt-5 rounded-xl border border-danger/30 bg-pastel-blush p-4">
+                                <p role="alert" className="text-sm text-danger">
                                     {projectsError}
                                 </p>
 
                                 <button
                                     type="button"
                                     onClick={refresh}
-                                    className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-red-700 underline"
+                                    className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-danger underline"
                                 >
                                     <RefreshCw size={16} />
                                     Retry

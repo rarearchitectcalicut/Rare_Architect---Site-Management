@@ -81,7 +81,7 @@ function TimelineSnapshot({ value, tasks }) {
         const id = entry.task_id ?? entry.task?.id ?? entry.task ?? entry.id;
         const task = tasks.find((item) => String(item.id) === String(id));
         const title = entry.task_title || entry.title || entry.task?.title || task?.title || "Task no longer available";
-        return <li key={String(id) + ':' + index} className="flex items-start gap-2 rounded-lg bg-white/60 p-2 text-xs text-muted"><span className="shrink-0 font-bold">{index + 1}.</span><span className="min-w-0 break-words">{title}</span></li>;
+        return <li key={String(id) + ':' + index} className="flex items-start gap-2 rounded-lg bg-surface/60 p-2 text-xs text-muted"><span className="shrink-0 font-bold">{index + 1}.</span><span className="min-w-0 break-words">{title}</span></li>;
     })}{!ordered.length && <li className="text-xs text-muted">No tasks recorded.</li>}</ol>;
 }
 
@@ -451,7 +451,7 @@ export default function TimelineRequestHistory({
             {error && (
                 <div
                     role="alert"
-                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                    className="rounded-xl border border-danger/30 bg-pastel-blush p-4 text-sm text-danger"
                 >
                     {error}
                 </div>

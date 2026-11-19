@@ -117,7 +117,7 @@ function FormField({ label, error, children }) {
             {children}
 
             {error && (
-                <p role="alert" className="mt-2 text-xs text-red-700">
+                <p role="alert" className="mt-2 text-xs text-danger">
                     {error}
                 </p>
             )}
@@ -300,7 +300,7 @@ export default function BulkAddTasks({
                     event.stopPropagation();
                     if (!savingRef.current) onClose();
                 }}
-                className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-ink/55 p-0 text-ink backdrop-blur-sm backdrop:bg-transparent sm:p-6"
+                className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-overlay/55 p-0 text-ink backdrop-blur-sm backdrop:bg-transparent sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -634,7 +634,7 @@ export default function BulkAddTasks({
                             {error && (
                                 <div
                                     role="alert"
-                                    className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                                    className="flex items-start gap-2 rounded-xl border border-danger/30 bg-pastel-blush p-4 text-sm text-danger"
                                 >
                                     <AlertCircle size={18} className="shrink-0" />
                                     <span>{error}</span>
@@ -661,7 +661,7 @@ export default function BulkAddTasks({
                                 <button
                                     type="submit"
                                     disabled={saving || rows.some((row) => Object.keys(taskScheduleErrors(row, project)).length > 0)}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-action px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
                                 >
                                     <Send size={17} />
                                     Submit All ({rows.length})

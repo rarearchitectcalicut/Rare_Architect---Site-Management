@@ -41,7 +41,7 @@ export default function SupervisorProjectSelector({ action, onClose }) {
       <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{title}</h2><p className="mt-2 text-sm text-muted">Choose an assigned Active or Maintenance project.</p></div><button type="button" onClick={onClose} aria-label="Close project selector" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-app focus-visible:outline-2 focus-visible:outline-ink"><X size={20} /></button></div>
       <ProjectSearch query={query} onSearch={(value) => { setQuery(value); setPage(1); }} label="Search assigned projects" />
       {!current && <p role="status" className="text-sm text-muted">Loading assigned projects...</p>}
-      {current?.error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{current.error} <button type="button" onClick={() => setRevision((value) => value + 1)} className="min-h-11 px-3 font-semibold underline">Retry</button></div>}
+      {current?.error && <div role="alert" className="rounded-xl bg-pastel-blush p-4 text-sm text-danger">{current.error} <button type="button" onClick={() => setRevision((value) => value + 1)} className="min-h-11 px-3 font-semibold underline">Retry</button></div>}
       {current?.data && <>
         <fieldset className="max-h-[35dvh] space-y-2 overflow-y-auto"><legend className="mb-2 text-sm font-semibold">Project</legend>
           {current.data.results.map((project) => <label key={project.id} className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border p-3 ${selected?.id === project.id ? "border-ink bg-app" : "border-border bg-surface"}`}>

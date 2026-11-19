@@ -169,7 +169,7 @@ function DelayReportFilters({ filters, onChange, onClear, projects, suggestions 
             >
                 <Filter size={18} aria-hidden="true" />
                 <span className="hidden min-[481px]:inline">Filters</span>
-                {activeFilterCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-xs font-semibold text-surface">{activeFilterCount}</span>}
+                {activeFilterCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-action px-1 text-xs font-semibold text-white">{activeFilterCount}</span>}
             </button>
             <label className="hidden w-36 shrink-0 text-xs font-semibold text-muted min-[481px]:block">
                 <span className="sr-only">Sort delay reports</span>
@@ -182,7 +182,7 @@ function DelayReportFilters({ filters, onChange, onClear, projects, suggestions 
             <p role="status" aria-live="polite" aria-atomic="true" className="min-w-0 truncate text-sm font-medium text-muted">{loading ? "Updating delay reports..." : `${Number(count).toLocaleString("en-IN")} delay ${count === 1 ? "report" : "reports"}`}</p>
             {hasActiveFilters && <button type="button" onClick={clearAll} className="min-h-11 shrink-0 rounded-lg px-3 text-xs font-semibold text-info focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">Clear filters</button>}
         </div>
-        <div hidden={!filtersOpen} className="fixed inset-0 z-[100] bg-ink/45 min-[481px]:bg-transparent" onClick={(event) => { if (event.target === event.currentTarget) closeFilters(); }}>
+        <div hidden={!filtersOpen} className="fixed inset-0 z-[100] bg-overlay/45 min-[481px]:bg-transparent" onClick={(event) => { if (event.target === event.currentTarget) closeFilters(); }}>
         <div
             id="delay-report-filters-dialog"
             role="dialog"

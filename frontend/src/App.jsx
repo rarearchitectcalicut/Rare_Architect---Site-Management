@@ -216,7 +216,7 @@ export default function App() {
           {updateReady && <p role="status">A new version of RARE is ready. Save your work before updating.</p>}
           {updateMessage && <p role="status">{updateMessage}</p>}
           <div className="mt-2 flex flex-wrap gap-3">
-            {updateReady && <button type="button" onClick={applyUpdate} className="rounded-xl bg-ink px-4 py-2 font-semibold text-white">Update RARE</button>}
+            {updateReady && <button type="button" onClick={applyUpdate} className="rounded-xl bg-action px-4 py-2 font-semibold text-white">Update RARE</button>}
             {(connectionError || updateMessage) && <button type="button" onClick={() => { setConnectionError(!navigator.onLine); setUpdateMessage(""); }} className="rounded-xl border border-border px-4 py-2 font-semibold">Dismiss</button>}
           </div>
         </aside>
