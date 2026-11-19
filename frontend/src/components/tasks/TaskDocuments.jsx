@@ -283,7 +283,7 @@ function DocumentUploadForm({
             {error && (
                 <p
                     role="alert"
-                    className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700"
+                    className="rounded-xl border border-danger/30 bg-pastel-blush p-3 text-xs text-danger"
                 >
                     {error}
                 </p>
@@ -292,7 +292,7 @@ function DocumentUploadForm({
             <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-action px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
             >
                 <UploadCloud size={17} />
                 {saving ? "Uploading..." : versionMode
@@ -392,7 +392,7 @@ function DocumentRow({
                     onClick={download}
                     disabled={downloading}
                     title="Download current version"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-pastel-sky text-info hover:bg-[#D8E7FA] disabled:opacity-50"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-pastel-sky text-info hover:bg-pastel-sky disabled:opacity-50"
                 >
                     <Download size={18} />
                 </button>
@@ -430,7 +430,7 @@ function DocumentRow({
             </div>
 
             {error && (
-                <p role="alert" className="px-4 pb-3 text-xs text-red-700">
+                <p role="alert" className="px-4 pb-3 text-xs text-danger">
                     {error}
                 </p>
             )}
@@ -478,7 +478,7 @@ function DocumentRow({
                     )}
 
                     {versionsError && (
-                        <p role="alert" className="text-xs text-red-700">
+                        <p role="alert" className="text-xs text-danger">
                             {versionsError}
                         </p>
                     )}
@@ -575,7 +575,7 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
                         type="button"
                         onClick={() => setShowUpload((value) => !value)}
                         disabled={readOnly}
-                        className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-xs font-semibold text-white"
+                        className="inline-flex items-center gap-2 rounded-xl bg-action px-4 py-3 text-xs font-semibold text-white"
                     >
                         <FilePlus2 size={17} />
                         Upload Document
@@ -604,7 +604,7 @@ export default function TaskDocuments({ taskId, readOnly = false }) {
             {error && (
                 <p
                     role="alert"
-                    className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                    className="mt-4 rounded-xl border border-danger/30 bg-pastel-blush p-3 text-sm text-danger"
                 >
                     {error}
                 </p>

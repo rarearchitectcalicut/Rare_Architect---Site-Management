@@ -177,7 +177,7 @@ function AddSupervisorDialog({
 
   return (
     <div
-      className="rare-fade fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-3 backdrop-blur-sm sm:p-4"
+      className="rare-fade fixed inset-0 z-50 flex items-center justify-center bg-overlay/45 p-3 backdrop-blur-sm sm:p-4"
       role="presentation"
     >
       <section
@@ -237,7 +237,7 @@ function AddSupervisorDialog({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search supervisor..."
               className="
-                                h-12 w-full rounded-xl border border-border bg-white
+                                h-12 w-full rounded-xl border border-border bg-surface
                                 pl-10 pr-4 text-sm outline-none
                                 transition-all duration-200
                                 hover:border-border-strong
@@ -248,7 +248,7 @@ function AddSupervisorDialog({
           </div>
 
           {error && (
-            <p role="alert" className="mb-4 text-sm text-red-700">
+            <p role="alert" className="mb-4 text-sm text-danger">
               {error}
             </p>
           )}
@@ -273,7 +273,7 @@ function AddSupervisorDialog({
                                         ${
                                           checked
                                             ? "border-ink bg-app"
-                                            : "border-border bg-white hover:border-border-strong hover:bg-surface-soft/60"
+                                            : "border-border bg-surface hover:border-border-strong hover:bg-surface-soft/60"
                                         }
                                     `}
                 >
@@ -296,7 +296,7 @@ function AddSupervisorDialog({
                                             transition-all duration-200
                                             ${
                                               checked
-                                                ? "scale-110 border-ink bg-ink text-white"
+                                                ? "scale-110 border-ink bg-action text-white"
                                                 : "border-border-strong group-hover:border-ink"
                                             }
                                         `}
@@ -338,7 +338,7 @@ function AddSupervisorDialog({
             onClick={handleAssign}
             disabled={!selected.length}
             className="
-                            flex-1 rounded-xl bg-ink px-5 py-3
+                            flex-1 rounded-xl bg-action px-5 py-3
                             text-sm font-semibold text-white
                             transition-all duration-200 ease-out
                             hover:-translate-y-0.5 hover:bg-primary-hover
@@ -562,7 +562,7 @@ export default function ProjectOverview() {
     <div className="rare-project-detail">
 
       {loadingMessage && <LoadingScreen message={loadingMessage} />}
-      {notice && <p role="status" className="rounded-xl border border-[#B8D5C1] bg-pastel-mint p-4 text-sm text-success">{notice}</p>}
+      {notice && <p role="status" className="rounded-xl border border-border-strong bg-pastel-mint p-4 text-sm text-success">{notice}</p>}
       {project?.status === "CANCELLED" && <section className="space-y-2 rounded-2xl border border-border bg-surface p-5 text-sm text-muted">
         <p className="font-semibold text-ink">This project has been cancelled. Existing records remain available for reference.</p>
         <form onSubmit={changeCancelledStatus} className="flex flex-wrap items-end gap-3 pt-2">
@@ -571,9 +571,9 @@ export default function ProjectOverview() {
               <option value="ACTIVE">Active</option><option value="MAINTENANCE">Maintenance</option><option value="ON_HOLD">On hold</option><option value="COMPLETED">Completed</option>
             </select>
           </label>
-          <button type="submit" disabled={changingStatus} className="min-h-12 rounded-xl bg-ink px-5 py-3 font-semibold text-surface disabled:opacity-50">{changingStatus ? "Updating status..." : "Update status"}</button>
+          <button type="submit" disabled={changingStatus} className="min-h-12 rounded-xl bg-action px-5 py-3 font-semibold text-white disabled:opacity-50">{changingStatus ? "Updating status..." : "Update status"}</button>
         </form>
-        {statusError && <p role="alert" className="text-sm text-red-700">{statusError}</p>}
+        {statusError && <p role="alert" className="text-sm text-danger">{statusError}</p>}
         <p>Pending approvals remain available for separate Admin review; cancellation does not decide them.</p>
         {project.cancellation && <><p>Cancelled by {project.cancellation.cancelled_by} on {new Date(project.cancellation.cancelled_at).toLocaleString("en-IN")}</p><p className="whitespace-pre-wrap break-words">Reason: {project.cancellation.reason || "No reason recorded in the existing history."}</p></>}
       </section>}
@@ -581,7 +581,7 @@ export default function ProjectOverview() {
       {error && (
         <div
           role="alert"
-          className="rare-rise rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          className="rare-rise rounded-2xl border border-danger/30 bg-pastel-blush p-4 text-sm text-danger"
         >
           {error}
           <button
@@ -592,7 +592,7 @@ export default function ProjectOverview() {
                             transition-opacity duration-200
                             hover:opacity-70
                             focus-visible:outline-none focus-visible:ring-2
-                            focus-visible:ring-red-700/40
+                            focus-visible:ring-danger/40
                         "
           >
             Retry
@@ -654,7 +654,7 @@ export default function ProjectOverview() {
                 disabled={project.status === "CANCELLED"}
                 onClick={() => setShowAssign(true)}
                 className="
-                                    group flex items-center gap-2 rounded-xl bg-ink
+                                    group flex items-center gap-2 rounded-xl bg-action
                                     px-4 py-3 text-sm font-semibold text-white
                                     transition-all duration-200 ease-out
                                     hover:-translate-y-0.5 hover:bg-primary-hover
@@ -782,12 +782,12 @@ export default function ProjectOverview() {
                           aria-label={`Remove ${name}`}
                           className="
                                                         group/del flex items-center justify-center rounded-xl
-                                                        border border-red-200 p-3 text-red-600
+                                                        border border-danger/30 p-3 text-danger
                                                         transition-all duration-200 ease-out
-                                                        hover:border-red-300 hover:bg-red-50
+                                                        hover:border-danger/30 hover:bg-pastel-blush
                                                         active:scale-95
                                                         focus-visible:outline-none focus-visible:ring-2
-                                                        focus-visible:ring-red-600/40
+                                                        focus-visible:ring-danger/40
                                                     "
                         >
                           <Trash2
@@ -832,7 +832,7 @@ export default function ProjectOverview() {
 
       {/* REMOVE CONFIRMATION */}
       {removeTarget && project?.status !== "CANCELLED" && (
-        <div className="rare-fade fixed inset-0 z-50 flex items-center justify-center bg-ink/45 p-3 backdrop-blur-sm sm:p-4">
+        <div className="rare-fade fixed inset-0 z-50 flex items-center justify-center bg-overlay/45 p-3 backdrop-blur-sm sm:p-4">
           <div
             role="alertdialog"
             aria-modal="true"
@@ -888,7 +888,7 @@ export default function ProjectOverview() {
                                     hover:shadow-[0_10px_24px_rgba(185,28,28,0.28)]
                                     active:translate-y-0 active:scale-[0.98]
                                     focus-visible:outline-none focus-visible:ring-2
-                                    focus-visible:ring-red-700/40 focus-visible:ring-offset-2
+                                    focus-visible:ring-danger/40 focus-visible:ring-offset-2
                                     motion-reduce:hover:translate-y-0
                                     sm:flex-none
                                 "
@@ -907,7 +907,7 @@ export default function ProjectOverview() {
       />
       {showCancelProject && <dialog ref={cancelDialog} aria-labelledby={cancelTitleId} aria-describedby={cancelMessageId}
         onCancel={(event) => { event.preventDefault(); if (!cancellationInFlight.current) setShowCancelProject(false); }}
-        className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-border bg-surface p-5 text-ink shadow-2xl backdrop:bg-ink/55 sm:p-7">
+        className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-border bg-surface p-5 text-ink shadow-2xl backdrop:bg-overlay/55 sm:p-7">
         <form onSubmit={cancelProject} className="space-y-5">
           <h2 id={cancelTitleId} className="text-xl font-bold">Cancel Project?</h2>
           <p className="break-words font-semibold">{project?.name}</p>
@@ -918,7 +918,7 @@ export default function ProjectOverview() {
           {cancellationError && <p role="alert" className="text-sm text-danger">{cancellationError}</p>}
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <button type="button" disabled={cancelling} onClick={() => setShowCancelProject(false)} className="min-h-12 rounded-xl border border-border-strong bg-surface px-5 py-3 text-sm font-semibold hover:bg-app focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info disabled:opacity-60">Keep Project</button>
-            <button type="submit" disabled={cancelling || !cancellationReason.trim()} className="min-h-12 rounded-xl bg-danger px-5 py-3 text-sm font-semibold text-white hover:bg-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:cursor-not-allowed disabled:opacity-60">{cancelling ? "Cancelling..." : "Cancel Project"}</button>
+            <button type="submit" disabled={cancelling || !cancellationReason.trim()} className="min-h-12 rounded-xl bg-danger-solid px-5 py-3 text-sm font-semibold text-white hover:bg-danger-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:cursor-not-allowed disabled:opacity-60">{cancelling ? "Cancelling..." : "Cancel Project"}</button>
           </div>
         </form>
       </dialog>}

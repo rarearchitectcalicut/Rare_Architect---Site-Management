@@ -63,7 +63,7 @@ export default function TaskChangeReview({ record }) {
                                             </p>
                                         </div>
 
-                                        <div className="rounded-xl border border-[#D4E2F4] bg-pastel-sky p-4">
+                                        <div className="rounded-xl border border-border-strong bg-pastel-sky p-4">
                                             <p className="text-xs font-bold uppercase tracking-wider text-info">
                                                 Proposed
                                             </p>

@@ -68,6 +68,7 @@ export default defineConfig(({ mode }) => {
 
         includeAssets: [
           'rare-logo.png',
+          'darkmode_logo.png',
           'apple-touch-icon.png',
         ],
 
@@ -126,6 +127,7 @@ export default defineConfig(({ mode }) => {
           // private documents, or report attachments.
           globPatterns: [
             'index.html',
+            'appearance.js',
             'assets/*.{js,css,woff,woff2}',
             'assets/rare-logo-*.png',
           ],

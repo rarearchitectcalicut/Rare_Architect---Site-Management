@@ -169,7 +169,7 @@ function ProjectTaskFilterSheet({
             onClick={(event) => {
                 if (event.target === dialogRef.current) onClose();
             }}
-            className="fixed inset-x-0 bottom-0 top-auto m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 text-ink shadow-[0_-12px_36px_rgba(33,30,26,0.18)] backdrop:bg-ink/45 min-[1024px]:inset-auto min-[1024px]:top-1/2 min-[1024px]:left-1/2 min-[1024px]:-translate-x-1/2 min-[1024px]:-translate-y-1/2 min-[1024px]:w-[min(28rem,calc(100vw-2rem))] min-[1024px]:rounded-2xl min-[1024px]:shadow-2xl"
+            className="fixed inset-x-0 bottom-0 top-auto m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 text-ink shadow-[0_-12px_36px_rgba(33,30,26,0.18)] backdrop:bg-overlay/45 min-[1024px]:inset-auto min-[1024px]:top-1/2 min-[1024px]:left-1/2 min-[1024px]:-translate-x-1/2 min-[1024px]:-translate-y-1/2 min-[1024px]:w-[min(28rem,calc(100vw-2rem))] min-[1024px]:rounded-2xl min-[1024px]:shadow-2xl"
         >
             <div className="mb-4 flex items-center justify-between gap-3 border-b border-border pb-3">
                 <h2 id="task-filters-sheet-title" className="text-base font-semibold text-ink">
@@ -590,7 +590,7 @@ export default function SupervisorProjectTasks() {
                             Boolean(error) ||
                             !["ACTIVE", "MAINTENANCE"].includes(project?.status)
                         }
-                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-ink px-4 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:flex-none sm:text-sm"
+                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-action px-4 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:flex-none sm:text-sm"
                     >
                         <Plus size={17} aria-hidden="true" className="shrink-0" />
                         Create Task
@@ -633,7 +633,7 @@ export default function SupervisorProjectTasks() {
                             onClick={() => updateFilter(setApproval, chip.id)}
                             className={`flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
                                 isSelected
-                                    ? "border-ink bg-ink text-surface"
+                                    ? "border-ink bg-action text-white"
                                     : "border-border bg-surface text-muted hover:bg-surface-soft"
                             }`}
                         >
@@ -677,7 +677,7 @@ export default function SupervisorProjectTasks() {
                     {activeFilterCount > 0 && (
                         <span
                             aria-hidden="true"
-                            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-xs font-semibold text-surface"
+                            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-action px-1 text-xs font-semibold text-white"
                         >
                             {activeFilterCount}
                         </span>
@@ -708,7 +708,7 @@ export default function SupervisorProjectTasks() {
                 </p>
             )}
             {creationError && (
-                <p role="alert" className="rounded-xl bg-red-50 p-4 text-xs text-red-700">
+                <p role="alert" className="rounded-xl bg-pastel-blush p-4 text-xs text-danger">
                     {creationError}
                 </p>
             )}
@@ -771,7 +771,7 @@ export default function SupervisorProjectTasks() {
                             className={`inline-flex h-11 w-11 min-h-11 items-center justify-center rounded-xl p-0 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning ${
                                 layout === value
                                     ? "bg-surface text-ink shadow-sm"
-                                    : "text-muted hover:bg-white/60"
+                                    : "text-muted hover:bg-surface/60"
                             }`}
                         >
                             <Icon size={18} aria-hidden="true" />
@@ -782,8 +782,8 @@ export default function SupervisorProjectTasks() {
 
             {/* ERROR */}
             {!loading && error && (
-                <div className="rounded-2xl border border-red-200 bg-surface p-5">
-                    <p role="alert" className="text-xs text-red-700 sm:text-sm">
+                <div className="rounded-2xl border border-danger/30 bg-surface p-5">
+                    <p role="alert" className="text-xs text-danger sm:text-sm">
                         {error}
                     </p>
 

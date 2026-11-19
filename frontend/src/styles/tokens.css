@@ -1,4 +1,4 @@
-/* RARE's light design contract. These tokens also feed Tailwind v4 utilities. */
+/* Shared semantic colors. These tokens also feed Tailwind v4 utilities. */
 @theme static {
   --color-app: #f8f9fc;
   --color-surface: #ffffff;
@@ -15,12 +15,20 @@
   --color-pastel-butter: #fff5d9;
   --color-primary: #252a31;
   --color-primary-hover: #3b424d;
+  --color-action: #20262d;
+  --color-overlay: #101722;
   --color-focus: #5967d8;
   --color-success: #216a4d;
   --color-warning: #865d12;
   --color-danger: #b4423c;
   --color-info: #305c90;
   --color-violet: #67509a;
+  /* Solid fills retain white-label contrast when text accents become lighter. */
+  --color-success-solid: #216a4d;
+  --color-warning-solid: #865d12;
+  --color-danger-solid: #b4423c;
+  --color-info-solid: #305c90;
+  --color-violet-solid: #67509a;
   --color-brand-yellow: #efc447;
   --color-brand-red: #c74e48;
   --font-sans: "Manrope", "Plus Jakarta Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
@@ -28,8 +36,40 @@
   --radius-card: 1.5rem;
 }
 
+/* A cool charcoal canvas, raised slate surfaces, and restrained tinted accents. */
+:root[data-theme="dark"] {
+  --color-app: #111720;
+  --color-surface: #1a2330;
+  --color-surface-soft: #202c3b;
+  --color-ink: #e6edf7;
+  --color-muted: #adbace;
+  --color-subtle: #9babc1;
+  --color-border: #303e50;
+  --color-border-strong: #4b6079;
+  --color-pastel-sky: #20374e;
+  --color-pastel-lavender: #302e4c;
+  --color-pastel-mint: #1d3b32;
+  --color-pastel-blush: #442d2e;
+  --color-pastel-butter: #403620;
+  --color-primary: #3e4e6c;
+  --color-primary-hover: #4c5e80;
+  --color-action: #3e4e6c;
+  --color-focus: #a9b4ff;
+  --color-success: #8bddb3;
+  --color-warning: #f0cc7e;
+  --color-danger: #ffa69e;
+  --color-info: #a0cbff;
+  --color-violet: #c9b5f3;
+  --shadow-float: 0 8px 30px rgb(0 0 0 / .15);
+  --rare-cover-line: #ffffff0d;
+  --rare-canvas-background: radial-gradient(ellipse at 0 0, #31282d55 0, transparent 42rem),
+    radial-gradient(ellipse at 100% 4rem, #20374e66 0, transparent 60rem),
+    radial-gradient(ellipse at 40% 25rem, #302e4c44 0, transparent 50rem), var(--color-app);
+}
+
 @layer base {
   :root {
+    --rare-cover-line: #ffffff60;
     --rare-canvas-background: radial-gradient(ellipse at 0 0, #fff0ec 0, transparent 42rem),
       radial-gradient(ellipse at 100% 4rem, #e5f4ff 0, transparent 60rem),
       radial-gradient(ellipse at 40% 25rem, #f0edff80 0, transparent 50rem), var(--color-app);
@@ -37,8 +77,8 @@
     color: var(--color-ink);
     background: var(--color-app);
     --rare-muted-readable: var(--color-muted);
-    --rare-success: var(--color-success);
-    --rare-danger: var(--color-danger);
+    --rare-success: var(--color-success-solid);
+    --rare-danger: var(--color-danger-solid);
   }
   body {
     background: var(--rare-canvas-background);

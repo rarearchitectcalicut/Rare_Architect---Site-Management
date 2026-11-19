@@ -17,6 +17,7 @@ import {
 import AccountProfile from "../../components/settings/AccountProfile";
 import ChangePasswordForm from "../../components/settings/ChangePasswordForm";
 import PushPreferences from "../../components/settings/PushPreferences";
+import AppearancePreference from "../../components/settings/AppearancePreference";
 import LoadingScreen from "../../components/LoadingScreen";
 
 import { settingsApi } from "../../api/settingsApi";
@@ -39,7 +40,7 @@ const inputClass = `
 
 const primaryButton = `
   inline-flex items-center justify-center gap-2
-  rounded-xl bg-ink px-5 py-3
+  rounded-xl bg-action px-5 py-3
   text-sm font-semibold text-white
   transition-all duration-200
   hover:-translate-y-0.5
@@ -453,7 +454,7 @@ function CategoryModal({
                 className="
           fixed inset-0 z-50
           flex items-center justify-center
-          bg-ink/55 p-3
+          bg-overlay/55 p-3
           backdrop-blur-sm sm:p-6
         "
                 onMouseDown={(event) => {
@@ -587,7 +588,7 @@ function CategoryModal({
                                 {errors.image && (
                                     <p
                                         role="alert"
-                                        className="mt-2 text-xs text-red-700"
+                                        className="mt-2 text-xs text-danger"
                                     >
                                         {errors.image}
                                     </p>
@@ -601,7 +602,7 @@ function CategoryModal({
                                     className="text-sm font-semibold text-muted"
                                 >
                                     Category Name
-                                    <span className="ml-1 text-red-600">
+                                    <span className="ml-1 text-danger">
                                         *
                                     </span>
                                 </label>
@@ -622,7 +623,7 @@ function CategoryModal({
                                 {errors.name && (
                                     <p
                                         role="alert"
-                                        className="mt-2 text-xs text-red-700"
+                                        className="mt-2 text-xs text-danger"
                                     >
                                         {errors.name}
                                     </p>
@@ -653,7 +654,7 @@ function CategoryModal({
                                 {errors.description && (
                                     <p
                                         role="alert"
-                                        className="mt-2 text-xs text-red-700"
+                                        className="mt-2 text-xs text-danger"
                                     >
                                         {errors.description}
                                     </p>
@@ -685,7 +686,7 @@ function CategoryModal({
                             </label>
 
                             {errors.is_active && (
-                                <p className="text-xs text-red-700">
+                                <p className="text-xs text-danger">
                                     {errors.is_active}
                                 </p>
                             )}
@@ -693,7 +694,7 @@ function CategoryModal({
                             {errors.general && (
                                 <div
                                     role="alert"
-                                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                                    className="rounded-xl border border-danger/30 bg-pastel-blush p-4 text-sm text-danger"
                                 >
                                     {errors.general}
                                 </div>
@@ -921,6 +922,7 @@ export default function AdminSettings() {
           2. CHANGE PASSWORD
           ===================================== */}
 
+            <AppearancePreference />
             <div className="settings-security-grid contents"><ChangePasswordForm /><PushPreferences /></div>
 
             {/* =====================================
@@ -1049,7 +1051,7 @@ export default function AdminSettings() {
                 {error && (
                     <div
                         role="alert"
-                        className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                        className="mt-5 rounded-xl border border-danger/30 bg-pastel-blush p-4 text-sm text-danger"
                     >
                         {error}
                     </div>

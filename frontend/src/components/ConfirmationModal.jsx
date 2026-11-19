@@ -33,7 +33,7 @@ export default function ConfirmationModal({ title, message, confirmLabel, onDeci
                 // Escape dismisses this confirmation without closing the task form.
                 if (event.key === "Escape") event.stopPropagation();
             }}
-            className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-border bg-surface p-6 text-ink shadow-2xl backdrop:bg-ink/55 backdrop:backdrop-blur-sm sm:p-7"
+            className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-border bg-surface p-6 text-ink shadow-2xl backdrop:bg-overlay/55 backdrop:backdrop-blur-sm sm:p-7"
         >
             <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-app text-muted">
                 <ClipboardCheck size={24} aria-hidden="true" />

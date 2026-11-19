@@ -56,7 +56,7 @@ export default function PushPreferences() {
                 <button type="button" disabled={busy} onClick={() => setRevision((value) => value + 1)} className="rare-button rare-button-secondary"><RefreshCw size={18} aria-hidden="true" />Check status</button>
             </div>
         </>}
-        {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+        {error && <p role="alert" className="mt-4 rounded-xl bg-pastel-blush p-4 text-sm text-danger">{error}</p>}
         {notice && <p role="status" className="mt-4 rounded-xl bg-pastel-mint p-4 text-sm text-success">{notice}</p>}
     </section>;
 }

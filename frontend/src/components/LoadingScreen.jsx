@@ -9,7 +9,7 @@ export default function LoadingScreen({ message = "Loading...", standalone = fal
             aria-live="polite"
             aria-label={message}
             className="
-                fixed inset-0 z-9999 isolate
+                rare-loading-screen fixed inset-0 z-9999 isolate
                 flex min-h-dvh items-center justify-center
                 px-6
             "
@@ -24,7 +24,7 @@ export default function LoadingScreen({ message = "Loading...", standalone = fal
             )}
             <div
                 aria-hidden="true"
-                className="absolute inset-0 -z-10 bg-app/40 backdrop-blur-xl backdrop-saturate-125"
+                className="rare-loading-backdrop absolute inset-0 -z-10 bg-app/40 backdrop-blur-xl backdrop-saturate-125"
             />
             <div className="flex max-w-full flex-col items-center justify-center gap-7">
 
@@ -32,7 +32,7 @@ export default function LoadingScreen({ message = "Loading...", standalone = fal
                 <img
                     src={rareLogo}
                     alt="RARE - Rifath Associates LLP"
-                    className="h-auto w-44 object-contain sm:w-48"
+                    className="rare-theme-logo h-auto w-44 object-contain sm:w-48"
                 />
 
                 {/* Smooth wave dots */}

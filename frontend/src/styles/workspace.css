@@ -34,12 +34,12 @@ dialog :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"
 .rare-header-tabs, .rare-nav-rail, .rare-sidebar-brand { display: none; }
 /* Identical geometry for links and the native iOS button. */
 .rare-mobile-nav { position: fixed; z-index: 40; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
-.rare-mobile-nav-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; gap: 4px; padding: 6px; border: 1px solid var(--color-border); border-radius: 1rem; background: rgb(255 255 255 / .95); box-shadow: 0 12px 35px rgb(33 30 26 / .14); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+.rare-mobile-nav-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; gap: 4px; padding: 6px; border: 1px solid var(--color-border); border-radius: 1rem; background: color-mix(in srgb, var(--color-surface) 95%, transparent); box-shadow: 0 12px 35px rgb(33 30 26 / .14); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
 .rare-mobile-nav-item { -webkit-appearance: none; appearance: none; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; align-self: stretch; gap: 4px; width: 100%; min-width: 0; min-height: 56px; margin: 0; padding: 8px 2px; border: 0; border-radius: .75rem; background: transparent; color: var(--color-muted); font: inherit; text-align: center; text-decoration: none; cursor: pointer; touch-action: manipulation; transition: background 160ms, color 160ms; }
 .rare-mobile-nav-icon { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 20px; width: 20px; height: 20px; }
 .rare-mobile-nav-icon > svg { display: block; flex-shrink: 0; width: 20px; height: 20px; }
 .rare-mobile-nav-label { display: block; font-size: .75rem; font-weight: 500; line-height: 1rem; white-space: nowrap; }
-.rare-mobile-nav-item.is-active { background: var(--color-ink); color: white; }
+.rare-mobile-nav-item.is-active { background: var(--color-action); color: white; }
 @media (hover: hover) and (pointer: fine) {
   .rare-mobile-nav-item:hover:not(.is-active) { background: var(--color-app); }
 }
@@ -51,12 +51,14 @@ dialog :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"
 .rare-dashboard-stat[data-tone="violet"] { background: var(--color-pastel-lavender); }
 .rare-dashboard-stat p:first-child { color: var(--color-ink); }
 .rare-dashboard-stat svg { stroke-width: 1.75; }
-.rare-auth-canvas { background: radial-gradient(ellipse at top left, #fff0e8, transparent 65%), radial-gradient(ellipse at bottom right, #e7f3ff, transparent 70%), var(--color-app); }
+.rare-auth-canvas { background: radial-gradient(ellipse at top left, var(--color-pastel-blush), transparent 65%), radial-gradient(ellipse at bottom right, var(--color-pastel-sky), transparent 70%), var(--color-app); }
 .rare-auth-panel { background: transparent; }
+:root[data-theme="dark"] .rare-auth-logo { padding: .5rem .75rem; border-radius: .75rem; background: white; }
+:root[data-theme="dark"] .rare-loading-screen .rare-theme-logo { content: url("/darkmode_logo.png"); }
 .rare-auth-art { margin: 1.25rem; border-radius: 2rem; min-height: calc(100dvh - 2.5rem); }
 .rare-auth-card { border-radius: 1.75rem; background: var(--color-surface); box-shadow: 0 20px 70px rgb(49 64 91 / .07); }
 .rare-project-cover { background: linear-gradient(130deg, var(--color-pastel-lavender), var(--color-pastel-sky) 55%, var(--color-pastel-mint)); }
-.rare-project-cover::after { content: ""; pointer-events: none; position: absolute; width: 45%; height: 150%; right: -5%; bottom: -70%; transform: rotate(-25deg); border: 1px solid rgb(255 255 255 / .8); border-radius: 2rem; box-shadow: 0 0 0 24px rgb(255 255 255 / .16), 0 0 0 48px rgb(255 255 255 / .1); }
+.rare-project-cover::after { content: ""; pointer-events: none; position: absolute; width: 45%; height: 150%; right: -5%; bottom: -70%; transform: rotate(-25deg); border: 1px solid var(--color-border); border-radius: 2rem; box-shadow: 0 0 0 24px rgb(255 255 255 / .16), 0 0 0 48px rgb(255 255 255 / .1); }
 .rare-app main :is([aria-label="Task detail sections"], [aria-label="Report sections"], [aria-label="Request queues"]) { border: 1px solid var(--color-border); border-radius: 1.5rem; background: var(--color-surface); gap: .375rem; padding: .5rem; }
 .rare-app main :is([aria-label="Task detail sections"], [aria-label="Report sections"], [aria-label="Request queues"]) > button { border-radius: 999px; min-height: 2.75rem; border-bottom: 0; transition: background 160ms, color 160ms; }
 .rare-app main :is([aria-label="Task detail sections"], [aria-label="Report sections"], [aria-label="Request queues"]) > button[aria-pressed="true"] { background: var(--color-primary); color: white; }
@@ -80,7 +82,7 @@ dialog :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"
   .rare-sidebar-brand > a { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; border-radius: 1rem; }
   .rare-sidebar-brand img { display: block; width: 100%; max-height: 100%; object-fit: contain; }
   /* The shell reserves the expanded width for hover and keyboard focus. */
-  .rare-nav-rail { position: fixed; z-index: 40; top: 6.75rem; bottom: 1.25rem; left: 1.25rem; width: 4.75rem; display: flex; flex-direction: column; gap: 1rem; border: 1px solid var(--color-border); border-radius: 1.75rem; background: white; padding: 1rem .75rem; box-shadow: var(--shadow-float); transition: width 200ms ease, box-shadow 200ms ease; }
+  .rare-nav-rail { position: fixed; z-index: 40; top: 6.75rem; bottom: 1.25rem; left: 1.25rem; width: 4.75rem; display: flex; flex-direction: column; gap: 1rem; border: 1px solid var(--color-border); border-radius: 1.75rem; background: var(--color-surface); padding: 1rem .75rem; box-shadow: var(--shadow-float); transition: width 200ms ease, box-shadow 200ms ease; }
   /* Mouse clicks retain focus; only keyboard focus should keep the rail open. */
   .rare-nav-rail:has(:focus-visible) { width: 15rem; box-shadow: 0 16px 40px rgb(49 64 91 / .12); }
   .rare-rail-links { display: flex; flex: 1; min-height: 0; width: 100%; flex-direction: column; gap: .25rem; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
@@ -93,7 +95,7 @@ dialog :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"
   .rare-rail-link:focus-visible { outline-offset: -3px; }
   .rare-rail-link:disabled { opacity: .5; cursor: wait; }
   .rare-rail-footer { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; width: 100%; gap: .25rem; padding-top: .5rem; border-top: 1px solid var(--color-border); }
-  .rare-rail-count { position: absolute; top: .125rem; left: 1.875rem; display: flex; align-items: center; justify-content: center; min-width: 1.1rem; height: 1.1rem; padding: .1rem; border-radius: 999px; background: var(--color-danger); color: white; font-size: .6rem; line-height: 1; }
+  .rare-rail-count { position: absolute; top: .125rem; left: 1.875rem; display: flex; align-items: center; justify-content: center; min-width: 1.1rem; height: 1.1rem; padding: .1rem; border-radius: 999px; background: var(--color-danger-solid); color: white; font-size: .6rem; line-height: 1; }
 }
 @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
   .rare-app:has(.rare-nav-rail:hover) { --rare-shell-inset: 17.25rem; --rare-brand-clearance: 2rem; }
@@ -155,3 +157,7 @@ dialog :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"
 }
 @media (min-width: 1024px) { .admin-approval-center { --approval-nav-top: 6.5rem; } }
 .approval-tab-count { min-width: 0; max-width: 3.5rem; overflow: hidden; text-overflow: ellipsis; }
+
+/* The loading screen uses the dark logo on black with white bouncing dots. */
+:root[data-theme="dark"] .rare-loading-backdrop { background: #000; }
+:root[data-theme="dark"] .rare-loading-screen .loading-dot { background: #fff; }

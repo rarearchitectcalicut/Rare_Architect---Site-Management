@@ -145,7 +145,7 @@ export default function ReportProjectPicker({ role = "ADMIN" }) {
 
         <section aria-label="Daily report projects" aria-busy={!current} className="space-y-4">
             {!current && <p role="status" className="rounded-2xl border border-border bg-surface p-6 text-sm text-muted">Loading projects...</p>}
-            {current?.error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+            {current?.error && <div role="alert" className="rounded-xl bg-pastel-blush p-4 text-sm text-danger">
                 <p>{current.error}</p>
                 <button type="button" className={`${button} mt-3`} onClick={() => setRevision((value) => value + 1)}>Retry</button>
             </div>}

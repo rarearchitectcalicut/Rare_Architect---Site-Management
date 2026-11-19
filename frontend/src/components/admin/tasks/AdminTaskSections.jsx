@@ -13,7 +13,7 @@ const button = "task-secondary px-3 py-2.5 text-xs font-semibold text-muted disa
 function Resource({ name, resources, onRetry, children }) {
     const resource = resources[name];
     if (!resource || resource.loading) return <div role="status" className="space-y-4 py-4"><span className="text-xs text-muted">Loading section…</span><div aria-hidden="true" className="grid gap-4 motion-safe:animate-pulse sm:grid-cols-2">{[0, 1].map((item) => <div key={item} className="space-y-3 rounded-2xl border border-border bg-surface-soft p-5"><div className="h-2.5 w-1/3 rounded-full bg-border" /><div className="h-3 w-2/3 rounded-full bg-border" /></div>)}</div></div>;
-    if (resource.error) return <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700"><p>{resource.error}</p><button type="button" className={`${button} mt-3`} onClick={() => onRetry(name)}>Retry</button></div>;
+    if (resource.error) return <div role="alert" className="rounded-xl bg-pastel-blush p-4 text-sm text-danger"><p>{resource.error}</p><button type="button" className={`${button} mt-3`} onClick={() => onRetry(name)}>Retry</button></div>;
     return children(resource.data);
 }
 
@@ -50,9 +50,9 @@ function Documents({ taskId, resources, onRetry, onVersions, onDownload, downloa
     return <div className="admin-task-documents space-y-4">
         <ProjectSearch query={search} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search task documents" placeholder="Title, description or filename" loading={!current} suggestions={documents.map((doc) => ({ id: doc.id, name: doc.title, context: doc.current_version?.original_filename }))} />
         {!current && <p role="status" className="text-sm text-muted">Updating documents...</p>}
-        {current?.error && <div role="alert" className="text-sm text-red-700">{current.error}<button type="button" className={button} onClick={() => setRevision((value) => value + 1)}>Retry</button></div>}
+        {current?.error && <div role="alert" className="text-sm text-danger">{current.error}<button type="button" className={button} onClick={() => setRevision((value) => value + 1)}>Retry</button></div>}
         {current?.data && <nav aria-label="Task document pages" className="rare-pagination text-sm text-muted"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)} className={button}>Previous</button><span aria-live="polite" aria-atomic="true">Page {page} of {Math.max(1, Math.ceil(count / 8))}<span className="block text-xs">{count} documents</span></span><button type="button" disabled={page * 8 >= count} onClick={() => setPage(page + 1)} className={button}>Next</button></nav>}
-        {downloadError && <p role="alert" className="text-sm text-red-700">{downloadError}</p>}
+        {downloadError && <p role="alert" className="text-sm text-danger">{downloadError}</p>}
         {current?.data && !documents.length && <p className="text-sm text-muted">No task documents.</p>}
         {documents.map((doc) => <article key={doc.id} className="space-y-4 rounded-2xl border border-border p-4">
             <h3 className="break-words font-bold">{doc.title}</h3><Fields rows={[["Type", formatText(doc.document_type)], ["Description", doc.description], ["Uploaded", formatDate(doc.created_at)], ["Current version", doc.current_version?.version_number], ["Original filename", doc.current_version?.original_filename]]} />

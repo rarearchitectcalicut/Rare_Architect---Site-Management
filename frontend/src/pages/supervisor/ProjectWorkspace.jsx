@@ -35,7 +35,7 @@ function documentSize(size) {
 function DocumentFieldError({ errors, name }) {
     const value = errors[name];
     const text = Array.isArray(value) ? value.filter((item) => typeof item === "string").join(" ") : typeof value === "string" ? value : "";
-    return text ? <span id={`document-${name}-error`} role="alert" className="mt-2 block text-xs text-red-700">{text}</span> : null;
+    return text ? <span id={`document-${name}-error`} role="alert" className="mt-2 block text-xs text-danger">{text}</span> : null;
 }
 
 function ProjectDocumentUpload({ projectId, documentRecord, rules, onClose, onSaved }) {
@@ -166,7 +166,7 @@ function ProjectDocumentLibrary({ role = "SUPERVISOR", projectId }) {
         {!state.key && <LoadingScreen message="Loading project documents..." />}
         <header className="rare-page-header space-y-4 rounded-[26px] border border-border bg-surface p-5 sm:p-7"><Link to={`/${admin ? "admin" : "supervisor"}/projects/${projectId}`} className="text-sm text-muted">Back to project</Link><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs text-muted">{projectState.id === projectId ? projectState.project?.name : "Project"}</p><h1 className="mt-2 flex items-center gap-2 text-2xl font-bold"><FileText size={24} />Project Documents</h1><p className="mt-2 text-sm text-muted">Versioned drawings and project records. {admin ? "Manage files and retain their history." : "Read-only access to your assigned project."}</p></div><div className="flex flex-wrap gap-2"><button type="button" disabled={loading} onClick={refresh} aria-label="Refresh documents" className={documentButton}><RefreshCw size={16} className="mr-2 inline" />Refresh</button>{admin && projectState.project?.status !== "CANCELLED" && <button type="button" disabled={loading || !rules || Boolean(error)} onClick={() => setUpload({})} className="rare-button rare-button-primary"><Plus size={18} aria-hidden="true" />Upload Document</button>}</div></div></header>
         {notice && <p role="status" className="rounded-xl bg-pastel-mint p-4 text-sm text-success">{notice}</p>}
-        {error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+        {error && <p role="alert" className="rounded-xl bg-pastel-blush p-4 text-sm text-danger">{error}</p>}
         <SearchFilterToolbar
             label="Document search and filters"
             search={<ProjectSearch compact key={searchReset} query={search} onSearch={(value) => { setSearch(value); setPage(1); }} label="Search documents" labelClassName="sr-only" placeholder="Title, description, type or filename" loading={loading} suggestions={documents.map((doc) => ({ id: doc.id, name: doc.title, context: formatText(doc.document_type) }))} />}
@@ -467,13 +467,13 @@ export default function SupervisorProjectWorkspace() {
             {!loading && error && (
                 <section
                     role="alert"
-                    className="rounded-[18px] border border-red-200 bg-[#FFF9F8] p-4"
+                    className="rounded-[18px] border border-danger/30 bg-pastel-blush p-4"
                 >
-                    <p className="text-sm text-red-700">{error}</p>
+                    <p className="text-sm text-danger">{error}</p>
                     <button
                         type="button"
                         onClick={() => setRefreshKey((n) => n + 1)}
-                        className="mt-3 rounded-xl bg-ink px-3.5 py-2 text-sm font-semibold text-white"
+                        className="mt-3 rounded-xl bg-action px-3.5 py-2 text-sm font-semibold text-white"
                     >
                         Retry
                     </button>

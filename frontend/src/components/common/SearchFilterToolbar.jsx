@@ -81,10 +81,10 @@ export default function SearchFilterToolbar({
             >
                 <Filter size={18} aria-hidden="true" />
                 <span className="hidden min-[481px]:inline">Filters</span>
-                {activeCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-xs font-semibold text-surface">{activeCount}</span>}
+                {activeCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-action px-1 text-xs font-semibold text-white">{activeCount}</span>}
             </button>
         </div>
-        <div hidden={!open} className="fixed inset-0 z-[100] bg-ink/45 min-[481px]:bg-transparent" onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
+        <div hidden={!open} className="fixed inset-0 z-[100] bg-overlay/45 min-[481px]:bg-transparent" onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
             <div
                 id="search-filter-dialog"
                 role="dialog"

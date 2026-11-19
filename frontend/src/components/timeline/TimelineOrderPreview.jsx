@@ -69,7 +69,7 @@ export default function TimelineOrderPreview({
 
             {/* CHANGED TASKS */}
             {changedTasks.length === 0 ? (
-                <div className="flex items-center gap-3 rounded-2xl border border-[#CFE2D2] bg-pastel-mint p-4">
+                <div className="flex items-center gap-3 rounded-2xl border border-border-strong bg-pastel-mint p-4">
                     <CheckCircle2
                         size={19}
                         className="text-success"

@@ -66,7 +66,7 @@ export default function SectionPlaceholder() {
                 className="
           mx-auto mt-7 inline-flex
           items-center gap-2
-          rounded-xl bg-ink
+          rounded-xl bg-action
           px-5 py-3
           text-sm font-semibold text-white
           hover:bg-primary-hover

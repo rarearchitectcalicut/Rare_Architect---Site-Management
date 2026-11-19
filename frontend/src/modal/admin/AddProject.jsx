@@ -121,8 +121,8 @@ const inputStyle = `
   disabled:cursor-not-allowed
   disabled:opacity-50
   disabled:hover:border-border
-  aria-invalid:border-red-600
-  aria-invalid:ring-4 aria-invalid:ring-red-600/10
+  aria-invalid:border-danger
+  aria-invalid:ring-4 aria-invalid:ring-danger/10
 `;
 
 function Field({
@@ -140,7 +140,7 @@ function Field({
             >
                 {label}
                 {required && (
-                    <span className="ml-1 text-red-600">*</span>
+                    <span className="ml-1 text-danger">*</span>
                 )}
             </label>
 
@@ -149,7 +149,7 @@ function Field({
             {error && (
                 <p
                     role="alert"
-                    className="flex items-start gap-1.5 text-xs text-red-700"
+                    className="flex items-start gap-1.5 text-xs text-danger"
                 >
                     <AlertCircle
                         size={14}
@@ -580,7 +580,7 @@ export default function AddProject({
                     onClick={() => {
                         if (!isBusy) onClose();
                     }}
-                    className="rare-backdrop absolute inset-0 bg-ink/50 backdrop-blur-sm"
+                    className="rare-backdrop absolute inset-0 bg-overlay/50 backdrop-blur-sm"
                 />
 
                 {/* MODAL */}
@@ -729,7 +729,7 @@ export default function AddProject({
                                                         cursor-pointer rounded-full bg-surface px-3.5 py-2
                                                         text-xs font-semibold text-ink shadow
                                                         transition-all duration-200
-                                                        hover:bg-white hover:shadow-md
+                                                        hover:bg-surface hover:shadow-md
                                                         active:scale-95
                                                     "
                                                 >
@@ -744,7 +744,7 @@ export default function AddProject({
                                                     className="
                                                         rounded-full bg-surface p-2 text-ink shadow
                                                         transition-all duration-200
-                                                        hover:bg-white hover:text-red-700 hover:shadow-md
+                                                        hover:bg-surface hover:text-danger hover:shadow-md
                                                         active:scale-95
                                                         focus-visible:outline-none focus-visible:ring-2
                                                         focus-visible:ring-ink/40
@@ -763,7 +763,7 @@ export default function AddProject({
                                                 className="
                                                     rounded-2xl bg-pastel-sky p-3.5 text-info
                                                     transition-all duration-300 ease-out
-                                                    group-hover:scale-110 group-hover:bg-info group-hover:text-white
+                                                    group-hover:scale-110 group-hover:bg-info-solid group-hover:text-white
                                                     motion-reduce:transition-none
                                                     motion-reduce:group-hover:transform-none
                                                 "
@@ -867,12 +867,12 @@ export default function AddProject({
                                                 {
                                                     value: "ACTIVE",
                                                     label: "Active",
-                                                    dot: "bg-success",
+                                                    dot: "bg-success-solid",
                                                 },
                                                 {
                                                     value: "MAINTENANCE",
                                                     label: "Maintenance",
-                                                    dot: "bg-warning",
+                                                    dot: "bg-warning-solid",
                                                 },
                                             ].map((option) => (
                                                 <label
@@ -913,7 +913,7 @@ export default function AddProject({
                                         {errors.status && (
                                             <p
                                                 role="alert"
-                                                className="flex items-start gap-1.5 text-xs text-red-700"
+                                                className="flex items-start gap-1.5 text-xs text-danger"
                                             >
                                                 <AlertCircle
                                                     size={14}
@@ -1049,7 +1049,7 @@ export default function AddProject({
                             {serverError && (
                                 <div
                                     role="alert"
-                                    className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                                    className="flex items-start gap-3 rounded-xl border border-danger/30 bg-pastel-blush px-4 py-3 text-sm text-danger"
                                 >
                                     <AlertCircle
                                         size={18}
@@ -1073,7 +1073,7 @@ export default function AddProject({
                             "
                         >
                             <p className="hidden text-xs text-muted sm:mr-auto sm:block">
-                                <span className="text-red-600">*</span> Required fields
+                                <span className="text-danger">*</span> Required fields
                             </p>
 
                             <button
@@ -1099,7 +1099,7 @@ export default function AddProject({
                                 disabled={isBusy || !categories.length}
                                 className="
                                     group inline-flex items-center justify-center gap-2
-                                    rounded-xl bg-ink px-6 py-3
+                                    rounded-xl bg-action px-6 py-3
                                     text-sm font-semibold text-white
                                     transition-all duration-200 ease-out
                                     hover:-translate-y-0.5 hover:bg-primary-hover

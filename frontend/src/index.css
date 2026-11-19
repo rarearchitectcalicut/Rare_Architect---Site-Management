@@ -7,6 +7,7 @@
 @import "./styles/dashboard-categories.css";
 @import "./styles/notepad.css";
 @import "./styles/report-builder.css";
+@import "./styles/appearance.css";
 
 @keyframes dot-wave {
 
@@ -57,7 +58,7 @@
 /* Shared, mobile-first refinements for the existing RARE screens. */
 @layer base {
     :root {
-        color-scheme: light;
+        color-scheme: light dark;
         font-family: var(--font-sans);
         color: var(--color-ink);
         background: var(--color-app);
@@ -65,8 +66,8 @@
         text-rendering: optimizeLegibility;
         -webkit-text-size-adjust: 100%;
         --rare-muted-readable: var(--color-muted);
-        --rare-success: var(--color-success);
-        --rare-danger: var(--color-danger);
+        --rare-success: var(--color-success-solid);
+        --rare-danger: var(--color-danger-solid);
     }
     html { scroll-padding-block: 5rem 7rem; }
     body { margin: 0; min-width: 0; line-height: 1.55; }
@@ -88,7 +89,7 @@
 }
 
 .rare-main { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px)); }
-.rare-skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 100; transform: translateY(-180%); border-radius: .75rem; background: var(--color-ink); color: var(--color-surface); padding: .75rem 1rem; }
+.rare-skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 100; transform: translateY(-180%); border-radius: .75rem; background: var(--color-action); color: white; padding: .75rem 1rem; }
 .rare-skip-link:focus { transform: none; }
 .rare-page-header { min-width: 0; padding: 1rem; border-radius: 1.25rem; box-shadow: none; }
 .rare-page-header h1 { margin-top: .5rem; font-size: 1.375rem; line-height: 1.3; }
@@ -199,19 +200,19 @@
         white-space: normal;
         transition: background-color 160ms, border-color 160ms, box-shadow 160ms;
     }
-    .rare-button-primary { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-surface); box-shadow: 0 2px 4px #211E1A18; }
+    .rare-button-primary { background: var(--color-action); border-color: var(--color-action); color: white; box-shadow: 0 2px 4px #211E1A18; }
     .rare-button-secondary { background: var(--color-surface); border-color: var(--color-subtle); color: var(--color-muted); box-shadow: 0 1px 3px #211E1A08; }
     .rare-button-success { background: var(--rare-success); border-color: var(--rare-success); color: #FFFFFF; }
     .rare-button-danger { background: var(--rare-danger); border-color: var(--rare-danger); color: #FFFFFF; }
-    .rare-button-danger-outline { background: #FFF5F3; border-color: #B85A50; color: #9F231B; }
+    .rare-button-danger-outline { background: var(--color-pastel-blush); border-color: var(--color-border-strong); color: var(--color-danger); }
     .rare-button:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
     .rare-button:focus-visible { outline: 3px solid var(--color-info); outline-offset: 3px; }
     @media (hover: hover) {
         .rare-button-primary:hover:not(:disabled) { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
         .rare-button-secondary:hover:not(:disabled) { background: var(--color-app); border-color: var(--color-subtle); }
-        .rare-button-success:hover:not(:disabled) { background: #14532D; border-color: #14532D; }
-        .rare-button-danger:hover:not(:disabled) { background: #912018; border-color: #912018; }
-        .rare-button-danger-outline:hover:not(:disabled) { background: #FCE5E1; border-color: var(--color-danger); }
+        .rare-button-success:hover:not(:disabled) { background: #14532D; border-color: var(--color-border-strong); }
+        .rare-button-danger:hover:not(:disabled) { background: #912018; border-color: var(--color-border-strong); }
+        .rare-button-danger-outline:hover:not(:disabled) { background: var(--color-pastel-blush); border-color: var(--color-danger); }
     }
 }
 
@@ -761,7 +762,7 @@ dialog :where(input, textarea)::placeholder { color: var(--color-muted); opacity
 .settings-page-heading { padding: 4px 2px 0; }
 .settings-page-heading > p:first-child { color: var(--color-muted); font-size: 10px; font-weight: 600; letter-spacing: .14em; }
 .settings-page-heading > div { align-items: center; margin-top: 12px; }
-.settings-page-heading > div > span { width: 48px; height: 48px; border: 1px solid #fff; border-radius: 16px; background: #fff; color: #76658e; box-shadow: 0 4px 16px #303d5710; }
+.settings-page-heading > div > span { width: 48px; height: 48px; border: 1px solid var(--color-surface); border-radius: 16px; background: var(--color-surface); color: var(--color-muted); box-shadow: 0 4px 16px #303d5710; }
 .settings-page-heading h1 { line-height: 1.2; }
 .settings-page-heading h1 + p { margin-top: 6px; font-size: 13px; line-height: 1.6; }
 .settings-nav-dock { position: sticky; top: var(--settings-nav-top); z-index: 10; min-width: 0; padding: 4px 0 8px; background: var(--rare-canvas-background); background-attachment: fixed; }
@@ -775,8 +776,8 @@ dialog :where(input, textarea)::placeholder { color: var(--color-muted); opacity
 .settings-page section[id] { scroll-margin-top: calc(var(--settings-nav-top) - .25rem); }
 .settings-page .settings-personal-information, .settings-page .settings-project-categories, .settings-page #settings-notifications { padding: 24px; }
 .settings-page .settings-profile-body { padding: 22px; }
-.settings-profile-cover { height: 64px; background: repeating-linear-gradient(135deg, transparent 0 18px, #ffffff60 18px 19px, transparent 19px 36px), linear-gradient(110deg, #eae6f7, #e6f1f7 70%, #edf5ed); }
-.settings-page .settings-profile-avatar { width: 68px; height: 68px; margin-top: -50px; border: 4px solid #fff; border-radius: 22px; background: #eeeaf7; color: #655380; font-size: 26px; box-shadow: 0 3px 12px #303d5708; }
+.settings-profile-cover { height: 64px; background: repeating-linear-gradient(135deg, transparent 0 18px, var(--rare-cover-line) 18px 19px, transparent 19px 36px), linear-gradient(110deg, var(--color-pastel-sky), var(--color-pastel-sky) 70%, var(--color-pastel-mint)); }
+.settings-page .settings-profile-avatar { width: 68px; height: 68px; margin-top: -50px; border: 4px solid var(--color-surface); border-radius: 22px; background: var(--color-pastel-lavender); color: var(--color-violet); font-size: 26px; box-shadow: 0 3px 12px #303d5708; }
 .settings-page .settings-profile-identity { flex-direction: column; gap: 14px; }
 .settings-profile-identity > div:last-child { width: 100%; }
 .settings-profile-identity > div:last-child > p:first-child { font-size: 9px; font-weight: 600; letter-spacing: .1em; }
@@ -795,7 +796,7 @@ dialog :where(input, textarea)::placeholder { color: var(--color-muted); opacity
 .settings-personal-information form > div.grid > div:last-child { grid-column: 1 / -1; }
 .settings-personal-information label { font-size: 10px; font-weight: 600; letter-spacing: .06em; }
 .settings-personal-information form > div.grid > div > p { font-weight: 500; line-height: 1.6; }
-.settings-page input:not([type="checkbox"]):not([type="radio"]), .settings-page select, .settings-page textarea { border-radius: 10px; background-color: #fff; }
+.settings-page input:not([type="checkbox"]):not([type="radio"]), .settings-page select, .settings-page textarea { border-radius: 10px; background-color: var(--color-surface); }
 .settings-page button:not([role="switch"]) { border-radius: 10px; }
 .settings-page .settings-password-card > div.grid { grid-template-columns: minmax(0, 1fr); }
 .settings-page .settings-password-form { padding: 24px; }
@@ -809,7 +810,7 @@ dialog :where(input, textarea)::placeholder { color: var(--color-muted); opacity
 .settings-password-form label { font-size: 12px; font-weight: 500; }
 .settings-password-form input { height: 48px; }
 .settings-password-form button[type="submit"] { justify-self: start; min-width: 0; width: auto; box-shadow: none; }
-.settings-page .settings-password-guidance { padding: 20px 24px; border: 0; border-top: 1px solid var(--color-border); background: #faf9fd; }
+.settings-page .settings-password-guidance { padding: 20px 24px; border: 0; border-top: 1px solid var(--color-border); background: var(--color-surface-soft); }
 .settings-password-guidance ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
 .settings-password-guidance li { margin: 0; font-size: 12px; line-height: 1.6; }
 .settings-password-guidance > p { margin-top: 16px; padding-top: 14px; line-height: 1.8; }
@@ -881,7 +882,7 @@ dialog :where(input, textarea)::placeholder { color: var(--color-muted); opacity
     .admin-dashboard-activity section > div:nth-child(2) > .group:nth-child(n+5) { display: none; }
     .admin-dashboard-activity section > div:nth-child(2) > .group:nth-child(4) { padding-bottom: 0; }
     .admin-dashboard-activity section > div:nth-child(2) > .group:not(:last-child):not(:nth-child(4))::before { content: ""; position: absolute; left: 13px; top: 26px; bottom: 0; width: 1px; background: var(--color-border-strong); }
-    .admin-dashboard-activity section > div:nth-child(2) > .group > div:first-child { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 7px; border-radius: 50%; background: #E2EBFC; color: #4A78CB; }
+    .admin-dashboard-activity section > div:nth-child(2) > .group > div:first-child { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 7px; border-radius: 50%; background: var(--color-pastel-sky); color: var(--color-info); }
     .admin-dashboard-activity section > div:nth-child(2) > .group > div:first-child svg { width: 14px; height: 14px; }
     .admin-dashboard-activity .group > div:last-child > p:first-child { font-size: 12px; font-weight: 600; }
     .admin-dashboard-activity .group > div:last-child > p { margin-top: 4px; line-height: 1.5; }

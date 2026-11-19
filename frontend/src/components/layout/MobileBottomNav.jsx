@@ -41,7 +41,7 @@ export default function MobileBottomNav({
                     >
                         <span className="rare-mobile-nav-icon">
                             <NavIcon name={item.icon} size={20} />
-                            {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+                            {item.path.endsWith("/notifications") && unreadCount > 0 && <span aria-label={`${unreadCount} unread notifications`} className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-solid px-1 text-[10px] font-bold leading-none text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
                         </span>
 
                         <span className="rare-mobile-nav-label">

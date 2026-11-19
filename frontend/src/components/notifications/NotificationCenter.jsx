@@ -381,7 +381,7 @@ function NotificationRow({ notification, busy, onOpen }) {
             {unread && (
                 <span
                     aria-hidden="true"
-                    className="absolute inset-y-0 left-0 w-1 bg-info"
+                    className="absolute inset-y-0 left-0 w-1 bg-info-solid"
                 />
             )}
 
@@ -393,7 +393,7 @@ function NotificationRow({ notification, busy, onOpen }) {
                 </span>
 
                 {unread && (
-                    <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-pastel-lavender bg-info group-hover:border-pastel-lavender" />
+                    <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-pastel-lavender bg-info-solid group-hover:border-pastel-lavender" />
                 )}
             </span>
 
@@ -706,7 +706,7 @@ export default function NotificationCenter({
     ];
 
     const selectClass =
-        "h-11 w-full appearance-none rounded-xl border border-border bg-white pl-4 pr-10 text-sm text-ink outline-none transition-all hover:border-border-strong focus:border-info focus:ring-4 focus:ring-info/15";
+        "h-11 w-full appearance-none rounded-xl border border-border bg-surface pl-4 pr-10 text-sm text-ink outline-none transition-all hover:border-border-strong focus:border-info focus:ring-4 focus:ring-info/15";
 
     return (
         <div className="notifications-page mx-auto max-w-4xl space-y-5 pb-10 sm:space-y-6">
@@ -725,11 +725,11 @@ export default function NotificationCenter({
             {/* HEADER */}
             <header className="rare-page-header lg:hidden flex items-start justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-4">
-                    <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-ink text-white shadow-lg shadow-ink/20">
+                    <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-action text-white shadow-lg shadow-ink/20">
                         <BellRing size={25} strokeWidth={1.7} />
 
                         {unreadCount > 0 && (
-                            <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-surface bg-info px-1.5 text-xs font-bold">
+                            <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-surface bg-info-solid px-1.5 text-xs font-bold">
                                 {unreadCount > 99 ? "99+" : unreadCount}
                             </span>
                         )}
@@ -755,7 +755,7 @@ export default function NotificationCenter({
                     onClick={() => setRefreshKey((v) => v + 1)}
                     disabled={loading}
                     aria-label="Refresh notifications"
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-ink transition-colors hover:bg-app disabled:opacity-50 sm:w-auto sm:gap-2 sm:px-4"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-ink transition-colors hover:bg-app disabled:opacity-50 sm:w-auto sm:gap-2 sm:px-4"
                 >
                     <RefreshCw size={17} />
                     <span className="hidden text-sm font-semibold sm:inline">
@@ -790,7 +790,7 @@ export default function NotificationCenter({
                                     setPage(1);
                                 }}
                                 className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-info sm:flex-none ${visibility === tab.key
-                                        ? "bg-white text-ink shadow-sm"
+                                        ? "bg-surface text-ink shadow-sm"
                                         : "text-muted hover:text-ink"
                                     }`}
                             >
@@ -861,7 +861,7 @@ export default function NotificationCenter({
             {error && (
                 <div
                     role="alert"
-                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                    className="rounded-xl border border-danger/30 bg-pastel-blush p-4 text-sm text-danger"
                 >
                     {error}
                 </div>
@@ -870,7 +870,7 @@ export default function NotificationCenter({
             {notice && (
                 <div
                     role="status"
-                    className="rounded-xl border border-[#F0DDB0] bg-pastel-butter p-4 text-sm text-warning"
+                    className="rounded-xl border border-border-strong bg-pastel-butter p-4 text-sm text-warning"
                 >
                     {notice}
                 </div>
@@ -920,7 +920,7 @@ export default function NotificationCenter({
                                 <button
                                     type="button"
                                     onClick={resetFilters}
-                                    className="mt-6 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-info"
+                                    className="mt-6 rounded-xl bg-action px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-info-solid"
                                 >
                                     Clear filters
                                 </button>
@@ -1015,7 +1015,7 @@ export default function NotificationCenter({
                             <button
                                 type="button"
                                 onClick={() => setOpenedNotification(null)}
-                                className="mt-5 h-12 w-full rounded-xl bg-ink text-sm font-semibold text-white transition-colors hover:bg-info"
+                                className="mt-5 h-12 w-full rounded-xl bg-action text-sm font-semibold text-white transition-colors hover:bg-info-solid"
                             >
                                 Done
                             </button>

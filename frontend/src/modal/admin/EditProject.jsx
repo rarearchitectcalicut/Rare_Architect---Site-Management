@@ -84,14 +84,14 @@ function Field({
             >
                 {label}
                 {required && (
-                    <span className="ml-1 text-red-600">*</span>
+                    <span className="ml-1 text-danger">*</span>
                 )}
             </label>
 
             {children}
 
             {error && (
-                <p role="alert" className="text-xs text-red-700">
+                <p role="alert" className="text-xs text-danger">
                     {error}
                 </p>
             )}
@@ -476,7 +476,7 @@ export default function EditProject({
 
             {/* BACKDROP */}
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 p-0 backdrop-blur-sm sm:p-6"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/55 p-0 backdrop-blur-sm sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -614,7 +614,7 @@ export default function EditProject({
                                 )}
 
                                 {errors.cover_image && (
-                                    <p role="alert" className="text-xs text-red-700">
+                                    <p role="alert" className="text-xs text-danger">
                                         {errors.cover_image}
                                     </p>
                                 )}
@@ -825,7 +825,7 @@ export default function EditProject({
                             {errors.general && (
                                 <div
                                     role="alert"
-                                    className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                                    className="rounded-xl border border-danger/30 bg-pastel-blush px-4 py-3 text-sm text-danger"
                                 >
                                     {errors.general}
                                 </div>
@@ -849,7 +849,7 @@ export default function EditProject({
                                     Boolean(busyMessage) ||
                                     Boolean(errors.categories)
                                 }
-                                className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
+                                className="inline-flex items-center gap-2 rounded-xl bg-action px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
                             >
                                 <Save size={18} />
                                 Save Changes

@@ -340,7 +340,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
             {error && (
                 <div
                     role="alert"
-                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                    className="rounded-xl border border-danger/30 bg-pastel-blush p-4 text-sm text-danger"
                 >
                     {error}
 
@@ -459,7 +459,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                         setErrors({});
                                         setEditing(true);
                                     }}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-[0_8px_20px_rgba(33,30,26,0.12)]"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-[0_8px_20px_rgba(33,30,26,0.12)]"
                                 >
                                     <Pencil size={17} />
                                     Edit Profile
@@ -509,7 +509,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                                     {errors[field.key] && (
                                                         <p
                                                             role="alert"
-                                                            className="mt-2 text-xs text-red-700"
+                                                            className="mt-2 text-xs text-danger"
                                                         >
                                                             {errors[field.key]}
                                                         </p>
@@ -543,7 +543,7 @@ export default function AccountProfile({ role = "ADMIN" }) {
                                     <button
                                         type="submit"
                                         disabled={Boolean(busyMessage)}
-                                        className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-hover hover:shadow-md disabled:opacity-50"
+                                        className="inline-flex items-center gap-2 rounded-xl bg-action px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-hover hover:shadow-md disabled:opacity-50"
                                     >
                                         <Save size={17} />
                                         Save Changes

@@ -277,7 +277,7 @@ export default function ProposeTimelineOrder({
             )}
 
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 p-0 backdrop-blur-sm sm:p-6"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/55 p-0 backdrop-blur-sm sm:p-6"
                 onMouseDown={(event) => {
                     if (
                         event.target === event.currentTarget &&
@@ -410,12 +410,12 @@ export default function ProposeTimelineOrder({
                             </div>
 
                             {!validSet && (
-                                <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4">
+                                <div className="flex items-start gap-2 rounded-xl border border-danger/30 bg-pastel-blush p-4">
                                     <AlertCircle
                                         size={18}
-                                        className="shrink-0 text-red-700"
+                                        className="shrink-0 text-danger"
                                     />
-                                    <p className="text-xs text-red-700">
+                                    <p className="text-xs text-danger">
                                         The proposed sequence doesn't contain
                                         exactly the same tasks as the current
                                         project timeline. Refresh before submitting.
@@ -426,14 +426,14 @@ export default function ProposeTimelineOrder({
                             {error && (
                                 <div
                                     role="alert"
-                                    className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4"
+                                    className="flex items-start gap-2 rounded-xl border border-danger/30 bg-pastel-blush p-4"
                                 >
                                     <AlertCircle
                                         size={18}
-                                        className="shrink-0 text-red-700"
+                                        className="shrink-0 text-danger"
                                     />
 
-                                    <p className="text-sm leading-6 text-red-700">
+                                    <p className="text-sm leading-6 text-danger">
                                         {error}
                                     </p>
                                 </div>
@@ -465,7 +465,7 @@ export default function ProposeTimelineOrder({
                                         !validSet ||
                                         !reason.trim()
                                     }
-                                    className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-action px-5 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <Send size={17} />
                                     Submit Request
